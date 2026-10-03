@@ -1,0 +1,199 @@
+{
+  "seed": 20261003,
+  "total": 16,
+  "passed": 1,
+  "flagged": 2,
+  "failed": 13,
+  "repaired": 8,
+  "rule_fail_counts": {
+    "rule_3": 13,
+    "rule_10": 8,
+    "rule_8b": 4
+  },
+  "results": [
+    {
+      "tick": 1,
+      "seed": 20261003,
+      "difficulty": "stable_day",
+      "objective": "cost_efficiency",
+      "status": "fail",
+      "repaired": true,
+      "failed_rules": [
+        "rule_3",
+        "rule_10"
+      ]
+    },
+    {
+      "tick": 2,
+      "seed": 20261103,
+      "difficulty": "stable_day",
+      "objective": "min_carbon",
+      "status": "fail",
+      "repaired": false,
+      "failed_rules": [
+        "rule_3"
+      ]
+    },
+    {
+      "tick": 3,
+      "seed": 20261203,
+      "difficulty": "stable_day",
+      "objective": "max_renewable_utilisation",
+      "status": "fail",
+      "repaired": true,
+      "failed_rules": [
+        "rule_3",
+        "rule_10"
+      ]
+    },
+    {
+      "tick": 4,
+      "seed": 20261303,
+      "difficulty": "stable_day",
+      "objective": "max_profit",
+      "status": "fail",
+      "repaired": true,
+      "failed_rules": [
+        "rule_3",
+        "rule_10"
+      ]
+    },
+    {
+      "tick": 5,
+      "seed": 20271003,
+      "difficulty": "cloudy_afternoon",
+      "objective": "cost_efficiency",
+      "status": "fail",
+      "repaired": false,
+      "failed_rules": [
+        "rule_3",
+        "rule_8b"
+      ]
+    },
+    {
+      "tick": 6,
+      "seed": 20271103,
+      "difficulty": "cloudy_afternoon",
+      "objective": "min_carbon",
+      "status": "flagged",
+      "repaired": false,
+      "failed_rules": [
+        "rule_8b"
+      ]
+    },
+    {
+      "tick": 7,
+      "seed": 20271203,
+      "difficulty": "cloudy_afternoon",
+      "objective": "max_renewable_utilisation",
+      "status": "fail",
+      "repaired": true,
+      "failed_rules": [
+        "rule_3",
+        "rule_8b",
+        "rule_10"
+      ]
+    },
+    {
+      "tick": 8,
+      "seed": 20271303,
+      "difficulty": "cloudy_afternoon",
+      "objective": "max_profit",
+      "status": "fail",
+      "repaired": true,
+      "failed_rules": [
+        "rule_3",
+        "rule_8b",
+        "rule_10"
+      ]
+    },
+    {
+      "tick": 9,
+      "seed": 20281003,
+      "difficulty": "price_spike",
+      "objective": "cost_efficiency",
+      "status": "flagged",
+      "repaired": true,
+      "failed_rules": [
+        "rule_10"
+      ]
+    },
+    {
+      "tick": 10,
+      "seed": 20281103,
+      "difficulty": "price_spike",
+      "objective": "min_carbon",
+      "status": "pass",
+      "repaired": false,
+      "failed_rules": []
+    },
+    {
+      "tick": 11,
+      "seed": 20281203,
+      "difficulty": "price_spike",
+      "objective": "max_renewable_utilisation",
+      "status": "fail",
+      "repaired": false,
+      "failed_rules": [
+        "rule_3"
+      ]
+    },
+    {
+      "tick": 12,
+      "seed": 20281303,
+      "difficulty": "price_spike",
+      "objective": "max_profit",
+      "status": "fail",
+      "repaired": false,
+      "failed_rules": [
+        "rule_3"
+      ]
+    },
+    {
+      "tick": 13,
+      "seed": 20291003,
+      "difficulty": "multi_failure_cascade",
+      "objective": "cost_efficiency",
+      "status": "fail",
+      "repaired": true,
+      "failed_rules": [
+        "rule_3",
+        "rule_10"
+      ]
+    },
+    {
+      "tick": 14,
+      "seed": 20291103,
+      "difficulty": "multi_failure_cascade",
+      "objective": "min_carbon",
+      "status": "fail",
+      "repaired": false,
+      "failed_rules": [
+        "rule_3"
+      ]
+    },
+    {
+      "tick": 15,
+      "seed": 20291203,
+      "difficulty": "multi_failure_cascade",
+      "objective": "max_renewable_utilisation",
+      "status": "fail",
+      "repaired": true,
+      "failed_rules": [
+        "rule_3",
+        "rule_10"
+      ]
+    },
+    {
+      "tick": 16,
+      "seed": 20291303,
+      "difficulty": "multi_failure_cascade",
+      "objective": "max_profit",
+      "status": "fail",
+      "repaired": false,
+      "failed_rules": [
+        "rule_3"
+      ]
+    }
+  ]
+}

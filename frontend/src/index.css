@@ -1,0 +1,135 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #0f1216;
+  color: #e6e9ef;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+h1 {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: #9aa4b2;
+  margin-bottom: 24px;
+}
+
+.panel {
+  background: #171b21;
+  border: 1px solid #262c35;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.panel h2 {
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #9aa4b2;
+  margin: 0 0 12px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+select, button, input {
+  background: #1f252d;
+  color: #e6e9ef;
+  border: 1px solid #333a45;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+button {
+  cursor: pointer;
+  background: #3b6fd1;
+  border-color: #3b6fd1;
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  background: #1f252d;
+  border-color: #333a45;
+}
+
+pre {
+  background: #0b0d10;
+  border-radius: 8px;
+  padding: 12px;
+  overflow-x: auto;
+  font-size: 12.5px;
+  max-height: 340px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge.pass { background: #1e4620; color: #6fe382; }
+.badge.fail { background: #4a1f23; color: #ff8a8a; }
+.badge.flagged { background: #4a3c1f; color: #f5c663; }
+
+.rule-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: grid;
+  gap: 6px;
+}
+
+.rule-list li {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #1f252d;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rule-ok { color: #6fe382; }
+.rule-bad { color: #ff8a8a; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th, td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid #262c35;
+}
+
+.error {
+  color: #ff8a8a;
+  white-space: pre-wrap;
+}

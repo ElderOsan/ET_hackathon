@@ -15,7 +15,8 @@ from google.genai import types
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.core.llm_client import MODEL, get_client
-from app.data.tuning import FLOOR_MAX, FLOOR_MIN, FLOOR_STEP_DOWN
+from app.data import physics
+from app.data.tuning import FLOOR_MAX, FLOOR_MIN, FLOOR_STEP_DOWN, REASONING_CHAR_CAP
 from app.models.schemas import BatteryAction, Decision, EnvironmentState
 
 SYSTEM_PROMPT = """You are the Orchestrator Agent for a Renewable Energy Orchestrator. Every 15 minutes \
@@ -68,14 +69,28 @@ usable capacity and can increase curtailment and purchases, so raising it on a c
 signal is a mistake. Always give a one-line floor_justification naming the specific signals that drove \
 your number (price volatility, forecast change, storm alert, asset outage, forecast confidence).
 
-In the reasoning field, state: which golden rules were binding this tick, which cascade layer and priority \
-drove the choice, and which dispatch-ladder step was used.
+The environment state is followed by a separate "Physics facts" block — total_generation_mw, \
+net_position_mw (positive = surplus, negative = shortfall), a position label, the same for the forecast, and \
+each battery's discharge_available_mw / charge_headroom_mw. These are computed for you; do not recompute them \
+yourself, and do not let them disagree with your own arithmetic — use them directly.
 
-Always call submit_decision with your chosen actions."""
+In the reasoning field (written FIRST, before you decide any action): state the position (surplus/shortfall/ \
+balanced) from the physics facts, the dispatch-ladder step you are following because of it, which golden \
+rules were binding, and which cascade layer and priority drove the choice. Keep it under {reasoning_cap} \
+characters.
+
+Always call submit_decision with your chosen actions.""".format(reasoning_cap=REASONING_CHAR_CAP)
 
 SUBMIT_DECISION_SCHEMA = {
     "type": "object",
     "properties": {
+        "reasoning": {
+            "type": "string",
+            "maxLength": REASONING_CHAR_CAP,
+            "description": "Written FIRST: the position (surplus/shortfall/balanced), the ladder step, which golden rules were binding, and the cascade priority — before any action below.",
+        },
+        "reserve_floor_pct": {"type": "number", "description": "Proposed reserve floor, before clamping/ramping."},
+        "floor_justification": {"type": "string"},
         "battery_actions": {
             "type": "array",
             "items": {
@@ -93,20 +108,17 @@ SUBMIT_DECISION_SCHEMA = {
         "curtail_solar_mw": {"type": "number"},
         "curtail_wind_mw": {"type": "number"},
         "demand_response_triggered": {"type": "boolean"},
-        "reserve_floor_pct": {"type": "number", "description": "Proposed reserve floor, before clamping/ramping."},
-        "floor_justification": {"type": "string"},
-        "reasoning": {"type": "string"},
     },
     "required": [
+        "reasoning",
+        "reserve_floor_pct",
+        "floor_justification",
         "battery_actions",
         "market_action",
         "market_amount_mw",
         "curtail_solar_mw",
         "curtail_wind_mw",
         "demand_response_triggered",
-        "reserve_floor_pct",
-        "floor_justification",
-        "reasoning",
     ],
 }
 
@@ -156,13 +168,17 @@ def decide(scenario: EnvironmentState) -> Decision:
 
     objective = scenario.objective.value if scenario.objective else None
     user_payload = scenario.model_dump(mode="json", exclude=_HIDDEN_FIELDS)
+    # Facts derived from state only — no hidden-tag content, objective expectation, or
+    # Evaluator output, so the Evaluator's independence from the Orchestrator's input holds.
+    facts = physics.orchestrator_facts(scenario, scenario.previous_floor_pct)
 
     response = _call_gemini(
         client,
         model=MODEL,
         contents=(
             f"Declared objective for this tick: {objective or 'NONE — cost_efficiency applies under the golden rules'}\n\n"
-            f"Environment state:\n{json.dumps(user_payload, indent=2)}"
+            f"Environment state:\n{json.dumps(user_payload, indent=2)}\n\n"
+            f"Physics facts (computed — use directly, do not recompute):\n{json.dumps(facts, indent=2)}"
         ),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT,

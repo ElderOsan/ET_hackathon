@@ -8,10 +8,14 @@ from pydantic import BaseModel
 
 from app.agents.pipeline import run_decision_pipeline
 from app.agents.scenario_agent import generate_scenario, normalize_scenario
+from app.data.benchmark_seeds import DEV_SEED_SET, HELD_OUT_SEED_SET
+from app.data.tuning import BENCHMARK_ALLOW_HELD_OUT, RULE_CATEGORY_MAP
 from app.models.schemas import (
     BatchRunSummary,
+    CategoryBreakdown,
     Difficulty,
     EnvironmentState,
+    FieldRepair,
     ObjectiveBreakdown,
     Objective,
     ScenarioRunResult,
@@ -82,6 +86,78 @@ def run_from_scenario(req: FromScenarioRequest):
     return _run_or_503(normalized)
 
 
+def _categorize_rule(rule_id: str, repairs: list[FieldRepair]) -> str:
+    if rule_id == "rule_3":
+        over_allocation = any(
+            r.field.startswith("market_amount_mw") or r.field.startswith("curtailment") or "amount_mw" in r.field
+            for r in repairs
+        )
+        return "arithmetic" if over_allocation else "outcome"
+    return RULE_CATEGORY_MAP.get(rule_id, "strategy")
+
+
+def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: str | None, objectives: list) -> BatchRunSummary:
+    total = len(results)
+    infeasible_count = sum(1 for r in results if r.infeasible)
+
+    raw_stages = [next(s for s in r.stages if s.name == "raw") for r in results]
+    applied_stages = [next(s for s in r.stages if s.name == "applied") for r in results]
+
+    first_attempt_passed = sum(1 for s in raw_stages if s.evaluation.status.value == "pass")
+    applied_passed = sum(1 for s in applied_stages if s.evaluation.status.value == "pass")
+    applied_failed = sum(1 for s in applied_stages if s.evaluation.status.value == "fail")
+    applied_flagged = sum(1 for s in applied_stages if s.evaluation.status.value == "flagged")
+    repaired_count = sum(1 for r in results if r.repaired)
+
+    category_counts: dict[str, int] = {"arithmetic": 0, "strategy": 0, "outcome": 0}
+    for r, raw_stage in zip(results, raw_stages):
+        for rule in raw_stage.evaluation.rules:
+            if not rule.passed and rule.applicable:
+                category = _categorize_rule(rule.rule_id, r.repairs)
+                category_counts[category] = category_counts.get(category, 0) + 1
+
+    by_objective: list[ObjectiveBreakdown] = []
+    for objective in objectives:
+        key = objective.value if objective else "none"
+        rows = [(r, a) for r, a in zip(results, applied_stages) if (r.scenario.objective.value if r.scenario.objective else "none") == key]
+        by_objective.append(ObjectiveBreakdown(
+            objective=key,
+            total=len(rows),
+            passed=sum(1 for _, a in rows if a.evaluation.status.value == "pass"),
+            flagged=sum(1 for _, a in rows if a.evaluation.status.value == "flagged"),
+            failed=sum(1 for _, a in rows if a.evaluation.status.value == "fail"),
+        ))
+
+    return BatchRunSummary(
+        seed=base_seed,
+        seed_set=seed_set_name,
+        total=total,
+        infeasible_count=infeasible_count,
+        first_attempt_passed=first_attempt_passed,
+        first_attempt_pass_rate_pct=round((first_attempt_passed / total) * 100, 1) if total else 0.0,
+        applied_passed=applied_passed,
+        applied_failed=applied_failed,
+        applied_flagged=applied_flagged,
+        applied_pass_rate_pct=round((applied_passed / total) * 100, 1) if total else 0.0,
+        repaired_count=repaired_count,
+        repair_rate_pct=round((repaired_count / total) * 100, 1) if total else 0.0,
+        raw_category_breakdown=[CategoryBreakdown(category=c, failed_or_flagged=n) for c, n in category_counts.items()],
+        by_objective=by_objective,
+        results=results,
+    )
+
+
+def _run_matrix(base_seed: int, n_per_cell: int, objectives: list, seed_set_name: str | None = None) -> BatchRunSummary:
+    results: list[ScenarioRunResult] = []
+    for d_idx, difficulty in enumerate(Difficulty):
+        for o_idx, objective in enumerate(objectives):
+            for rep in range(n_per_cell):
+                cell_seed = base_seed + d_idx * 10_000 + o_idx * 100 + rep
+                scenario = generate_scenario(difficulty, objective, seed=cell_seed)
+                results.append(_run_or_503(scenario))
+    return _summarize(results, base_seed, seed_set_name, objectives)
+
+
 class BatchRunRequest(BaseModel):
     n_per_cell: int = 1
     seed: int | None = None
@@ -95,7 +171,7 @@ def run_batch(req: BatchRunRequest):
     base_seed = req.seed if req.seed is not None else random.SystemRandom().randint(0, 2**31 - 1)
 
     if req.strip_objective:
-        objectives: list[Objective | None] = [None]
+        objectives: list = [None]
     elif req.full_matrix:
         objectives = list(Objective)
     elif req.objectives:
@@ -103,43 +179,30 @@ def run_batch(req: BatchRunRequest):
     else:
         objectives = list(Objective)
 
-    results: list[ScenarioRunResult] = []
-    for d_idx, difficulty in enumerate(Difficulty):
-        for o_idx, objective in enumerate(objectives):
-            for rep in range(req.n_per_cell):
-                cell_seed = base_seed + d_idx * 10_000 + o_idx * 100 + rep
-                scenario = generate_scenario(difficulty, objective, seed=cell_seed)
-                results.append(_run_or_503(scenario))
+    return _run_matrix(base_seed, req.n_per_cell, objectives)
 
-    total = len(results)
-    passed = sum(1 for r in results if r.evaluation.status.value == "pass")
-    failed = sum(1 for r in results if r.evaluation.status.value == "fail")
-    flagged = sum(1 for r in results if r.evaluation.status.value == "flagged")
-    repaired_count = sum(1 for r in results if r.repaired)
 
-    by_objective: list[ObjectiveBreakdown] = []
-    for objective in objectives:
-        key = objective.value if objective else "none"
-        rows = [r for r in results if (r.scenario.objective.value if r.scenario.objective else "none") == key]
-        by_objective.append(
-            ObjectiveBreakdown(
-                objective=key,
-                total=len(rows),
-                passed=sum(1 for r in rows if r.evaluation.status.value == "pass"),
-                flagged=sum(1 for r in rows if r.evaluation.status.value == "flagged"),
-                failed=sum(1 for r in rows if r.evaluation.status.value == "fail"),
-            )
-        )
+class BenchmarkEstimateResponse(BaseModel):
+    scenario_count: int
+    estimated_calls: float
 
-    return BatchRunSummary(
-        seed=base_seed,
-        total=total,
-        passed=passed,
-        failed=failed,
-        flagged=flagged,
-        pass_rate_pct=round((passed / total) * 100, 1) if total else 0.0,
-        repaired_count=repaired_count,
-        repair_rate_pct=round((repaired_count / total) * 100, 1) if total else 0.0,
-        by_objective=by_objective,
-        results=results,
-    )
+
+@router.get("/benchmark/estimate", response_model=BenchmarkEstimateResponse)
+def benchmark_estimate():
+    count = len(Difficulty) * len(Objective)  # n_per_cell=1 for the standard benchmark
+    return BenchmarkEstimateResponse(scenario_count=count, estimated_calls=round(count * 1.2, 1))
+
+
+class BenchmarkRunRequest(BaseModel):
+    use_held_out: bool = False
+
+
+@router.post("/benchmark/run", response_model=BatchRunSummary)
+def benchmark_run(req: BenchmarkRunRequest):
+    if req.use_held_out:
+        if not BENCHMARK_ALLOW_HELD_OUT:
+            raise HTTPException(status_code=403, detail="The held-out set is gated by BENCHMARK_ALLOW_HELD_OUT in tuning.py — flip it on only when actually reporting results, not while tuning.")
+        seed_set = HELD_OUT_SEED_SET
+    else:
+        seed_set = DEV_SEED_SET
+    return _run_matrix(seed_set["base_seed"], 1, list(Objective), seed_set_name=seed_set["name"])

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
 
 function splitEvenly(total, n) {
@@ -39,6 +39,8 @@ export default function ManualEntryForm({ original, presets, onSubmit, loading }
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [corrections, setCorrections] = useState([]);
   const [checking, setChecking] = useState(false);
+  const [facts, setFacts] = useState(null);
+  const [factsLoading, setFactsLoading] = useState(false);
 
   function patch(fields) {
     setScenario((s) => ({ ...s, ...fields }));
@@ -47,6 +49,21 @@ export default function ManualEntryForm({ original, presets, onSubmit, loading }
   function resetToGenerated() {
     setScenario(original);
   }
+
+  async function refreshFacts() {
+    setFactsLoading(true);
+    try {
+      const { facts: f } = await api.normalizeScenario(scenario);
+      setFacts(f);
+    } finally {
+      setFactsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshFacts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function setAggregateSolar(output_mw, forecast_mw) {
     const farms = expandSolar
@@ -170,7 +187,23 @@ export default function ManualEntryForm({ original, presets, onSubmit, loading }
             </select>
           </Field>
           <button type="button" className="secondary" onClick={resetToGenerated}>Reset to generated</button>
+          <button type="button" className="secondary" onClick={refreshFacts} disabled={factsLoading}>
+            {factsLoading ? "Checking…" : "Refresh physics facts"}
+          </button>
         </div>
+        {facts && (
+          <div className="row" style={{ marginTop: 10, fontSize: 13 }}>
+            <span className="badge" style={{ background: "#1f2b45", color: "#8fb4ff" }}>
+              generation {facts.total_generation_mw} MW
+            </span>
+            <span className="badge" style={{ background: facts.position === "surplus" ? "#1e4620" : facts.position === "shortfall" ? "#4a1f23" : "#1f2b45", color: facts.position === "surplus" ? "#6fe382" : facts.position === "shortfall" ? "#ff8a8a" : "#8fb4ff" }}>
+              {facts.position}: {facts.net_position_mw} MW
+            </span>
+            <span style={{ color: "#9aa4b2" }}>
+              battery discharge available: {facts.total_discharge_available_mw} MW · charge headroom: {facts.total_charge_headroom_mw} MW
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="panel" style={{ background: "#14181e" }}>

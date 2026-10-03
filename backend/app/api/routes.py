@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.agents.pipeline import run_decision_pipeline
 from app.agents.scenario_agent import generate_scenario, normalize_scenario
+from app.data import physics
 from app.data.benchmark_seeds import DEV_SEED_SET, HELD_OUT_SEED_SET
 from app.data.tuning import BENCHMARK_ALLOW_HELD_OUT, RULE_CATEGORY_MAP
 from app.models.schemas import (
@@ -60,12 +61,14 @@ class NormalizeRequest(BaseModel):
 class NormalizeResponse(BaseModel):
     scenario: EnvironmentState
     corrections: list[str]
+    facts: dict = {}
 
 
 @router.post("/scenario/normalize", response_model=NormalizeResponse)
 def scenario_normalize(req: NormalizeRequest):
     normalized, corrections = normalize_scenario(req.scenario)
-    return NormalizeResponse(scenario=normalized, corrections=corrections)
+    facts = physics.orchestrator_facts(normalized, normalized.previous_floor_pct)
+    return NormalizeResponse(scenario=normalized, corrections=corrections, facts=facts)
 
 
 @router.post("/run/single", response_model=ScenarioRunResult)

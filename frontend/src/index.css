@@ -117,6 +117,16 @@ pre {
 .rule-ok { color: #6fe382; }
 .rule-bad { color: #ff8a8a; }
 
+.result-pass, .result-fail, .result-flag, .result-na {
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.result-pass { color: #6fe382; }
+.result-fail { color: #ff8a8a; }
+.result-flag { color: #f5c663; }
+.result-na { color: #6b7585; }
+
 table {
   width: 100%;
   border-collapse: collapse;

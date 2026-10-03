@@ -59,15 +59,35 @@ export default function BatchRunPanel() {
       {summary && (
         <>
           <div className="row" style={{ marginTop: 14, gap: 24 }}>
-            <p style={{ fontSize: 18, margin: 0 }}>
-              Pass rate: <strong>{summary.pass_rate_pct}%</strong> ({summary.passed}/{summary.total} passed, {summary.failed} failed, {summary.flagged} flagged)
+            <p style={{ fontSize: 20, margin: 0 }}>
+              First-attempt pass rate: <strong>{summary.first_attempt_pass_rate_pct}%</strong>{" "}
+              <span style={{ fontSize: 12, color: "#9aa4b2" }}>({summary.first_attempt_passed}/{summary.total}) — the model's own score, before the balancer</span>
             </p>
-            <p style={{ fontSize: 18, margin: 0 }}>
-              Repair rate: <strong style={{ color: summary.repair_rate_pct > 20 ? "#f5a666" : "#9aa4b2" }}>{summary.repair_rate_pct}%</strong>{" "}
-              <span style={{ fontSize: 12, color: "#9aa4b2" }}>({summary.repaired_count} needed balancer repair above tolerance)</span>
-            </p>
-            <p style={{ fontSize: 13, margin: 0, color: "#9aa4b2" }}>seed: {summary.seed}</p>
           </div>
+          <div className="row" style={{ marginTop: 6, gap: 24 }}>
+            <p style={{ fontSize: 16, margin: 0 }}>
+              Applied pass rate: <strong>{summary.applied_pass_rate_pct}%</strong> ({summary.applied_passed}/{summary.total} passed, {summary.applied_failed} failed, {summary.applied_flagged} flagged)
+            </p>
+            <p style={{ fontSize: 16, margin: 0 }}>
+              Repair rate: <strong style={{ color: summary.repair_rate_pct > 20 ? "#f5a666" : "#9aa4b2" }}>{summary.repair_rate_pct}%</strong>{" "}
+              <span style={{ fontSize: 12, color: "#9aa4b2" }}>({summary.repaired_count} needed repair above tolerance)</span>
+            </p>
+            <p style={{ fontSize: 13, margin: 0, color: summary.infeasible_count > 0 ? "#f5a666" : "#9aa4b2" }}>
+              infeasible scenarios: {summary.infeasible_count}{summary.infeasible_count > 0 ? " (generator bug — should be 0)" : ""}
+            </p>
+            <p style={{ fontSize: 13, margin: 0, color: "#9aa4b2" }}>seed: {summary.seed}{summary.seed_set ? ` (${summary.seed_set})` : ""}</p>
+          </div>
+
+          <table style={{ marginTop: 12 }}>
+            <thead>
+              <tr><th>Category (raw-stage failures)</th><th>Count</th></tr>
+            </thead>
+            <tbody>
+              {summary.raw_category_breakdown.map((c) => (
+                <tr key={c.category}><td>{c.category}</td><td>{c.failed_or_flagged}</td></tr>
+              ))}
+            </tbody>
+          </table>
 
           <table style={{ marginTop: 12 }}>
             <thead>
@@ -92,14 +112,17 @@ export default function BatchRunPanel() {
                 <th>Tick</th>
                 <th>Difficulty</th>
                 <th>Objective</th>
-                <th>Status</th>
+                <th>Raw</th>
+                <th>Applied</th>
                 <th>Repaired</th>
-                <th>Failed/flagged rules</th>
+                <th>Applied failed/flagged rules</th>
               </tr>
             </thead>
             <tbody>
               {summary.results.map((r) => {
-                const failedRules = r.evaluation.rules.filter((x) => !x.passed).map((x) => x.rule_id);
+                const rawStage = r.stages.find((s) => s.name === "raw");
+                const appliedStage = r.stages.find((s) => s.name === "applied");
+                const failedRules = appliedStage.evaluation.rules.filter((x) => !x.passed && x.applicable).map((x) => x.rule_id);
                 const isOpen = expandedTick === r.scenario.tick;
                 return (
                   <Fragment key={r.scenario.tick}>
@@ -107,25 +130,26 @@ export default function BatchRunPanel() {
                       <td>{r.scenario.tick}</td>
                       <td>{r.scenario.difficulty}</td>
                       <td>{r.scenario.objective || "none"}</td>
-                      <td><span className={`badge ${r.evaluation.status}`}>{r.evaluation.status}</span></td>
+                      <td><span className={`badge ${rawStage.evaluation.status}`}>{rawStage.evaluation.status}</span></td>
+                      <td><span className={`badge ${appliedStage.evaluation.status}`}>{appliedStage.evaluation.status}</span></td>
                       <td>{r.repaired ? "yes" : "no"}</td>
                       <td style={{ fontSize: 12 }}>{failedRules.join(", ") || "—"}</td>
                     </tr>
                     {isOpen && (
                       <tr>
-                        <td colSpan={6}>
+                        <td colSpan={7}>
                           <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
                             <div style={{ flex: 1 }}>
                               <p style={{ fontSize: 11, color: "#9aa4b2" }}>Scenario (seed {r.scenario.seed})</p>
                               <pre style={{ maxHeight: 240 }}>{JSON.stringify(r.scenario, null, 2)}</pre>
                             </div>
                             <div style={{ flex: 1 }}>
-                              <p style={{ fontSize: 11, color: "#9aa4b2" }}>Applied decision</p>
-                              <pre style={{ maxHeight: 240 }}>{JSON.stringify(r.applied, null, 2)}</pre>
+                              <p style={{ fontSize: 11, color: "#9aa4b2" }}>Raw proposal + verdict</p>
+                              <pre style={{ maxHeight: 240 }}>{JSON.stringify(rawStage, null, 2)}</pre>
                             </div>
                             <div style={{ flex: 1 }}>
-                              <p style={{ fontSize: 11, color: "#9aa4b2" }}>Evaluator rules</p>
-                              <pre style={{ maxHeight: 240 }}>{JSON.stringify(r.evaluation.rules, null, 2)}</pre>
+                              <p style={{ fontSize: 11, color: "#9aa4b2" }}>Applied decision + verdict</p>
+                              <pre style={{ maxHeight: 240 }}>{JSON.stringify(appliedStage, null, 2)}</pre>
                             </div>
                           </div>
                         </td>

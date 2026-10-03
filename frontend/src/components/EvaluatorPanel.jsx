@@ -1,18 +1,34 @@
 import { useState } from "react";
 
+function resultWord(r) {
+  if (!r.applicable) return "N/A";
+  if (r.passed) return "PASS";
+  return r.severity === "fail" ? "FAIL" : "FLAG";
+}
+
+function resultClass(r) {
+  if (!r.applicable) return "result-na";
+  if (r.passed) return "result-pass";
+  return r.severity === "fail" ? "result-fail" : "result-flag";
+}
+
 function RuleRow({ r }) {
   return (
     <li key={r.rule_id}>
       <span>
         <strong>{r.rule_id}</strong>{" "}
-        <span className={`badge ${r.severity === "fail" ? "fail" : "flagged"}`} style={{ fontSize: 10, padding: "1px 6px" }}>
-          {r.severity}
-        </span>{" "}
-        — {r.description}
+        <span style={{ fontSize: 10, color: "#6b7585" }}>({r.severity === "fail" ? "golden rule" : "advisory"})</span>
+        {" "}— {r.description}
         <br />
         <span style={{ color: "#9aa4b2" }}>{r.detail}</span>
+        {r.value_label && (
+          <>
+            <br />
+            <span style={{ color: "#6b7585", fontSize: 12 }}>{r.value_label}: {r.value_actual} vs {r.value_reference}</span>
+          </>
+        )}
       </span>
-      <span className={r.passed ? "rule-ok" : "rule-bad"}>{r.passed ? "OK" : "VIOLATION"}</span>
+      <span className={resultClass(r)}>{resultWord(r)}</span>
     </li>
   );
 }
@@ -21,8 +37,9 @@ export default function EvaluatorPanel({ evaluation }) {
   const [showPassing, setShowPassing] = useState(false);
   if (!evaluation) return null;
 
-  const violated = evaluation.rules.filter((r) => !r.passed);
-  const passing = evaluation.rules.filter((r) => r.passed);
+  const notPassing = evaluation.rules.filter((r) => !r.passed && r.applicable);
+  const naRules = evaluation.rules.filter((r) => !r.applicable);
+  const passing = evaluation.rules.filter((r) => r.passed && r.applicable);
 
   return (
     <div className="panel">
@@ -32,15 +49,21 @@ export default function EvaluatorPanel({ evaluation }) {
         <span style={{ fontSize: 13, color: "#9aa4b2" }}>{evaluation.notes}</span>
       </div>
 
-      {violated.length > 0 ? (
+      {notPassing.length > 0 ? (
         <>
-          <h3 style={{ fontSize: 13, color: "#ff8a8a", margin: "10px 0 4px" }}>Violated or flagged ({violated.length})</h3>
+          <h3 style={{ fontSize: 13, color: "#ff8a8a", margin: "10px 0 4px" }}>Violated or flagged ({notPassing.length})</h3>
           <ul className="rule-list">
-            {violated.map((r) => <RuleRow key={r.rule_id} r={r} />)}
+            {notPassing.map((r) => <RuleRow key={r.rule_id} r={r} />)}
           </ul>
         </>
       ) : (
         <p style={{ fontSize: 13, color: "#6fe382" }}>No rules violated or flagged.</p>
+      )}
+
+      {naRules.length > 0 && (
+        <ul className="rule-list" style={{ marginTop: 8 }}>
+          {naRules.map((r) => <RuleRow key={r.rule_id} r={r} />)}
+        </ul>
       )}
 
       {passing.length > 0 && (

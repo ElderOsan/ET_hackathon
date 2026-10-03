@@ -113,8 +113,14 @@ export default function App() {
       {result && (
         <>
           <ScenarioPanel scenario={result.scenario} />
-          <DecisionPanel proposal={result.proposal} applied={result.applied} repairs={result.repairs} repaired={result.repaired} />
-          <EvaluatorPanel evaluation={result.evaluation} />
+          <DecisionPanel
+            rawStage={result.stages.find((s) => s.name === "raw")}
+            appliedStage={result.stages.find((s) => s.name === "applied")}
+            repairs={result.repairs}
+            repaired={result.repaired}
+            infeasible={result.infeasible}
+          />
+          <EvaluatorPanel evaluation={result.stages.find((s) => s.name === "applied").evaluation} />
         </>
       )}
 

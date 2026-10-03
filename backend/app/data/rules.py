@@ -78,19 +78,28 @@ def rule_2a_battery_absolute_floor(scenario: EnvironmentState, decision: Decisio
 
 def rule_3_unserved_load(scenario: EnvironmentState, decision: Decision) -> RuleResult:
     unserved = physics.unserved_mw(scenario, decision)
-    passed = unserved <= BALANCE_TOLERANCE_MW
+    achievable = physics.min_achievable_unserved_mw(scenario)
+    excess = unserved - achievable
+    passed = excess <= BALANCE_TOLERANCE_MW
     detail = (
-        f"{unserved:.1f}MW of total demand ({scenario.total_demand_mw:.1f}MW) went unserved."
+        f"{unserved:.1f}MW unserved vs {achievable:.1f}MW achievable minimum — {excess:.1f}MW is the decision's own fault, not physics."
         if not passed
-        else f"Total demand ({scenario.total_demand_mw:.1f}MW) fully served (unserved={unserved:.1f}MW)."
+        else (
+            f"{unserved:.1f}MW unserved matches the {achievable:.1f}MW physically achievable minimum — this scenario is infeasible, not a decision error."
+            if achievable > BALANCE_TOLERANCE_MW
+            else f"Total demand ({scenario.total_demand_mw:.1f}MW) fully served (unserved={unserved:.1f}MW)."
+        )
     )
-    return RuleResult(rule_id="rule_3", description="Total demand must be served (unserved_mw within tolerance)", severity="fail", passed=passed, detail=detail)
+    return RuleResult(
+        rule_id="rule_3", description="Unserved load must not exceed the physically achievable minimum", severity="fail", passed=passed, detail=detail,
+        value_label="unserved vs. achievable minimum", value_actual=round(unserved, 1), value_reference=round(achievable, 1),
+    )
 
 
 def rule_3b_reserve_margin(scenario: EnvironmentState, decision: Decision) -> RuleResult:
     unserved = physics.unserved_mw(scenario, decision)
     if unserved > BALANCE_TOLERANCE_MW:
-        return RuleResult(rule_id="rule_3b", description="Reserve-margin headroom meets the requirement", severity="flagged", passed=True, detail="Not applicable — load is already unserved (see rule_3).")
+        return RuleResult(rule_id="rule_3b", description="Reserve-margin headroom meets the requirement", severity="flagged", passed=True, applicable=False, detail="N/A — load is already unserved (see rule_3).")
     headroom = physics.reserve_margin_headroom_mw(scenario, decision, decision.applied_floor_pct)
     required = scenario.total_demand_mw * (RESERVE_MARGIN_PCT / 100)
     passed = headroom >= required
@@ -99,7 +108,10 @@ def rule_3b_reserve_margin(scenario: EnvironmentState, decision: Decision) -> Ru
         if passed
         else f"Reserve-margin headroom {headroom:.1f}MW is below the {required:.1f}MW requirement ({RESERVE_MARGIN_PCT:.0f}% of total demand) — load is served now but with thin margin."
     )
-    return RuleResult(rule_id="rule_3b", description="Reserve-margin headroom meets the requirement", severity="flagged", passed=passed, detail=detail)
+    return RuleResult(
+        rule_id="rule_3b", description="Reserve-margin headroom meets the requirement", severity="flagged", passed=passed, detail=detail,
+        value_label="headroom vs. required", value_actual=round(headroom, 1), value_reference=round(required, 1),
+    )
 
 
 def rule_4_no_sell_while_unmet(scenario: EnvironmentState, decision: Decision) -> RuleResult:
@@ -142,7 +154,10 @@ def rule_6_curtailment_amount(scenario: EnvironmentState, decision: Decision) ->
         if not passed
         else f"Curtailed {actual:.1f}MW vs {min_required:.1f}MW minimum required (within {CURTAIL_TOLERANCE_MW}MW tolerance)."
     )
-    return RuleResult(rule_id="rule_6", description="Curtailment must not exceed the minimum physically required (amount-based)", severity="fail", passed=passed, detail=detail)
+    return RuleResult(
+        rule_id="rule_6", description="Curtailment must not exceed the minimum physically required (amount-based)", severity="fail", passed=passed, detail=detail,
+        value_label="curtailed vs. minimum required", value_actual=round(actual, 1), value_reference=round(min_required, 1),
+    )
 
 
 def rule_7_transmission_and_frequency(scenario: EnvironmentState, decision: Decision) -> RuleResult:
@@ -248,23 +263,30 @@ def rule_9_cascade_deviation(scenario: EnvironmentState, decision: Decision) -> 
         tolerance = max(ref["reference_cost"], 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
         passed = actual_cost <= ref["reference_cost"] + tolerance
         detail = f"Net import cost ${actual_cost:.0f} vs reference ${ref['reference_cost']:.0f}" + ("." if passed else f" (exceeds {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
+        label, actual_val, ref_val = "net cost vs. reference ($)", actual_cost, ref["reference_cost"]
     elif top_priority == "carbon":
         actual_import = decision.market_amount_mw if decision.market_action == "buy" else 0.0
         tolerance = max(ref["min_grid_import_mw"], 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
         passed = actual_import <= ref["min_grid_import_mw"] + tolerance
         detail = f"Grid import {actual_import:.1f}MW (carbon proxy) vs reference minimum {ref['min_grid_import_mw']:.1f}MW" + ("." if passed else f" (exceeds {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
+        label, actual_val, ref_val = "grid import vs. reference minimum (MW)", actual_import, ref["min_grid_import_mw"]
     elif top_priority == "renewable_utilisation":
         actual_curtail = decision.curtail_solar_mw + decision.curtail_wind_mw
         min_required = physics.min_required_curtailment_mw(scenario)
         passed = actual_curtail <= min_required + CURTAIL_TOLERANCE_MW
         detail = f"Curtailed {actual_curtail:.1f}MW vs {min_required:.1f}MW minimum required" + ("." if passed else f" (exceeds {CURTAIL_TOLERANCE_MW}MW tolerance).")
+        label, actual_val, ref_val = "curtailed vs. minimum required (MW)", actual_curtail, min_required
     else:  # profit
         actual_revenue = (decision.market_amount_mw if decision.market_action == "sell" else 0.0) * scenario.electricity_price_per_mwh
         tolerance = max(ref["reference_revenue"], 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
         passed = actual_revenue >= ref["reference_revenue"] - tolerance
         detail = f"Net revenue ${actual_revenue:.0f} vs reference ${ref['reference_revenue']:.0f}" + ("." if passed else f" (below {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
+        label, actual_val, ref_val = "net revenue vs. reference ($)", actual_revenue, ref["reference_revenue"]
 
-    return RuleResult(rule_id="rule_9", description=f"Decision matches the declared cascade (top priority: {top_priority})", severity="flagged", passed=passed, detail=detail)
+    return RuleResult(
+        rule_id="rule_9", description=f"Decision matches the declared cascade (top priority: {top_priority})", severity="flagged", passed=passed, detail=detail,
+        value_label=label, value_actual=round(actual_val, 1), value_reference=round(ref_val, 1),
+    )
 
 
 def rule_10_repair_magnitude(repairs: list[FieldRepair]) -> RuleResult:
@@ -279,9 +301,11 @@ def rule_10_repair_magnitude(repairs: list[FieldRepair]) -> RuleResult:
     return RuleResult(rule_id="rule_10", description="Proposal needed no more than minor balancer repair", severity="flagged", passed=passed, detail=detail)
 
 
-def run_rules(scenario: EnvironmentState, decision: Decision, repairs: list[FieldRepair] | None = None) -> list[RuleResult]:
+def run_rules(scenario: EnvironmentState, decision: Decision, repairs: list[FieldRepair] | None = None, include_repair_rule: bool = True) -> list[RuleResult]:
+    """include_repair_rule=False for the 'raw' stage (pre-balancer) — rule_10 measures
+    balancer repair, which doesn't apply to a decision that hasn't been through it yet."""
     repairs = repairs or []
-    return [
+    rules = [
         rule_1_no_curtail_while_buying(scenario, decision),
         rule_2a_battery_absolute_floor(scenario, decision),
         rule_2b_battery_applied_floor(scenario, decision),
@@ -297,5 +321,7 @@ def run_rules(scenario: EnvironmentState, decision: Decision, repairs: list[Fiel
         rule_8d_floor_justification_present(scenario, decision),
         rule_8e_floor_clamped_or_ramped(scenario, decision),
         rule_9_cascade_deviation(scenario, decision),
-        rule_10_repair_magnitude(repairs),
     ]
+    if include_repair_rule:
+        rules.append(rule_10_repair_magnitude(repairs))
+    return rules

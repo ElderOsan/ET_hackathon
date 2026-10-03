@@ -1,10 +1,9 @@
 """Evaluator (Comparison Layer).
 
 Runs the full rule set (golden rules, severity "fail"; cascade/reserve-floor/repair checks,
-severity "flagged") on the APPLIED decision (post-balancer, per Brief 2) — never the raw
-model proposal. A failed "fail" rule means the decision is wrong regardless of objective; a
-failed "flagged" rule means it diverges from what the declared objective would prefer, or
-needed more than minor repair, without being unsafe.
+severity "flagged") against a decision. Brief 2 Patch: called once per stage — "raw" (the
+model's proposal, before the balancer, rule_10 excluded) and "applied" (after the balancer,
+all rules) — so both the model's own score and the system's final score are visible.
 """
 from __future__ import annotations
 
@@ -12,11 +11,11 @@ from app.data.rules import run_rules
 from app.models.schemas import Decision, EnvironmentState, EvalResult, EvalStatus, FieldRepair
 
 
-def evaluate(scenario: EnvironmentState, applied_decision: Decision, repairs: list[FieldRepair] | None = None) -> EvalResult:
-    rules = run_rules(scenario, applied_decision, repairs)
+def evaluate(scenario: EnvironmentState, decision: Decision, repairs: list[FieldRepair] | None = None, include_repair_rule: bool = True) -> EvalResult:
+    rules = run_rules(scenario, decision, repairs, include_repair_rule=include_repair_rule)
 
-    any_fail = any(not r.passed and r.severity == "fail" for r in rules)
-    any_flagged = any(not r.passed and r.severity == "flagged" for r in rules)
+    any_fail = any(not r.passed and r.applicable and r.severity == "fail" for r in rules)
+    any_flagged = any(not r.passed and r.applicable and r.severity == "flagged" for r in rules)
 
     if any_fail:
         status = EvalStatus.FAIL

@@ -12,6 +12,8 @@ class Difficulty(str, Enum):
     D2_CLOUDY_AFTERNOON = "cloudy_afternoon"
     D2_PRICE_SPIKE = "price_spike"
     D3_MULTI_FAILURE_CASCADE = "multi_failure_cascade"
+    D4_SURPLUS_DAY = "surplus_day"
+    D5_SHORTFALL_DAY = "shortfall_day"
 
 
 class Objective(str, Enum):
@@ -151,7 +153,11 @@ class RuleResult(BaseModel):
     description: str
     severity: Literal["fail", "flagged"]
     passed: bool
+    applicable: bool = Field(default=True, description="False means this rule could not be judged for this decision (e.g. rule_3b when load is already unserved) — display as N/A, not as a pass.")
     detail: str
+    value_label: Optional[str] = Field(default=None, description="For two-number rules (3, 6, 9): what the two values are, e.g. 'unserved vs. achievable minimum'.")
+    value_actual: Optional[float] = None
+    value_reference: Optional[float] = None
 
 
 class EvalStatus(str, Enum):
@@ -167,13 +173,18 @@ class EvalResult(BaseModel):
     notes: str = ""
 
 
+class DecisionStage(BaseModel):
+    name: Literal["raw", "applied"] = Field(description="'raw' = the Orchestrator's proposal exactly as submitted, before the balancer. 'applied' = after the balancer. A list, not two fixed fields, so a later stage (Brief 3's preflight loop) can be inserted between them without another schema change.")
+    decision: Decision
+    evaluation: EvalResult
+
+
 class ScenarioRunResult(BaseModel):
     scenario: EnvironmentState
-    proposal: Decision = Field(description="What the Orchestrator (model) returned, before the balancer.")
-    applied: Decision = Field(description="What was actually used — after the balancer made it physically consistent. The Evaluator judges this.")
+    stages: list[DecisionStage]
     repairs: list[FieldRepair] = Field(default_factory=list)
     repaired: bool = Field(description="True if any repair's magnitude exceeded REPAIR_TOLERANCE_MW.")
-    evaluation: EvalResult
+    infeasible: bool = Field(default=False, description="True if this scenario's min_achievable_unserved_mw > 0 — full service was physically impossible no matter the decision. The generator should never produce these; a nonzero count means a generator bug, not a model error.")
 
 
 class ObjectiveBreakdown(BaseModel):
@@ -184,14 +195,29 @@ class ObjectiveBreakdown(BaseModel):
     failed: int
 
 
+class CategoryBreakdown(BaseModel):
+    category: str
+    failed_or_flagged: int
+
+
 class BatchRunSummary(BaseModel):
     seed: int = Field(description="The base seed for this batch — reusing it reproduces every scenario in the run.")
+    seed_set: Optional[str] = Field(default=None, description="Name of the benchmark seed set used ('dev' or 'held_out'), if this run used one rather than an ad-hoc seed.")
     total: int
-    passed: int
-    failed: int
-    flagged: int
-    pass_rate_pct: float
+    infeasible_count: int = Field(description="Scenarios where min_achievable_unserved_mw > 0 — full service was physically impossible. Should always be 0; nonzero means a generator bug, not a model error.")
+
+    first_attempt_passed: int = Field(description="The Orchestrator's own raw proposal, judged before any balancer repair — the true score of the model.")
+    first_attempt_pass_rate_pct: float
+
+    applied_passed: int
+    applied_failed: int
+    applied_flagged: int
+    applied_pass_rate_pct: float
+
     repaired_count: int
-    repair_rate_pct: float = Field(description="Share of scenarios whose proposal needed repair above REPAIR_TOLERANCE_MW. A high pass rate alongside a high repair rate means the balancer is doing the work, not the model.")
+    repair_rate_pct: float = Field(description="Share of scenarios whose proposal needed repair above REPAIR_TOLERANCE_MW. A high applied pass rate alongside a high repair rate means the balancer is doing the work, not the model.")
+
+    raw_category_breakdown: list[CategoryBreakdown] = Field(description="Raw-stage failed/flagged rules grouped into arithmetic / strategy / outcome via the CONFIG category map.")
+
     by_objective: list[ObjectiveBreakdown]
     results: list[ScenarioRunResult]

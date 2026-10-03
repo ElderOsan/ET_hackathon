@@ -15,7 +15,7 @@ used in the power balance.
 """
 from __future__ import annotations
 
-from app.data.tuning import TICK_HOURS
+from app.data.tuning import BALANCE_TOLERANCE_MW, TICK_HOURS
 from app.models.schemas import Battery, Decision, EnvironmentState
 
 
@@ -108,3 +108,76 @@ def reserve_margin_headroom_mw(scenario: EnvironmentState, decision: Decision, f
     unused_import_headroom = max(0.0, scenario.transmission_headroom_mw - used_import)
 
     return unused_discharge + unused_import_headroom
+
+
+def min_achievable_unserved_mw(scenario: EnvironmentState) -> float:
+    """The best ANY decision could do: generation + every battery discharged all the way to
+    its absolute minimum safe charge (not just the reserve floor — this is "what's physically
+    possible", not "what's policy-compliant") + import up to transmission headroom. If this is
+    still short of total demand, the scenario is physically infeasible — a generator bug, not
+    a model mistake (Brief 2 Patch, Step 5)."""
+    generation = scenario.solar_output_mw + scenario.wind_output_mw
+    max_emergency_discharge = sum(max_discharge_mw(b, 0.0, emergency=True) for b in scenario.batteries)
+    best_case_supply = generation + max_emergency_discharge + scenario.transmission_headroom_mw
+    return max(0.0, scenario.total_demand_mw - best_case_supply)
+
+
+def total_generation_mw(scenario: EnvironmentState) -> float:
+    return scenario.solar_output_mw + scenario.wind_output_mw
+
+
+def net_position_mw(generation_mw: float, demand_mw: float) -> float:
+    """Positive = surplus, negative = shortfall."""
+    return generation_mw - demand_mw
+
+
+def position_label(net_position: float) -> str:
+    if net_position > BALANCE_TOLERANCE_MW:
+        return "surplus"
+    if net_position < -BALANCE_TOLERANCE_MW:
+        return "shortfall"
+    return "balanced"
+
+
+def battery_headroom_facts(scenario: EnvironmentState, floor_pct: float) -> dict:
+    """Per-battery and total discharge-available (above the applied floor) and charge-headroom
+    — the input facts the Orchestrator needs to reason about the shortfall/surplus ladder
+    without re-deriving battery math itself (Brief 2 Patch, Step 3)."""
+    per_battery = []
+    total_discharge = 0.0
+    total_charge = 0.0
+    for b in scenario.batteries:
+        discharge_available = round(max_discharge_mw(b, floor_pct, emergency=False), 1)
+        charge_headroom = round(max_charge_mw(b), 1)
+        per_battery.append({
+            "battery_id": b.id,
+            "discharge_available_mw": discharge_available,
+            "charge_headroom_mw": charge_headroom,
+        })
+        total_discharge += discharge_available
+        total_charge += charge_headroom
+    return {
+        "per_battery": per_battery,
+        "total_discharge_available_mw": round(total_discharge, 1),
+        "total_charge_headroom_mw": round(total_charge, 1),
+    }
+
+
+def orchestrator_facts(scenario: EnvironmentState, floor_pct: float) -> dict:
+    """Everything in Step 3: generation, net position (current and forecast), and battery
+    headroom — derived from scenario state ONLY. No hidden-tag content, objective expectation,
+    or Evaluator output belongs here; the Evaluator's independence from the Orchestrator's
+    input must stay intact."""
+    generation = total_generation_mw(scenario)
+    net_position = net_position_mw(generation, scenario.total_demand_mw)
+    forecast_generation = scenario.solar_forecast_mw + scenario.wind_forecast_mw
+    forecast_net_position = net_position_mw(forecast_generation, scenario.total_demand_forecast_mw)
+    return {
+        "total_generation_mw": round(generation, 1),
+        "net_position_mw": round(net_position, 1),
+        "position": position_label(net_position),
+        "forecast_total_generation_mw": round(forecast_generation, 1),
+        "forecast_net_position_mw": round(forecast_net_position, 1),
+        "forecast_position": position_label(forecast_net_position),
+        **battery_headroom_facts(scenario, floor_pct),
+    }

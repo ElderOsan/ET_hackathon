@@ -37,3 +37,39 @@ REPAIR_TOLERANCE_MW = 0.5  # total balancer repair magnitude allowed before rule
 # and is driven down by the transmission_at_capacity event — see physics.py docstring.
 TRANSMISSION_LINE_RATING_MW = 180.0
 TRANSMISSION_HEADROOM_CONSTRAINED_MW = 2.0  # near-zero headroom left when the line is "at capacity"
+
+# Brief 2 Patch — calibrated scenario generation ------------------------------------------
+
+# total_demand_mw is sampled within this band first; base/industrial are then split from it.
+DEMAND_BAND_MW = (90.0, 150.0)
+INDUSTRIAL_SHARE_RANGE = (0.25, 0.35)  # industrial_demand_mw as a share of total_demand_mw
+
+# Target generation/total_demand ratio per profile — rejection-sampled until the ratio lands
+# in range (or MAX_RESAMPLE_ATTEMPTS is hit, which should never happen in practice).
+PROFILE_RATIO_RANGES = {
+    "stable_day": (1.05, 1.25),
+    "cloudy_afternoon": (0.80, 1.00),
+    "price_spike": (0.95, 1.15),
+    "multi_failure_cascade": (0.70, 0.95),
+    "surplus_day": (1.30, 1.60),
+    "shortfall_day": (0.65, 0.90),
+}
+MAX_RESAMPLE_ATTEMPTS = 200
+
+REASONING_CHAR_CAP = 900  # submit_decision's reasoning field max length (JSON Schema maxLength)
+
+# Raw-rule-failure categories for the batch scoreboard (Step 6). rule_3 is special-cased in
+# code: "arithmetic" when the raw proposal over-allocated (repairs touched charge/sale/
+# curtailment), "outcome" when the shortfall was there regardless of allocation.
+RULE_CATEGORY_MAP = {
+    "rule_10": "arithmetic",
+    "rule_1": "strategy", "rule_2b": "strategy", "rule_4": "strategy", "rule_5": "strategy",
+    "rule_6": "strategy", "rule_8b": "strategy", "rule_8c": "strategy", "rule_8d": "strategy",
+    "rule_8e": "strategy", "rule_9": "strategy",
+    "rule_2a": "outcome", "rule_3b": "outcome", "rule_7": "outcome",
+    # rule_3 deliberately omitted — categorized dynamically, see routes.py
+}
+
+# Benchmark seed sets (Step 7). The held-out set is guarded by this flag so it's never
+# consumed casually while tuning — only flip it on when actually reporting results.
+BENCHMARK_ALLOW_HELD_OUT = False

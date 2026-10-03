@@ -86,7 +86,10 @@ def balance(scenario: EnvironmentState, proposal: Decision) -> tuple[Decision, l
     served = served_mw(curtail_solar, curtail_wind, purchase, sale)
     total_demand = scenario.total_demand_mw
 
-    # --- Phase A: load must be met before any sale or curtailment is allowed ---------------
+    # --- Phase A: load must be met before any sale or curtailment is allowed. If still short
+    # after both, unwind battery charging too (largest proposed charge first) — charging while
+    # load is unmet is never correct, same as selling or curtailing while unmet (Brief 2 Patch,
+    # Step 5, finding #4). Unwind order: curtailment, then sale, then charging. -------------
     if served < total_demand - BALANCE_TOLERANCE_MW and sale > 0:
         repairs.append(FieldRepair(field="market_amount_mw(sell)", proposed=sale, applied=0.0, delta_mw=-sale, reason="load unserved — cannot sell while demand is unmet"))
         sale = 0.0
@@ -95,6 +98,28 @@ def balance(scenario: EnvironmentState, proposal: Decision) -> tuple[Decision, l
         repairs.append(FieldRepair(field="curtailment", proposed=curtail_solar + curtail_wind, applied=0.0, delta_mw=-(curtail_solar + curtail_wind), reason="load unserved — cannot curtail while demand is unmet"))
         curtail_solar = curtail_wind = 0.0
         served = served_mw(curtail_solar, curtail_wind, purchase, sale)
+    if served < total_demand - BALANCE_TOLERANCE_MW:
+        charge_indices = sorted(
+            (i for i, a in enumerate(applied_battery_actions) if a.action == "charge"),
+            key=lambda i: -applied_battery_actions[i].amount_mw,
+        )
+        for i in charge_indices:
+            if served >= total_demand - BALANCE_TOLERANCE_MW:
+                break
+            action = applied_battery_actions[i]
+            shortfall = total_demand - served
+            reduction = round(min(action.amount_mw, shortfall), 1)
+            if reduction <= 0:
+                continue
+            new_amount = round(action.amount_mw - reduction, 1)
+            repairs.append(FieldRepair(
+                field=f"battery_actions[{action.battery_id}].amount_mw", proposed=action.amount_mw, applied=new_amount,
+                delta_mw=new_amount - action.amount_mw,
+                reason="load unserved — unwound charging to free generation for load (curtailment and sale already removed)",
+            ))
+            applied_battery_actions[i] = BatteryAction(battery_id=action.battery_id, action="charge" if new_amount > 0 else "hold", amount_mw=new_amount)
+            total_charge = sum(a.amount_mw for a in applied_battery_actions if a.action == "charge")
+            served = served_mw(curtail_solar, curtail_wind, purchase, sale)
     # If still short here, it's a genuine shortfall — left standing, not invented away.
 
     # --- Phase A.5: drop a purchase that surplus makes unnecessary -------------------------

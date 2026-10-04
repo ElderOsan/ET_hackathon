@@ -1,23 +1,26 @@
 {
-  "seed": 20261004,
-  "seed_set": "dev",
+  "seed": 0,
+  "seed_set": "reevaluated",
   "total": 72,
   "infeasible_count": 0,
   "judged_count": 72,
   "margin_infeasible_count": 10,
   "na_counts_by_rule": {
-    "rule_9": 35,
+    "rule_9": 30,
     "rule_5": 36,
     "rule_3b": 1
   },
   "unresolved_count": 0,
   "unresolved": [],
-  "first_attempt_passed": 54,
-  "first_attempt_pass_rate_pct": 75.0,
-  "applied_passed": 54,
+  "safe_mode_count": 0,
+  "safe_mode_passed": 0,
+  "safe_mode_pass_rate_pct": 0.0,
+  "first_attempt_passed": 59,
+  "first_attempt_pass_rate_pct": 81.9,
+  "applied_passed": 59,
   "applied_failed": 2,
-  "applied_flagged": 16,
-  "applied_pass_rate_pct": 75.0,
+  "applied_flagged": 11,
+  "applied_pass_rate_pct": 81.9,
   "repaired_count": 3,
   "repair_rate_pct": 4.2,
   "raw_category_breakdown": [
@@ -27,7 +30,7 @@
     },
     {
       "category": "strategy",
-      "failed_or_flagged": 24
+      "failed_or_flagged": 18
     },
     {
       "category": "outcome",
@@ -38,15 +41,15 @@
     {
       "objective": "cost_efficiency",
       "total": 18,
-      "passed": 15,
-      "flagged": 2,
+      "passed": 16,
+      "flagged": 1,
       "failed": 1
     },
     {
       "objective": "min_carbon",
       "total": 18,
-      "passed": 17,
-      "flagged": 1,
+      "passed": 18,
+      "flagged": 0,
       "failed": 0
     },
     {
@@ -59,8 +62,8 @@
     {
       "objective": "max_profit",
       "total": 18,
-      "passed": 6,
-      "flagged": 12,
+      "passed": 9,
+      "flagged": 9,
       "failed": 0
     }
   ],
@@ -8891,10 +8894,10 @@
                 "severity": "flagged",
                 "passed": true,
                 "applicable": true,
-                "detail": "Grid import 14.8MW (carbon proxy) vs reference minimum 14.6MW.",
+                "detail": "Grid import 14.8MW (carbon proxy) vs reference minimum 14.8MW.",
                 "value_label": "grid import vs. reference minimum (MW)",
                 "value_actual": 14.8,
-                "value_reference": 14.6
+                "value_reference": 14.8
               }
             ],
             "notes": "All checks passed."
@@ -9093,10 +9096,10 @@
                 "severity": "flagged",
                 "passed": true,
                 "applicable": true,
-                "detail": "Grid import 14.8MW (carbon proxy) vs reference minimum 14.6MW.",
+                "detail": "Grid import 14.8MW (carbon proxy) vs reference minimum 14.8MW.",
                 "value_label": "grid import vs. reference minimum (MW)",
                 "value_actual": 14.8,
-                "value_reference": 14.6
+                "value_reference": 14.8
               },
               {
                 "rule_id": "rule_10",
@@ -12467,7 +12470,7 @@
           },
           "evaluation": {
             "tick": 24,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -12627,15 +12630,15 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: profit)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Revenue $0 (sell 0.0MW @ $49/MWh) - cost $49 (buy 0.9MW @ $54/MWh) = net profit $-49 vs reference $0 (below 5% tolerance).",
+                "detail": "Revenue $0 (sell 0.0MW @ $49/MWh) - cost $49 (buy 0.9MW @ $54/MWh) = net profit $-49 vs reference $-49.",
                 "value_label": "net profit vs. reference ($)",
                 "value_actual": -49.0,
-                "value_reference": 0.0
+                "value_reference": -49.0
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         },
         {
@@ -12669,7 +12672,7 @@
           },
           "evaluation": {
             "tick": 24,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -12829,12 +12832,12 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: profit)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Revenue $0 (sell 0.0MW @ $49/MWh) - cost $49 (buy 0.9MW @ $54/MWh) = net profit $-49 vs reference $0 (below 5% tolerance).",
+                "detail": "Revenue $0 (sell 0.0MW @ $49/MWh) - cost $49 (buy 0.9MW @ $54/MWh) = net profit $-49 vs reference $-49.",
                 "value_label": "net profit vs. reference ($)",
                 "value_actual": -49.0,
-                "value_reference": 0.0
+                "value_reference": -49.0
               },
               {
                 "rule_id": "rule_10",
@@ -12848,7 +12851,7 @@
                 "value_reference": null
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         }
       ],
@@ -20099,12 +20102,12 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: cost)",
                 "severity": "flagged",
-                "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change net import cost here (best and worst feasible outcomes both ~$3452).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "passed": false,
+                "applicable": true,
+                "detail": "Net import cost $1929 vs reference $677 (exceeds 5% tolerance).",
+                "value_label": "net cost vs. reference ($)",
+                "value_actual": 1929.0,
+                "value_reference": 676.8
               }
             ],
             "notes": "One or more golden rules violated."
@@ -20302,11 +20305,11 @@
                 "description": "Decision matches the declared cascade (top priority: cost)",
                 "severity": "flagged",
                 "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change net import cost here (best and worst feasible outcomes both ~$3452).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "applicable": true,
+                "detail": "Net import cost $677 vs reference $677.",
+                "value_label": "net cost vs. reference ($)",
+                "value_actual": 676.8,
+                "value_reference": 676.8
               },
               {
                 "rule_id": "rule_10",
@@ -21167,11 +21170,11 @@
                 "description": "Decision matches the declared cascade (top priority: carbon)",
                 "severity": "flagged",
                 "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change grid import here (best and worst feasible outcomes both ~10.4MW).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "applicable": true,
+                "detail": "Grid import 2.1MW (carbon proxy) vs reference minimum 2.0MW.",
+                "value_label": "grid import vs. reference minimum (MW)",
+                "value_actual": 2.1,
+                "value_reference": 2.0
               }
             ],
             "notes": "All checks passed."
@@ -21364,11 +21367,11 @@
                 "description": "Decision matches the declared cascade (top priority: carbon)",
                 "severity": "flagged",
                 "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change grid import here (best and worst feasible outcomes both ~10.4MW).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "applicable": true,
+                "detail": "Grid import 2.0MW (carbon proxy) vs reference minimum 2.0MW.",
+                "value_label": "grid import vs. reference minimum (MW)",
+                "value_actual": 2.0,
+                "value_reference": 2.0
               },
               {
                 "rule_id": "rule_10",
@@ -21702,11 +21705,11 @@
                 "description": "Decision matches the declared cascade (top priority: carbon)",
                 "severity": "flagged",
                 "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change grid import here (best and worst feasible outcomes both ~6.9MW).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "applicable": true,
+                "detail": "Grid import 0.0MW (carbon proxy) vs reference minimum 2.0MW.",
+                "value_label": "grid import vs. reference minimum (MW)",
+                "value_actual": 0.0,
+                "value_reference": 2.0
               }
             ],
             "notes": "All checks passed."
@@ -21899,11 +21902,11 @@
                 "description": "Decision matches the declared cascade (top priority: carbon)",
                 "severity": "flagged",
                 "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change grid import here (best and worst feasible outcomes both ~6.9MW).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "applicable": true,
+                "detail": "Grid import 0.0MW (carbon proxy) vs reference minimum 2.0MW.",
+                "value_label": "grid import vs. reference minimum (MW)",
+                "value_actual": 0.0,
+                "value_reference": 2.0
               },
               {
                 "rule_id": "rule_10",
@@ -22229,11 +22232,11 @@
                 "description": "Decision matches the declared cascade (top priority: carbon)",
                 "severity": "flagged",
                 "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change grid import here (best and worst feasible outcomes both ~5.7MW).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "applicable": true,
+                "detail": "Grid import 0.0MW (carbon proxy) vs reference minimum 2.0MW.",
+                "value_label": "grid import vs. reference minimum (MW)",
+                "value_actual": 0.0,
+                "value_reference": 2.0
               }
             ],
             "notes": "All checks passed."
@@ -22426,11 +22429,11 @@
                 "description": "Decision matches the declared cascade (top priority: carbon)",
                 "severity": "flagged",
                 "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change grid import here (best and worst feasible outcomes both ~5.7MW).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "applicable": true,
+                "detail": "Grid import 0.0MW (carbon proxy) vs reference minimum 2.0MW.",
+                "value_label": "grid import vs. reference minimum (MW)",
+                "value_actual": 0.0,
+                "value_reference": 2.0
               },
               {
                 "rule_id": "rule_10",
@@ -24337,11 +24340,11 @@
                 "description": "Decision matches the declared cascade (top priority: profit)",
                 "severity": "flagged",
                 "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change net profit here (best and worst feasible outcomes both ~$-1582).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "applicable": true,
+                "detail": "Revenue $0 (sell 0.0MW @ $251/MWh) - cost $0 (buy 0.0MW @ $278/MWh) = net profit $0 vs reference $-555.",
+                "value_label": "net profit vs. reference ($)",
+                "value_actual": 0.0,
+                "value_reference": -555.2
               }
             ],
             "notes": "All checks passed."
@@ -24534,11 +24537,11 @@
                 "description": "Decision matches the declared cascade (top priority: profit)",
                 "severity": "flagged",
                 "passed": true,
-                "applicable": false,
-                "detail": "N/A \u2014 no decision could change net profit here (best and worst feasible outcomes both ~$-1582).",
-                "value_label": null,
-                "value_actual": null,
-                "value_reference": null
+                "applicable": true,
+                "detail": "Revenue $0 (sell 0.0MW @ $251/MWh) - cost $0 (buy 0.0MW @ $278/MWh) = net profit $0 vs reference $-555.",
+                "value_label": "net profit vs. reference ($)",
+                "value_actual": 0.0,
+                "value_reference": -555.2
               },
               {
                 "rule_id": "rule_10",
@@ -33240,7 +33243,7 @@
           },
           "evaluation": {
             "tick": 63,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -33268,9 +33271,9 @@
                 "rule_id": "rule_2b",
                 "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "battery_1 would drop to 25.0% (applied floor 25.0%)",
+                "detail": "No battery discharged below the Orchestrator's own applied floor.",
                 "value_label": null,
                 "value_actual": null,
                 "value_reference": null
@@ -33400,15 +33403,15 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: cost)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Net import cost $4897 vs reference $4326 (exceeds 5% tolerance).",
+                "detail": "Net import cost $4897 vs reference $4896.",
                 "value_label": "net cost vs. reference ($)",
                 "value_actual": 4896.5,
-                "value_reference": 4326.4
+                "value_reference": 4896.5
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         },
         {
@@ -33442,7 +33445,7 @@
           },
           "evaluation": {
             "tick": 63,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -33470,9 +33473,9 @@
                 "rule_id": "rule_2b",
                 "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "battery_1 would drop to 25.0% (applied floor 25.0%)",
+                "detail": "No battery discharged below the Orchestrator's own applied floor.",
                 "value_label": null,
                 "value_actual": null,
                 "value_reference": null
@@ -33602,12 +33605,12 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: cost)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Net import cost $4897 vs reference $4326 (exceeds 5% tolerance).",
+                "detail": "Net import cost $4897 vs reference $4896.",
                 "value_label": "net cost vs. reference ($)",
                 "value_actual": 4896.5,
-                "value_reference": 4326.4
+                "value_reference": 4896.5
               },
               {
                 "rule_id": "rule_10",
@@ -33621,7 +33624,7 @@
                 "value_reference": null
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         }
       ],
@@ -33772,7 +33775,7 @@
           },
           "evaluation": {
             "tick": 64,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -33932,15 +33935,15 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: carbon)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Grid import 21.8MW (carbon proxy) vs reference minimum 13.8MW (exceeds 5% tolerance).",
+                "detail": "Grid import 21.8MW (carbon proxy) vs reference minimum 21.8MW.",
                 "value_label": "grid import vs. reference minimum (MW)",
                 "value_actual": 21.8,
-                "value_reference": 13.8
+                "value_reference": 21.8
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         },
         {
@@ -33974,7 +33977,7 @@
           },
           "evaluation": {
             "tick": 64,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -34134,12 +34137,12 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: carbon)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Grid import 21.8MW (carbon proxy) vs reference minimum 13.8MW (exceeds 5% tolerance).",
+                "detail": "Grid import 21.8MW (carbon proxy) vs reference minimum 21.8MW.",
                 "value_label": "grid import vs. reference minimum (MW)",
                 "value_actual": 21.8,
-                "value_reference": 13.8
+                "value_reference": 21.8
               },
               {
                 "rule_id": "rule_10",
@@ -34153,7 +34156,7 @@
                 "value_reference": null
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         }
       ],
@@ -34466,10 +34469,10 @@
                 "severity": "flagged",
                 "passed": true,
                 "applicable": true,
-                "detail": "Grid import 21.0MW (carbon proxy) vs reference minimum 20.0MW.",
+                "detail": "Grid import 21.0MW (carbon proxy) vs reference minimum 21.0MW.",
                 "value_label": "grid import vs. reference minimum (MW)",
                 "value_actual": 21.0,
-                "value_reference": 20.0
+                "value_reference": 21.0
               }
             ],
             "notes": "All checks passed."
@@ -34668,10 +34671,10 @@
                 "severity": "flagged",
                 "passed": true,
                 "applicable": true,
-                "detail": "Grid import 21.0MW (carbon proxy) vs reference minimum 20.0MW.",
+                "detail": "Grid import 21.0MW (carbon proxy) vs reference minimum 21.0MW.",
                 "value_label": "grid import vs. reference minimum (MW)",
                 "value_actual": 21.0,
-                "value_reference": 20.0
+                "value_reference": 21.0
               },
               {
                 "rule_id": "rule_10",
@@ -36964,7 +36967,7 @@
           },
           "evaluation": {
             "tick": 70,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -36992,9 +36995,9 @@
                 "rule_id": "rule_2b",
                 "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "battery_1 would drop to 25.0% (applied floor 25.0%)",
+                "detail": "No battery discharged below the Orchestrator's own applied floor.",
                 "value_label": null,
                 "value_actual": null,
                 "value_reference": null
@@ -37124,15 +37127,15 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: profit)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Revenue $0 (sell 0.0MW @ $233/MWh) - cost $2783 (buy 10.8MW @ $258/MWh) = net profit $-2783 vs reference $-2113 (below 5% tolerance).",
+                "detail": "Revenue $0 (sell 0.0MW @ $233/MWh) - cost $2783 (buy 10.8MW @ $258/MWh) = net profit $-2783 vs reference $-2783.",
                 "value_label": "net profit vs. reference ($)",
                 "value_actual": -2782.8,
-                "value_reference": -2112.9
+                "value_reference": -2782.8
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         },
         {
@@ -37166,7 +37169,7 @@
           },
           "evaluation": {
             "tick": 70,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -37194,9 +37197,9 @@
                 "rule_id": "rule_2b",
                 "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "battery_1 would drop to 25.0% (applied floor 25.0%)",
+                "detail": "No battery discharged below the Orchestrator's own applied floor.",
                 "value_label": null,
                 "value_actual": null,
                 "value_reference": null
@@ -37326,12 +37329,12 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: profit)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Revenue $0 (sell 0.0MW @ $233/MWh) - cost $2783 (buy 10.8MW @ $258/MWh) = net profit $-2783 vs reference $-2113 (below 5% tolerance).",
+                "detail": "Revenue $0 (sell 0.0MW @ $233/MWh) - cost $2783 (buy 10.8MW @ $258/MWh) = net profit $-2783 vs reference $-2783.",
                 "value_label": "net profit vs. reference ($)",
                 "value_actual": -2782.8,
-                "value_reference": -2112.9
+                "value_reference": -2782.8
               },
               {
                 "rule_id": "rule_10",
@@ -37345,7 +37348,7 @@
                 "value_reference": null
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         }
       ],
@@ -37496,7 +37499,7 @@
           },
           "evaluation": {
             "tick": 71,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -37656,15 +37659,15 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: profit)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Revenue $0 (sell 0.0MW @ $161/MWh) - cost $5123 (buy 28.8MW @ $178/MWh) = net profit $-5123 vs reference $-3806 (below 5% tolerance).",
+                "detail": "Revenue $0 (sell 0.0MW @ $161/MWh) - cost $5123 (buy 28.8MW @ $178/MWh) = net profit $-5123 vs reference $-5123.",
                 "value_label": "net profit vs. reference ($)",
                 "value_actual": -5122.7,
-                "value_reference": -3806.4
+                "value_reference": -5122.7
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         },
         {
@@ -37698,7 +37701,7 @@
           },
           "evaluation": {
             "tick": 71,
-            "status": "flagged",
+            "status": "pass",
             "rules": [
               {
                 "rule_id": "rule_1",
@@ -37858,12 +37861,12 @@
                 "rule_id": "rule_9",
                 "description": "Decision matches the declared cascade (top priority: profit)",
                 "severity": "flagged",
-                "passed": false,
+                "passed": true,
                 "applicable": true,
-                "detail": "Revenue $0 (sell 0.0MW @ $161/MWh) - cost $5123 (buy 28.8MW @ $178/MWh) = net profit $-5123 vs reference $-3806 (below 5% tolerance).",
+                "detail": "Revenue $0 (sell 0.0MW @ $161/MWh) - cost $5123 (buy 28.8MW @ $178/MWh) = net profit $-5123 vs reference $-5123.",
                 "value_label": "net profit vs. reference ($)",
                 "value_actual": -5122.7,
-                "value_reference": -3806.4
+                "value_reference": -5122.7
               },
               {
                 "rule_id": "rule_10",
@@ -37877,7 +37880,7 @@
                 "value_reference": null
               }
             ],
-            "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+            "notes": "All checks passed."
           }
         }
       ],

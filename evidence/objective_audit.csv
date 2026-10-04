@@ -1,0 +1,73 @@
+tick,seed,profile,objective,applied_status,rule9_applicable,rule9_passed,rule9_value_label,rule9_actual,rule9_reference,rule5_applicable,rule2b_applicable,fired_rules
+1,20261004,stable_day,cost_efficiency,pass,False,True,,,,True,True,
+2,20261005,stable_day,cost_efficiency,pass,False,True,,,,True,True,
+3,20261006,stable_day,cost_efficiency,pass,False,True,,,,True,True,
+4,20261104,stable_day,min_carbon,pass,False,True,,,,False,True,
+5,20261105,stable_day,min_carbon,pass,False,True,,,,False,True,
+6,20261106,stable_day,min_carbon,pass,False,True,,,,False,True,
+7,20261204,stable_day,max_renewable_utilisation,pass,True,True,curtailed vs. minimum required (MW),0.0,0.0,False,True,
+8,20261205,stable_day,max_renewable_utilisation,pass,True,True,curtailed vs. minimum required (MW),0.0,0.0,False,True,
+9,20261206,stable_day,max_renewable_utilisation,pass,True,True,curtailed vs. minimum required (MW),0.0,0.0,False,True,
+10,20261304,stable_day,max_profit,flagged,True,False,net profit vs. reference ($),0.0,519.5,True,True,rule_9
+11,20261305,stable_day,max_profit,flagged,True,False,net profit vs. reference ($),0.0,639.5,True,True,rule_9
+12,20261306,stable_day,max_profit,flagged,True,False,net profit vs. reference ($),0.0,247.4,True,True,rule_9
+13,20271004,cloudy_afternoon,cost_efficiency,pass,True,True,net cost vs. reference ($),0.0,0.0,True,True,
+14,20271005,cloudy_afternoon,cost_efficiency,pass,True,True,net cost vs. reference ($),0.0,0.0,True,True,
+15,20271006,cloudy_afternoon,cost_efficiency,pass,True,True,net cost vs. reference ($),0.0,0.0,True,True,
+16,20271104,cloudy_afternoon,min_carbon,pass,True,True,grid import vs. reference minimum (MW),1.9,1.9,False,True,
+17,20271105,cloudy_afternoon,min_carbon,pass,True,True,grid import vs. reference minimum (MW),14.8,14.8,False,True,
+18,20271106,cloudy_afternoon,min_carbon,pass,True,True,grid import vs. reference minimum (MW),0.0,0.0,False,True,
+19,20271204,cloudy_afternoon,max_renewable_utilisation,pass,False,True,,,,False,True,
+20,20271205,cloudy_afternoon,max_renewable_utilisation,pass,False,True,,,,False,True,
+21,20271206,cloudy_afternoon,max_renewable_utilisation,pass,False,True,,,,False,True,
+22,20271304,cloudy_afternoon,max_profit,pass,False,True,,,,True,True,
+23,20271305,cloudy_afternoon,max_profit,pass,False,True,,,,True,True,
+24,20271306,cloudy_afternoon,max_profit,pass,True,True,net profit vs. reference ($),-49.0,-49.0,True,True,
+25,20281004,price_spike,cost_efficiency,pass,False,True,,,,True,True,
+26,20281005,price_spike,cost_efficiency,pass,True,True,net cost vs. reference ($),0.0,0.0,True,True,
+27,20281006,price_spike,cost_efficiency,flagged,False,True,,,,True,True,rule_5
+28,20281104,price_spike,min_carbon,pass,False,True,,,,False,True,
+29,20281105,price_spike,min_carbon,pass,False,True,,,,False,True,
+30,20281106,price_spike,min_carbon,pass,False,True,,,,False,True,
+31,20281204,price_spike,max_renewable_utilisation,pass,False,True,,,,False,True,
+32,20281205,price_spike,max_renewable_utilisation,flagged,True,True,curtailed vs. minimum required (MW),0.0,0.0,False,True,rule_8b
+33,20281206,price_spike,max_renewable_utilisation,pass,False,True,,,,False,True,
+34,20281304,price_spike,max_profit,flagged,True,False,net profit vs. reference ($),0.0,1563.2,True,True,rule_5;rule_9
+35,20281305,price_spike,max_profit,flagged,True,False,net profit vs. reference ($),0.0,308.9,True,True,rule_5;rule_9
+36,20281306,price_spike,max_profit,flagged,True,False,net profit vs. reference ($),0.0,3022.1,True,True,rule_5;rule_9
+37,20291004,multi_failure_cascade,cost_efficiency,pass,True,True,net cost vs. reference ($),0.0,0.0,True,True,
+38,20291005,multi_failure_cascade,cost_efficiency,fail,True,True,net cost vs. reference ($),676.8,676.8,True,True,rule_3;rule_10
+39,20291006,multi_failure_cascade,cost_efficiency,pass,True,True,net cost vs. reference ($),0.0,0.0,True,True,
+40,20291104,multi_failure_cascade,min_carbon,pass,True,True,grid import vs. reference minimum (MW),2.0,2.0,False,True,
+41,20291105,multi_failure_cascade,min_carbon,pass,True,True,grid import vs. reference minimum (MW),0.0,2.0,False,True,
+42,20291106,multi_failure_cascade,min_carbon,pass,True,True,grid import vs. reference minimum (MW),0.0,2.0,False,True,
+43,20291204,multi_failure_cascade,max_renewable_utilisation,pass,False,True,,,,False,True,
+44,20291205,multi_failure_cascade,max_renewable_utilisation,pass,False,True,,,,False,True,
+45,20291206,multi_failure_cascade,max_renewable_utilisation,pass,False,True,,,,False,True,
+46,20291304,multi_failure_cascade,max_profit,pass,True,True,net profit vs. reference ($),0.0,-555.2,True,True,
+47,20291305,multi_failure_cascade,max_profit,pass,True,True,net profit vs. reference ($),-592.2,-592.2,True,True,
+48,20291306,multi_failure_cascade,max_profit,pass,True,True,net profit vs. reference ($),-234.0,-234.0,True,True,
+49,20301004,surplus_day,cost_efficiency,pass,False,True,,,,True,True,
+50,20301005,surplus_day,cost_efficiency,pass,False,True,,,,True,True,
+51,20301006,surplus_day,cost_efficiency,pass,False,True,,,,True,True,
+52,20301104,surplus_day,min_carbon,pass,False,True,,,,False,True,
+53,20301105,surplus_day,min_carbon,pass,False,True,,,,False,True,
+54,20301106,surplus_day,min_carbon,pass,False,True,,,,False,True,
+55,20301204,surplus_day,max_renewable_utilisation,fail,True,False,curtailed vs. minimum required (MW),17.7,0.0,False,True,rule_6;rule_9;rule_10
+56,20301205,surplus_day,max_renewable_utilisation,pass,True,True,curtailed vs. minimum required (MW),0.0,0.0,False,True,
+57,20301206,surplus_day,max_renewable_utilisation,pass,True,True,curtailed vs. minimum required (MW),0.0,0.0,False,True,
+58,20301304,surplus_day,max_profit,flagged,True,False,net profit vs. reference ($),1080.7,1627.9,True,True,rule_9
+59,20301305,surplus_day,max_profit,flagged,True,False,net profit vs. reference ($),612.8,992.7,True,True,rule_9
+60,20301306,surplus_day,max_profit,flagged,True,False,net profit vs. reference ($),792.2,1155.4,True,True,rule_9
+61,20311004,shortfall_day,cost_efficiency,pass,True,True,net cost vs. reference ($),5226.2,5226.2,True,True,
+62,20311005,shortfall_day,cost_efficiency,pass,True,True,net cost vs. reference ($),3798.6,3798.6,True,True,
+63,20311006,shortfall_day,cost_efficiency,pass,True,True,net cost vs. reference ($),4896.5,4896.5,True,True,
+64,20311104,shortfall_day,min_carbon,pass,True,True,grid import vs. reference minimum (MW),21.8,21.8,False,True,
+65,20311105,shortfall_day,min_carbon,pass,True,True,grid import vs. reference minimum (MW),21.0,21.0,False,True,
+66,20311106,shortfall_day,min_carbon,pass,True,True,grid import vs. reference minimum (MW),7.5,7.5,False,True,
+67,20311204,shortfall_day,max_renewable_utilisation,pass,False,True,,,,False,True,
+68,20311205,shortfall_day,max_renewable_utilisation,pass,False,True,,,,False,True,
+69,20311206,shortfall_day,max_renewable_utilisation,pass,False,True,,,,False,True,
+70,20311304,shortfall_day,max_profit,pass,True,True,net profit vs. reference ($),-2782.8,-2782.8,True,True,
+71,20311305,shortfall_day,max_profit,pass,True,True,net profit vs. reference ($),-5122.7,-5122.7,True,True,
+72,20311306,shortfall_day,max_profit,pass,True,True,net profit vs. reference ($),-3507.2,-3507.2,True,True,

@@ -1,0 +1,41 @@
+{
+  "description": "Round 0 exit tiers, pre-registered before the run (same discipline as gate.json) -- the run must not be tuned to reach these.",
+  "run_spec": {
+    "seed_set": "dev",
+    "base_seed": 20261004,
+    "n_per_cell": 3,
+    "scenario_count": 72,
+    "denominator_note": "every scenario in the denominator -- no exclusions"
+  },
+  "tiers": {
+    "tier_G": {
+      "overall_first_attempt_pass": {"min_pct": 80.0, "min_count": 58, "of": 72},
+      "stable_surplus_shortfall_pass": {"min_pct": 92.0, "min_count": 34, "of": 36},
+      "non_fail_rate": {"min_pct": 97.0},
+      "per_objective_min_passes_of_18": 12,
+      "avoidable_unserved_pct": {"max_pct": 5.0},
+      "qualitative": [
+        "safe mode demonstrated",
+        "replay matches 72/72",
+        "deterministic suite green",
+        "every non-pass classified",
+        "zero verdict inconsistencies"
+      ]
+    },
+    "tier_A": {
+      "overall_first_attempt_pass": {"min_pct": 80.0, "min_count": 58, "of": 72},
+      "stable_surplus_shortfall_pass": {"min_pct": 86.0, "min_count": 31, "of": 36},
+      "non_fail_rate": {"min_pct": 95.0, "min_count": 69, "of": 72},
+      "per_objective_min_passes_of_18": 11,
+      "avoidable_unserved_pct": {"max_pct": 5.0},
+      "qualitative": [
+        "safe mode demonstrated",
+        "replay matches 72/72",
+        "deterministic suite green",
+        "every non-pass classified",
+        "zero verdict inconsistencies"
+      ]
+    }
+  },
+  "instructions": "Report the tier reached (G, A, or neither) with each line's number and interval, plus per-objective counts both over active rule_9 rows and over all 18 rows. Do not tune anything to reach a tier. If neither tier is met, report plainly with the top two failure classes and their counts."
+}

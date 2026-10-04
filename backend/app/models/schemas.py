@@ -209,7 +209,7 @@ class BatchRunSummary(BaseModel):
     total: int
     infeasible_count: int = Field(description="Scenarios where min_achievable_unserved_mw > 0 — full service was physically impossible. Should always be 0; nonzero means a generator bug, not a model error.")
     margin_infeasible_count: int = Field(default=0, description="Scenarios where load is served but no decision could reach the reserve-margin target (rule_3b). Expected to be nonzero sometimes — extreme cascades are the point, not a bug.")
-    na_count: int = Field(default=0, description="Scenarios where rule_9 (the cascade-deviation check) reported N/A because the top-priority metric had no real decision freedom. Excluded from both the numerator and denominator of first_attempt_pass_rate_pct / applied_pass_rate_pct — `total` still counts them, so (total - na_count) is the judged denominator.")
+    na_count: int = Field(default=0, description="Scenarios excluded from first_attempt_pass_rate_pct / applied_pass_rate_pct as a vacuous pass: rule_9 reported N/A AND both raw and applied stages were a clean PASS. A scenario that fails or is flagged for any other reason is never excluded just because rule_9 had nothing to judge. `total` still counts them, so (total - na_count) is the judged denominator.")
 
     first_attempt_passed: int = Field(description="The Orchestrator's own raw proposal, judged before any balancer repair — the true score of the model.")
     first_attempt_pass_rate_pct: float

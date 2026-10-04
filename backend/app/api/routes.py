@@ -111,7 +111,15 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
         rule9 = next((rule for rule in stage.evaluation.rules if rule.rule_id == "rule_9"), None)
         return rule9 is not None and not rule9.applicable
 
-    na_mask = [_rule9_na(a) for a in applied_stages]
+    def _excluded_as_vacuous_na(raw_stage, applied_stage) -> bool:
+        # Exclude only a genuinely vacuous pass (rule_9 N/A and BOTH stages clean PASS) --
+        # never a scenario that fails or is flagged for an unrelated reason. rule_9 is a
+        # flagged-severity check; its N/A-ness must never hide a golden-rule (fail-severity)
+        # violation found elsewhere, which an applied-stage-only mask did (a real bug: a
+        # rule_3 FAIL with an N/A rule_9 was silently dropped from applied_failed).
+        return _rule9_na(applied_stage) and raw_stage.evaluation.status.value == "pass" and applied_stage.evaluation.status.value == "pass"
+
+    na_mask = [_excluded_as_vacuous_na(r, a) for r, a in zip(raw_stages, applied_stages)]
     na_count = sum(na_mask)
     judged_total = total - na_count
 

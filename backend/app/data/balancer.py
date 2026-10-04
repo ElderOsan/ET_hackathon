@@ -200,25 +200,26 @@ def reference_dispatch(scenario: EnvironmentState, floor_pct: float) -> dict:
     rule_9 reports N/A when best and worst coincide (within tolerance): no decision could
     have moved this metric, so there's nothing to judge the model's choice against.
     """
+    # Patch 3, Step 3: the "best" numbers now come from the single dispatcher (one of its
+    # three roles) instead of a second, hand-rolled copy of the same ladder logic.
+    from app.data.dispatcher import dispatch_at_floor
+
     generation = scenario.solar_output_mw + scenario.wind_output_mw
     total_demand = scenario.total_demand_mw
     shortfall = max(0.0, total_demand - generation)
 
     def _min_import_at(floor: float) -> float:
-        headroom = sum(physics.max_discharge_mw(b, floor, emergency=False) for b in scenario.batteries)
-        used = min(shortfall, headroom)
-        return max(0.0, shortfall - used)
+        alt = dispatch_at_floor(scenario, scenario.objective, floor)
+        return alt.market_amount_mw if alt.market_action == "buy" else 0.0
 
-    battery_headroom = sum(physics.max_discharge_mw(b, floor_pct, emergency=False) for b in scenario.batteries)
-    battery_used = min(shortfall, battery_headroom)
-    remaining = max(0.0, shortfall - battery_used)
-    min_grid_import_mw = round(remaining, 1)
+    best = dispatch_at_floor(scenario, scenario.objective, floor_pct)
+    min_grid_import_mw = round(best.market_amount_mw, 1) if best.market_action == "buy" else 0.0
+    max_sellable_mw = round(best.market_amount_mw, 1) if best.market_action == "sell" else 0.0
     worst_grid_import_mw = round(shortfall, 1)  # no battery help at all, still feasible
 
     reference_cost_at_expected_floor_pct = round(_min_import_at(scenario.expected_floor_min_pct) * scenario.buy_price_per_mwh, 1)
 
     renewable_surplus_mw = max(0.0, generation - total_demand)
-    max_sellable_mw = round(physics.sellable_surplus_mw(scenario), 1)  # same definition as rule_5 and orchestrator_facts
     worst_sellable_mw = 0.0  # sell nothing (curtail or waste the surplus instead), still feasible
 
     reference_cost = round(min_grid_import_mw * scenario.buy_price_per_mwh, 1)

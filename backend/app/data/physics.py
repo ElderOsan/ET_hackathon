@@ -15,8 +15,18 @@ used in the power balance.
 """
 from __future__ import annotations
 
-from app.data.tuning import BALANCE_TOLERANCE_MW, PRICE_SPREAD_PCT, TICK_HOURS
+from app.data.tuning import BALANCE_TOLERANCE_MW, FLOOR_MAX, FLOOR_MIN, FLOOR_STEP_DOWN, PRICE_SPREAD_PCT, TICK_HOURS
 from app.models.schemas import Battery, Decision, EnvironmentState
+
+
+def apply_floor_clamp_and_ramp(proposed_floor_pct: float, previous_floor_pct: float) -> float:
+    """Hard bounds, then the ramp-down limit (the floor may rise by any amount in one tick,
+    but fall by at most FLOOR_STEP_DOWN). Shared by the Orchestrator's post-proposal clamp
+    (orchestrator_agent.py) and the dispatcher's from-scratch floor choice (dispatcher.py,
+    Patch 3 Step 3) — one definition, not two."""
+    clamped = min(max(proposed_floor_pct, FLOOR_MIN), FLOOR_MAX)
+    floor_after_ramp = max(clamped, previous_floor_pct - FLOOR_STEP_DOWN)
+    return min(max(floor_after_ramp, FLOOR_MIN), FLOOR_MAX)
 
 
 def buy_price_per_mwh(electricity_price_per_mwh: float) -> float:

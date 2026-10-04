@@ -24,6 +24,14 @@ FLOOR_BANDS = {
     "heavy_volatility": (45.0, 60.0),
 }
 
+# Patch 3, Step 3 — the dispatcher's OWN volatility signal, computed from scenario state
+# (storm_alert, an offline battery, a price spike), not mapped from the profile name the way
+# scenario_agent._VOLATILITY_CLASS is. A flat $/MWh threshold rather than the existing
+# _daily_high_threshold proxy (rules.py), which is structurally untriggerable for any
+# difficulty but price_spike (see NEXT_STEPS.md) — the dispatcher needs a signal that
+# actually fires from state alone, independent of which profile generated the scenario.
+DISPATCHER_PRICE_SPIKE_THRESHOLD_USD = 100.0
+
 DEFAULT_PREVIOUS_FLOOR_PCT = 25.0  # used when a scenario doesn't carry a prior tick's applied floor
 
 # Patch 3 addendum: percentage-point tolerance for "did this discharge reach the floor,

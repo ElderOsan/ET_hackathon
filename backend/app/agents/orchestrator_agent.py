@@ -19,9 +19,6 @@ from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponen
 from app.core.llm_client import MODEL, get_client
 from app.data import physics
 from app.data.tuning import (
-    FLOOR_MAX,
-    FLOOR_MIN,
-    FLOOR_STEP_DOWN,
     GEMINI_RETRY_ATTEMPTS,
     GEMINI_RETRY_MAX_WAIT_S,
     GEMINI_TEMPERATURE,
@@ -191,12 +188,6 @@ def _call_gemini(client, **kwargs):
     return client.models.generate_content(**kwargs)
 
 
-def _apply_floor_clamp_and_ramp(proposed_floor_pct: float, previous_floor_pct: float) -> float:
-    clamped = min(max(proposed_floor_pct, FLOOR_MIN), FLOOR_MAX)
-    floor_after_ramp = max(clamped, previous_floor_pct - FLOOR_STEP_DOWN)
-    return min(max(floor_after_ramp, FLOOR_MIN), FLOOR_MAX)
-
-
 # ---- Patch 3, Step 2: request/response boundary, factored out so a Recorder can intercept
 # it cleanly — record/replay touch only this boundary, never physics/balancer/Evaluator. ----
 
@@ -281,7 +272,7 @@ def decision_from_args(scenario: EnvironmentState, args: dict) -> Decision:
     objective = scenario.objective.value if scenario.objective else None
     try:
         proposed_floor = float(args["reserve_floor_pct"])
-        applied_floor = _apply_floor_clamp_and_ramp(proposed_floor, scenario.previous_floor_pct)
+        applied_floor = physics.apply_floor_clamp_and_ramp(proposed_floor, scenario.previous_floor_pct)
         return Decision(
             tick=scenario.tick,
             objective_used=objective or "cost_efficiency",

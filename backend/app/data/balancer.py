@@ -133,13 +133,18 @@ def balance(scenario: EnvironmentState, proposal: Decision) -> tuple[Decision, l
     if leftover > BALANCE_TOLERANCE_MW:
         more_sale_room = max(0.0, scenario.transmission_headroom_mw - sale)
         extra_sale = round(min(leftover, more_sale_room), 1)
-        if extra_sale > 0.05:
+        if extra_sale > 0:
+            # Brief 2 Patch 2, Step 4: every change is recorded, however small. The old
+            # ">0.05" gate here was dead in practice (every value in this function is
+            # rounded to 1 decimal, so a nonzero delta is always >=0.1) but it was still an
+            # arbitrary threshold with no CONFIG home, disconnected from BALANCE_TOLERANCE_MW
+            # and REPAIR_TOLERANCE_MW — removed rather than left as a trap for a future edit.
             repairs.append(FieldRepair(field="market_amount_mw(sell)", proposed=sale, applied=sale + extra_sale, delta_mw=extra_sale, reason=f"increased to absorb surplus within transmission headroom ({scenario.transmission_headroom_mw:.1f}MW)"))
         sale += extra_sale
         remaining = round(leftover - extra_sale, 1)
         if remaining > BALANCE_TOLERANCE_MW:
             new_cs, new_cw = _split_curtailment(curtail_solar + curtail_wind + remaining, scenario.solar_output_mw, scenario.wind_output_mw, curtail_solar, curtail_wind)
-            if abs(new_cs - curtail_solar) > 0.05 or abs(new_cw - curtail_wind) > 0.05:
+            if new_cs != curtail_solar or new_cw != curtail_wind:
                 repairs.append(FieldRepair(field="curtailment", proposed=curtail_solar + curtail_wind, applied=new_cs + new_cw, delta_mw=(new_cs + new_cw) - (curtail_solar + curtail_wind), reason="forced: surplus remained after load, max charge, and sale up to transmission headroom"))
             curtail_solar, curtail_wind = new_cs, new_cw
         served = served_mw(curtail_solar, curtail_wind, purchase, sale)

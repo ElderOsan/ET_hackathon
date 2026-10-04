@@ -390,6 +390,71 @@ def test_21_rule5_avoidable_charge_only_and_na_for_carbon_and_renewable():
         assert rule5c.passed is True
 
 
+def test_22_repaired_flag_true_even_below_repair_tolerance():
+    # Brief 2 Patch 2, acceptance test 8 / the row-49 root cause: a purchase-cap repair of
+    # 0.2MW (well under REPAIR_TOLERANCE_MW=0.5) is enough to flip rule_3 from pass (raw,
+    # uncapped purchase 10.2MW covers demand) to fail (applied, capped to the 10.0MW
+    # transmission headroom, leaving 0.15MW unserved against BALANCE_TOLERANCE_MW=0.1) --
+    # while the OLD `repaired` flag (gated on REPAIR_TOLERANCE_MW) would have shown
+    # "Repaired: no" for this very row. ScenarioRunResult.repaired must be True whenever the
+    # repair log is non-empty, regardless of magnitude.
+    scenario = _tick88_scenario(
+        wind_output_mw=50.0,  # generation 40 + 50 = 90.0
+        total_demand_mw=100.15, total_demand_forecast_mw=100.15,
+        transmission_headroom_mw=10.0,
+    )
+    proposal = _decision(market_action="buy", market_amount_mw=10.2)  # slightly over-buys
+    with patch.object(pipeline, "decide", return_value=proposal):
+        result = pipeline.run_decision_pipeline(scenario)
+
+    total_repair = sum(abs(r.delta_mw) for r in result.repairs)
+    assert 0 < total_repair < 0.5  # genuinely below REPAIR_TOLERANCE_MW
+    assert result.repaired is True  # must reflect "a repair happened", not "a big one did"
+
+    raw = next(s for s in result.stages if s.name == "raw")
+    applied = next(s for s in result.stages if s.name == "applied")
+    raw_rule3 = next(r for r in raw.evaluation.rules if r.rule_id == "rule_3")
+    applied_rule3 = next(r for r in applied.evaluation.rules if r.rule_id == "rule_3")
+    assert raw_rule3.passed, raw_rule3.detail  # uncapped 10.2MW purchase fully covers 100.15MW demand
+    assert not applied_rule3.passed, applied_rule3.detail  # capped to 10.0MW leaves 0.15MW short
+
+
+def test_23_empty_repair_log_implies_identical_raw_and_applied_verdict():
+    # Brief 2 Patch 2, acceptance test 7 (regression): for every row with an empty repair
+    # log, raw and applied verdicts are identical.
+    import app.agents.pipeline as pipeline_module
+
+    cases = []
+    # An exactly-balanced scenario (generation == demand) with a pure hold decision: no
+    # lever is used, nothing is short or surplus, so the balancer makes zero changes.
+    balanced = _tick88_scenario(wind_output_mw=99.0, wind_forecast_mw=99.0)  # generation 139.0 == demand 139.0
+    cases.append((balanced, _decision()))
+    # A shortfall scenario where the proposal already uses exactly the achievable levers --
+    # feasible as submitted, so the balancer has nothing to repair.
+    for difficulty in (Difficulty.D1_STABLE_DAY, Difficulty.D3_MULTI_FAILURE_CASCADE, Difficulty.D5_SHORTFALL_DAY):
+        for seed in range(5):
+            s = generate_scenario(difficulty, None, seed=2_000_000 + seed)
+            battery_actions = [BatteryAction(battery_id=b.id, action="discharge", amount_mw=physics.max_discharge_mw(b, s.previous_floor_pct, emergency=False)) for b in s.batteries]
+            shortfall = max(0.0, s.total_demand_mw - physics.total_generation_mw(s) - sum(a.amount_mw for a in battery_actions))
+            decision = _decision(
+                tick=s.tick, battery_actions=battery_actions,
+                market_action="buy" if shortfall > 0 else "hold", market_amount_mw=round(min(shortfall, s.transmission_headroom_mw), 1),
+                proposed_floor_pct=s.previous_floor_pct, applied_floor_pct=s.previous_floor_pct,
+            )
+            cases.append((s, decision))
+
+    checked_empty_repair_case = False
+    for s, decision in cases:
+        with patch.object(pipeline_module, "decide", return_value=decision):
+            result = pipeline_module.run_decision_pipeline(s)
+        raw = next(st for st in result.stages if st.name == "raw")
+        applied = next(st for st in result.stages if st.name == "applied")
+        if not result.repairs:
+            checked_empty_repair_case = True
+            assert raw.evaluation.status == applied.evaluation.status, f"seed={s.seed}: raw={raw.evaluation.status} applied={applied.evaluation.status} with no repairs"
+    assert checked_empty_repair_case, "no empty-repair case was actually exercised by this test"
+
+
 def test_15_regression_rules_3_and_4_never_disagree_on_unmet():
     scenario = _tick88_scenario()
     for curtail, sell, charge in [(0.0, 0.0, 0.0), (0.0, 17.3, 16.0), (0.0, 0.0, 16.0)]:

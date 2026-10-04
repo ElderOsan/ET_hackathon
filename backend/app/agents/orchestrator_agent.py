@@ -79,12 +79,20 @@ grid. (A stability-forced exception exists only when the transmission line is ge
 served is the right call, not a mistake.
 
 LAYER 2 — OBJECTIVE CASCADE (reorders priorities, subject to Layer 1 always holding):
-- cost_efficiency (the default when no objective is declared): cost, then carbon, then renewable utilisation.
-- min_carbon: carbon, then cost, then renewable utilisation.
-- max_renewable_utilisation: renewable utilisation, then cost, then carbon.
+- cost_efficiency (the default when no objective is declared): cost, then carbon, then renewable utilisation. \
+Cost is this tick's purchase cost (amount_mw * buy_price_per_mwh) minus sale revenue (amount_mw * \
+sell_price_per_mwh) — never use electricity_price_per_mwh directly for either side.
+- min_carbon: carbon, then cost, then renewable utilisation. Carbon is tonnes emitted this tick: purchased \
+MWh * grid_carbon_intensity_t_per_mwh — carbon_price_per_ton is informational only and never part of this \
+metric.
+- max_renewable_utilisation: renewable utilisation, then cost, then carbon. Renewable utilisation is the \
+share of this tick's solar + wind generation actually used rather than curtailed.
 - max_profit: profit, then cost, then carbon (carbon drops to last). Profit is sale revenue minus purchase \
-cost for this tick: a purchase costs buy_price_per_mwh (above electricity_price_per_mwh), a sale earns \
-sell_price_per_mwh (below it) — never use electricity_price_per_mwh directly for either side.
+cost for this tick, PLUS the value of any net energy stored: charging the battery this tick adds value at \
+sell_price_per_mwh (it is energy you could otherwise have sold), and discharging subtracts it at the same \
+rate — never use electricity_price_per_mwh for any side of this.
+Under every objective, the battery may only be charged from renewable surplus (generation above \
+total_demand_mw this tick) — never propose charging in order to buy from the grid.
 Within the cascade: find the best option on the top priority, treat every option within a small tolerance \
 of it as tied, then choose the best of those tied options on the next priority. Do not let a lower \
 priority override a clearly better option on a higher one.

@@ -103,7 +103,7 @@ def test_profit_02_sell_only():
 def test_profit_03_hold_is_both_zero():
     scenario = _tick88_scenario()
     p = physics.decision_profit(scenario, _decision())
-    assert p == {"sale_mw": 0.0, "purchase_mw": 0.0, "revenue": 0.0, "cost": 0.0, "net_profit": 0.0}
+    assert p == {"sale_mw": 0.0, "purchase_mw": 0.0, "revenue": 0.0, "cost": 0.0, "stored_energy_mwh": 0.0, "stored_energy_value": 0.0, "net_profit": 0.0}
 
 
 def test_profit_04_spread_zero_buy_equals_sell_equals_electricity_price():
@@ -342,3 +342,62 @@ def test_consistency_over_real_72_row_benchmark():
             violations.append((r["scenario"]["tick"], r["scenario"]["seed"], raw["evaluation"]["status"], applied["evaluation"]["status"]))
     assert violations == [], f"{len(violations)} empty-repair rows with differing verdicts: {violations}"
     assert len(data["results"]) == 72
+
+
+# ---- rule_11 / balancer no-grid-charging cap (Addendum C, point 6) --------------------
+
+
+def _rule11(scenario, decision):
+    return next(r for r in evaluate(scenario, decision).rules if r.rule_id == "rule_11")
+
+
+def test_rule11_01_charge_within_surplus_passes():
+    scenario = _tick88_scenario(total_demand_mw=90.0, total_demand_forecast_mw=90.0)  # surplus 11.7MW
+    decision = _decision(battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=5.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)])
+    r = _rule11(scenario, decision)
+    assert r.passed, r.detail
+
+
+def test_rule11_02_charge_beyond_surplus_flagged():
+    scenario = _tick88_scenario(total_demand_mw=90.0, total_demand_forecast_mw=90.0)  # surplus 11.7MW
+    decision = _decision(battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=15.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)])
+    r = _rule11(scenario, decision)
+    assert not r.passed
+    assert r.value_actual == 15.0 and r.value_reference == 11.7
+
+
+def test_rule11_03_no_surplus_any_charge_flagged():
+    scenario = _tick88_scenario()  # default: generation 101.7 < demand 139.0, no surplus
+    decision = _decision(battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=1.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)])
+    r = _rule11(scenario, decision)
+    assert not r.passed
+
+
+def test_rule11_04_hold_passes_regardless_of_surplus():
+    scenario = _tick88_scenario()  # no surplus
+    decision = _decision(battery_actions=[BatteryAction(battery_id="battery_1", action="hold", amount_mw=0.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)])
+    r = _rule11(scenario, decision)
+    assert r.passed
+
+
+def test_balancer_caps_charge_to_renewable_surplus():
+    # Addendum C, point 6: the balancer repairs a proposal that charges beyond the surplus,
+    # same enforcement rule_11 flags on the raw proposal. demand=95 -> surplus 6.7MW, below
+    # battery_1's own 10.0MW rate cap, so the surplus is the binding constraint here.
+    from app.data.balancer import balance
+    scenario = _tick88_scenario(total_demand_mw=95.0, total_demand_forecast_mw=95.0)
+    decision = _decision(battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=10.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)])
+    applied, repairs = balance(scenario, decision)
+    charge_action = next(a for a in applied.battery_actions if a.battery_id == "battery_1")
+    assert charge_action.amount_mw == 6.7
+    assert any("renewable surplus" in r.reason for r in repairs)
+
+
+def test_balancer_does_not_cap_charge_within_surplus():
+    from app.data.balancer import balance
+    scenario = _tick88_scenario(total_demand_mw=95.0, total_demand_forecast_mw=95.0)  # surplus 6.7MW
+    decision = _decision(battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=5.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)])
+    applied, repairs = balance(scenario, decision)
+    charge_action = next(a for a in applied.battery_actions if a.battery_id == "battery_1")
+    assert charge_action.amount_mw == 5.0
+    assert not any("renewable surplus" in r.reason for r in repairs)

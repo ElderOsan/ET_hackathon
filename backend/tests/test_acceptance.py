@@ -46,6 +46,7 @@ def _tick88_scenario(**overrides) -> EnvironmentState:
         buy_price_per_mwh=63.0,
         sell_price_per_mwh=57.0,
         carbon_price_per_ton=30.0,
+        grid_carbon_intensity_t_per_mwh=0.6,
         demand_response_incentive_per_mwh=20.0,
         weather_forecast="clear",
         storm_alert=False,

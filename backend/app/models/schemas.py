@@ -92,6 +92,7 @@ class EnvironmentState(BaseModel):
     buy_price_per_mwh: float = Field(description="Code-computed: electricity_price_per_mwh with the PRICE_SPREAD_PCT markup — what a purchase actually costs. Never re-derive it yourself.")
     sell_price_per_mwh: float = Field(description="Code-computed: electricity_price_per_mwh with the PRICE_SPREAD_PCT markdown — what a sale actually earns. Never re-derive it yourself.")
     carbon_price_per_ton: float
+    grid_carbon_intensity_t_per_mwh: float = Field(description="Addendum C: tonnes of CO2 per MWh of grid import, sampled independently of electricity_price_per_mwh — cheap-and-dirty and expensive-and-clean scenarios both occur. min_carbon's metric is emissions (import_mwh x this), not raw import MW. carbon_price_per_ton converts emissions to an informational dollar cost only; it is never added to the cost metric.")
     demand_response_incentive_per_mwh: float
 
     weather_forecast: str
@@ -186,6 +187,20 @@ class DecisionStage(BaseModel):
     evaluation: EvalResult
 
 
+class TickLedger(BaseModel):
+    """Addendum C, point 8: computed per tick, by code, never by the model. Displaying this
+    is later report work, not Round 0 — it's stored on every run record starting now so
+    nothing has to be recomputed retroactively."""
+    purchase_cost: float
+    sales_revenue: float
+    stored_energy_value_change: float = Field(description="Net change in stored energy (charge added minus discharge removed, after charging efficiency) valued at sell_price_per_mwh. Positive = batteries gained value this tick.")
+    profit: float = Field(description="sales_revenue - purchase_cost + stored_energy_value_change.")
+    emissions_tonnes: float = Field(description="grid import MWh x grid_carbon_intensity_t_per_mwh.")
+    carbon_cost: float = Field(description="emissions_tonnes x carbon_price_per_ton — informational only, never added to the cost metric.")
+    renewable_utilisation_pct: float = Field(description="(generation - curtailment) / generation x 100. Stored and sold energy both count as utilised; only curtailment counts against it.")
+    renewable_share_of_delivered_pct: float = Field(description="(generation - curtailment) / total_demand x 100, capped at 100 — informational: how much of total demand was met by non-curtailed renewable generation this tick.")
+
+
 class ScenarioRunResult(BaseModel):
     scenario: EnvironmentState
     stages: list[DecisionStage]
@@ -193,6 +208,7 @@ class ScenarioRunResult(BaseModel):
     repaired: bool = Field(description="True if any repair's magnitude exceeded REPAIR_TOLERANCE_MW.")
     infeasible: bool = Field(default=False, description="True if this scenario's min_achievable_unserved_mw > 0 — full service was physically impossible no matter the decision. The generator should never produce these; a nonzero count means a generator bug, not a model error.")
     margin_infeasible: bool = Field(default=False, description="True if load is served but max_achievable_headroom_mw is below the reserve-margin requirement — no decision could reach rule_3b's target this tick. Unlike `infeasible`, this is expected to happen sometimes (extreme cascades are the point) and is reported, not treated as a bug.")
+    ledger: Optional[TickLedger] = Field(default=None, description="Addendum C: the applied decision's computed per-tick ledger.")
 
 
 class ObjectiveBreakdown(BaseModel):

@@ -13,6 +13,18 @@ FREQ_BAND_HZ = (49.5, 50.5)  # grid frequency considered stable inside this band
 # Layer 2 objective cascade
 OBJECTIVE_TOLERANCE_PCT = 5.0  # how close to the top-priority optimum counts as "tied" before the next priority applies
 
+# Addendum C, Round 0 — grid_carbon_intensity_t_per_mwh is sampled independently of
+# electricity_price_per_mwh (a separate seeded stream, scenario_agent.py) so cheap-but-dirty
+# and expensive-but-clean scenarios both occur; this range is a starting estimate, not a
+# measured grid figure.
+CARBON_INTENSITY_RANGE_T_PER_MWH = (0.3, 0.9)
+
+# Addendum C, point 6 — the balancer caps proposed battery charge to the renewable surplus
+# (generation - total_demand, floored at 0); this is the tolerance before a cap counts as a
+# real repair, not rounding noise. Reuses the same magnitude as BALANCE_TOLERANCE_MW's
+# sibling constants rather than inventing a new one.
+GRID_CHARGE_CAP_TOLERANCE_MW = 0.1
+
 # Battery reserve floor
 FLOOR_MIN = 20.0
 FLOOR_MAX = 60.0
@@ -108,7 +120,7 @@ RULE_CATEGORY_MAP = {
     "rule_10": "arithmetic",
     "rule_1": "strategy", "rule_2b": "strategy", "rule_4": "strategy", "rule_5": "strategy",
     "rule_6": "strategy", "rule_8b": "strategy", "rule_8c": "strategy", "rule_8d": "strategy",
-    "rule_8e": "strategy", "rule_9": "strategy",
+    "rule_8e": "strategy", "rule_9": "strategy", "rule_11": "strategy",
     "rule_2a": "outcome", "rule_3b": "outcome", "rule_7": "outcome",
     # rule_3 deliberately omitted — categorized dynamically, see routes.py
 }

@@ -23,6 +23,7 @@ from app.models.schemas import (
     EvalStatus,
     RuleResult,
     ScenarioRunResult,
+    TickLedger,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,7 @@ def _call_failure_result(scenario: EnvironmentState, failure: CallFailure) -> Sc
             DecisionStage(name="applied", decision=placeholder, evaluation=fail_eval),
         ],
         repairs=[], repaired=False, infeasible=infeasible, margin_infeasible=False,
+        ledger=TickLedger(**physics.build_tick_ledger(scenario, placeholder)),
     )
 
 
@@ -103,6 +105,7 @@ def _evaluate_proposal(scenario: EnvironmentState, proposal: Decision) -> Scenar
         repaired=repaired,
         infeasible=infeasible,
         margin_infeasible=margin_infeasible,
+        ledger=TickLedger(**physics.build_tick_ledger(scenario, applied)),
     )
 
 

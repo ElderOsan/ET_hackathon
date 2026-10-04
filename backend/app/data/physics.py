@@ -41,16 +41,96 @@ def sell_price_per_mwh(electricity_price_per_mwh: float) -> float:
     return round(electricity_price_per_mwh * (1 - PRICE_SPREAD_PCT / 100), 2)
 
 
+def net_stored_energy_change_mwh(scenario: EnvironmentState, decision: Decision) -> float:
+    """Addendum C, point 2: the net MWh added to (positive) or removed from (negative)
+    battery storage this tick, across every battery action. Charging efficiency applies to
+    what's ADDED (max_charge_mw's own inverse formula: bus-side MW x TICK_HOURS x efficiency
+    is the energy that actually lands in the battery); discharge removes bus-side MW x
+    TICK_HOURS directly, with no efficiency factor, matching resulting_soc_pct."""
+    batteries_by_id = {b.id: b for b in scenario.batteries}
+    net_mwh = 0.0
+    for action in decision.battery_actions:
+        battery = batteries_by_id.get(action.battery_id)
+        if battery is None or action.amount_mw <= 0:
+            continue
+        if action.action == "charge":
+            efficiency = max(battery.charging_efficiency_pct / 100.0, 0.01)
+            net_mwh += action.amount_mw * TICK_HOURS * efficiency
+        elif action.action == "discharge":
+            net_mwh -= action.amount_mw * TICK_HOURS
+    return net_mwh
+
+
 def decision_profit(scenario: EnvironmentState, decision: Decision) -> dict:
-    """Sale revenue minus purchase cost for this tick, using the scenario's own buy/sell
-    prices (Brief 2 Patch 2, Step 2) — never the single electricity_price_per_mwh, which
-    silently showed $0 net when a purchase was netted against nothing. The single source of
-    truth for this arithmetic; rule_9's profit branch and the Decision panel both show it."""
+    """Addendum C, point 2: sale revenue minus purchase cost, PLUS the value of the net
+    change in stored energy (valued at sell_price_per_mwh — what that energy could earn if
+    sold) — replaces the single-tick, revenue-only metric that credited $0 for charging and
+    so could not distinguish "stored for later" from "wasted." The single source of truth
+    for this arithmetic; rule_9's profit branch, reference_dispatch, and the Decision panel
+    all use it."""
     sale_mw = decision.market_amount_mw if decision.market_action == "sell" else 0.0
     purchase_mw = decision.market_amount_mw if decision.market_action == "buy" else 0.0
     revenue = round(sale_mw * scenario.sell_price_per_mwh, 1)
     cost = round(purchase_mw * scenario.buy_price_per_mwh, 1)
-    return {"sale_mw": sale_mw, "purchase_mw": purchase_mw, "revenue": revenue, "cost": cost, "net_profit": round(revenue - cost, 1)}
+    stored_mwh = net_stored_energy_change_mwh(scenario, decision)
+    stored_value = round(stored_mwh * scenario.sell_price_per_mwh, 1)
+    return {
+        "sale_mw": sale_mw, "purchase_mw": purchase_mw, "revenue": revenue, "cost": cost,
+        "stored_energy_mwh": round(stored_mwh, 2), "stored_energy_value": stored_value,
+        "net_profit": round(revenue - cost + stored_value, 1),
+    }
+
+
+def renewable_surplus_mw(scenario: EnvironmentState) -> float:
+    """generation - total_demand, floored at 0 — the pool battery charging may never exceed
+    (Addendum C, point 6: no buying to charge)."""
+    return max(0.0, total_generation_mw(scenario) - scenario.total_demand_mw)
+
+
+def emissions_tonnes(scenario: EnvironmentState, decision: Decision) -> float:
+    """Addendum C, point 3: grid import (MWh, not MW) x grid_carbon_intensity_t_per_mwh.
+    Replaces the old raw-import-MW proxy as min_carbon's actual metric."""
+    purchase_mw = decision.market_amount_mw if decision.market_action == "buy" else 0.0
+    import_mwh = purchase_mw * TICK_HOURS
+    return round(import_mwh * scenario.grid_carbon_intensity_t_per_mwh, 3)
+
+
+def renewable_utilisation_pct(scenario: EnvironmentState, decision: Decision) -> float:
+    """Addendum C, point 4: (generation - curtailment) / generation x 100. Stored and sold
+    energy both count as utilised — only curtailment counts against it."""
+    generation = total_generation_mw(scenario)
+    if generation <= 0:
+        return 100.0
+    curtailment = decision.curtail_solar_mw + decision.curtail_wind_mw
+    return round(max(0.0, generation - curtailment) / generation * 100, 1)
+
+
+def renewable_share_of_delivered_pct(scenario: EnvironmentState, decision: Decision) -> float:
+    """Addendum C, point 4 (informational): how much of total demand was met by non-curtailed
+    renewable generation this tick, capped at 100%."""
+    if scenario.total_demand_mw <= 0:
+        return 0.0
+    generation = total_generation_mw(scenario)
+    curtailment = decision.curtail_solar_mw + decision.curtail_wind_mw
+    delivered = max(0.0, generation - curtailment)
+    return round(min(100.0, delivered / scenario.total_demand_mw * 100), 1)
+
+
+def build_tick_ledger(scenario: EnvironmentState, decision: Decision) -> dict:
+    """Addendum C, point 8: the per-tick ledger, computed here (and only here) from the same
+    functions every rule and reference already uses — never recomputed ad hoc elsewhere."""
+    profit = decision_profit(scenario, decision)
+    emissions = emissions_tonnes(scenario, decision)
+    return {
+        "purchase_cost": profit["cost"],
+        "sales_revenue": profit["revenue"],
+        "stored_energy_value_change": profit["stored_energy_value"],
+        "profit": profit["net_profit"],
+        "emissions_tonnes": emissions,
+        "carbon_cost": round(emissions * scenario.carbon_price_per_ton, 1),
+        "renewable_utilisation_pct": renewable_utilisation_pct(scenario, decision),
+        "renewable_share_of_delivered_pct": renewable_share_of_delivered_pct(scenario, decision),
+    }
 
 
 def max_charge_mw(battery: Battery) -> float:

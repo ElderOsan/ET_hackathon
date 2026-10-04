@@ -33,6 +33,10 @@ def balance(scenario: EnvironmentState, proposal: Decision) -> tuple[Decision, l
 
     # --- Step 1: cap every battery action to feasibility -----------------------------------
     applied_battery_actions: list[BatteryAction] = []
+    # Addendum C, point 6: charging may not exceed the renewable surplus -- this is a repair
+    # (the model's own mistake is caught separately by rule_11 on the raw proposal), so the
+    # cap is spent across battery actions in proposal order as a shared budget.
+    remaining_surplus_budget = physics.renewable_surplus_mw(scenario)
     for action in proposal.battery_actions:
         battery = batteries_by_id.get(action.battery_id)
         if battery is None:
@@ -43,10 +47,16 @@ def balance(scenario: EnvironmentState, proposal: Decision) -> tuple[Decision, l
                 repairs.append(FieldRepair(field=f"battery_actions[{battery.id}]", proposed=action.amount_mw, applied=0.0, delta_mw=-action.amount_mw, reason=f"{battery.id} is offline"))
             applied_battery_actions.append(BatteryAction(battery_id=battery.id, action="hold", amount_mw=0.0))
         elif action.action == "charge":
-            cap = physics.max_charge_mw(battery)
+            cap = min(physics.max_charge_mw(battery), max(remaining_surplus_budget, 0.0))
             amt = round(min(max(action.amount_mw, 0.0), cap), 1)
             if amt != action.amount_mw:
-                repairs.append(FieldRepair(field=f"battery_actions[{battery.id}].amount_mw", proposed=action.amount_mw, applied=amt, delta_mw=amt - action.amount_mw, reason=f"capped to max charge headroom ({cap:.1f}MW)"))
+                reason = (
+                    f"capped to the {remaining_surplus_budget:.1f}MW renewable surplus (no buying to charge)"
+                    if remaining_surplus_budget < physics.max_charge_mw(battery)
+                    else f"capped to max charge headroom ({cap:.1f}MW)"
+                )
+                repairs.append(FieldRepair(field=f"battery_actions[{battery.id}].amount_mw", proposed=action.amount_mw, applied=amt, delta_mw=amt - action.amount_mw, reason=reason))
+            remaining_surplus_budget -= amt
             applied_battery_actions.append(BatteryAction(battery_id=battery.id, action="charge" if amt > 0 else "hold", amount_mw=amt))
         elif action.action == "discharge":
             cap = physics.max_discharge_mw(battery, proposal.applied_floor_pct, emergency)
@@ -181,6 +191,34 @@ def balance(scenario: EnvironmentState, proposal: Decision) -> tuple[Decision, l
     return applied, repairs
 
 
+def _worst_feasible_decision(scenario: EnvironmentState) -> Decision:
+    """The worst still-feasible dispatch: serves load if possible using ONLY grid import
+    (zero battery help), sells and charges nothing. Used as the common "worst" baseline for
+    every objective's reference (Addendum C) — one decision, run through the same physics
+    functions as the "best" one, instead of a hand-rolled number per metric."""
+    generation = physics.total_generation_mw(scenario)
+    shortfall = max(0.0, scenario.total_demand_mw - generation)
+    hold_actions = [BatteryAction(battery_id=b.id, action="hold", amount_mw=0.0) for b in scenario.batteries]
+    if shortfall > 0:
+        import_mw = round(min(shortfall, physics.max_import_mw(scenario)), 1)
+        return Decision(
+            tick=scenario.tick, objective_used=scenario.objective.value if scenario.objective else "cost_efficiency",
+            battery_actions=hold_actions, market_action="buy" if import_mw > 0 else "hold", market_amount_mw=import_mw,
+            curtail_solar_mw=0.0, curtail_wind_mw=0.0, demand_response_triggered=False,
+            proposed_floor_pct=scenario.previous_floor_pct, applied_floor_pct=scenario.previous_floor_pct,
+            floor_justification="worst-feasible reference", reasoning="worst-feasible reference", mode="agent",
+        )
+    surplus = physics.renewable_surplus_mw(scenario)
+    curtail_solar, curtail_wind = _split_curtailment(surplus, scenario.solar_output_mw, scenario.wind_output_mw, 0.0, 0.0)
+    return Decision(
+        tick=scenario.tick, objective_used=scenario.objective.value if scenario.objective else "cost_efficiency",
+        battery_actions=hold_actions, market_action="hold", market_amount_mw=0.0,
+        curtail_solar_mw=curtail_solar, curtail_wind_mw=curtail_wind, demand_response_triggered=False,
+        proposed_floor_pct=scenario.previous_floor_pct, applied_floor_pct=scenario.previous_floor_pct,
+        floor_justification="worst-feasible reference", reasoning="worst-feasible reference", mode="agent",
+    )
+
+
 def reference_dispatch(scenario: EnvironmentState, floor_pct: float) -> dict:
     """The autonomous optimal dispatch (no proposal): cheapest/cleanest way to meet demand
     using renewables, then battery down to floor_pct, then grid import for whatever's left —
@@ -195,52 +233,61 @@ def reference_dispatch(scenario: EnvironmentState, floor_pct: float) -> dict:
     cost would have been at expected_floor_min_pct instead — is also returned, so the size of
     that gap stays visible without it silently driving rule_9's verdict.
 
-    Also returns the WORST still-feasible outcome per metric (Brief 2 Patch 2, Step 2): the
-    dispatch that still serves load and never curtails/sells more than exists, but makes no
-    use of the free levers (battery discharge, selling surplus) — e.g. covering the entire
-    shortfall from the grid alone, or curtailing the entire surplus instead of selling it.
+    Addendum C: best/worst for EVERY metric (cost, emissions, renewable utilisation, profit)
+    are now derived from two actual Decision objects (best = dispatch_at_floor's own choice,
+    worst = _worst_feasible_decision) run through the exact same physics functions the
+    scored decision is judged with — profit, emissions and utilisation can no longer drift
+    out of sync with each other or with the scored side's formula.
+
+    Also returns the WORST still-feasible outcome per metric (Brief 2 Patch 2, Step 2):
     rule_9 reports N/A when best and worst coincide (within tolerance): no decision could
     have moved this metric, so there's nothing to judge the model's choice against.
     """
-    # Patch 3, Step 3: the "best" numbers now come from the single dispatcher (one of its
-    # three roles) instead of a second, hand-rolled copy of the same ladder logic.
     from app.data.dispatcher import dispatch_at_floor
-
-    generation = scenario.solar_output_mw + scenario.wind_output_mw
-    total_demand = scenario.total_demand_mw
-    shortfall = max(0.0, total_demand - generation)
 
     def _min_import_at(floor: float) -> float:
         alt = dispatch_at_floor(scenario, scenario.objective, floor)
         return alt.market_amount_mw if alt.market_action == "buy" else 0.0
 
     best = dispatch_at_floor(scenario, scenario.objective, floor_pct)
+    worst = _worst_feasible_decision(scenario)
+
     min_grid_import_mw = round(best.market_amount_mw, 1) if best.market_action == "buy" else 0.0
     max_sellable_mw = round(best.market_amount_mw, 1) if best.market_action == "sell" else 0.0
-    worst_grid_import_mw = round(shortfall, 1)  # no battery help at all, still feasible
+    worst_grid_import_mw = round(worst.market_amount_mw, 1) if worst.market_action == "buy" else 0.0
+    worst_sellable_mw = 0.0
 
     reference_cost_at_expected_floor_pct = round(_min_import_at(scenario.expected_floor_min_pct) * scenario.buy_price_per_mwh, 1)
 
-    renewable_surplus_mw = max(0.0, generation - total_demand)
-    worst_sellable_mw = 0.0  # sell nothing (curtail or waste the surplus instead), still feasible
+    best_profit = physics.decision_profit(scenario, best)
+    worst_profit = physics.decision_profit(scenario, worst)
 
-    reference_cost = round(min_grid_import_mw * scenario.buy_price_per_mwh, 1)
-    worst_cost = round(worst_grid_import_mw * scenario.buy_price_per_mwh, 1)
-    reference_revenue = round(max_sellable_mw * scenario.sell_price_per_mwh, 1)
-    worst_revenue = round(worst_sellable_mw * scenario.sell_price_per_mwh, 1)
+    best_emissions = physics.emissions_tonnes(scenario, best)
+    worst_emissions = physics.emissions_tonnes(scenario, worst)
+
+    best_curtail_mw = round(best.curtail_solar_mw + best.curtail_wind_mw, 1)
+    worst_curtail_mw = round(worst.curtail_solar_mw + worst.curtail_wind_mw, 1)
+    best_utilisation_pct = physics.renewable_utilisation_pct(scenario, best)
+    worst_utilisation_pct = physics.renewable_utilisation_pct(scenario, worst)
 
     return {
         "min_grid_import_mw": min_grid_import_mw,
         "worst_grid_import_mw": worst_grid_import_mw,
-        "renewable_surplus_mw": round(renewable_surplus_mw, 1),
+        "renewable_surplus_mw": round(physics.renewable_surplus_mw(scenario), 1),
         "max_sellable_mw": max_sellable_mw,
         "worst_sellable_mw": worst_sellable_mw,
-        "reference_cost": reference_cost,
-        "worst_cost": worst_cost,
-        "reference_revenue": reference_revenue,
-        "worst_revenue": worst_revenue,
-        "reference_profit": round(reference_revenue - reference_cost, 1),
-        "worst_profit": round(worst_revenue - worst_cost, 1),
+        "reference_cost": best_profit["cost"],
+        "worst_cost": worst_profit["cost"],
+        "reference_revenue": best_profit["revenue"],
+        "worst_revenue": worst_profit["revenue"],
+        "reference_profit": best_profit["net_profit"],
+        "worst_profit": worst_profit["net_profit"],
+        "best_emissions_tonnes": best_emissions,
+        "worst_emissions_tonnes": worst_emissions,
+        "best_curtail_mw": best_curtail_mw,
+        "worst_curtail_mw": worst_curtail_mw,
+        "best_utilisation_pct": best_utilisation_pct,
+        "worst_utilisation_pct": worst_utilisation_pct,
         "floor_used_for_reference_pct": floor_pct,
         "reference_cost_at_expected_floor_pct": reference_cost_at_expected_floor_pct,  # informational only, not scored
     }

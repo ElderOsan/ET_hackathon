@@ -16,6 +16,7 @@ from app.data.tuning import (
     FLOOR_MIN,
     FLOOR_SOC_TOLERANCE_PCT,
     FREQ_BAND_HZ,
+    GRID_CHARGE_CAP_TOLERANCE_MW,
     OBJECTIVE_TOLERANCE_PCT,
     REPAIR_TOLERANCE_MW,
     RESERVE_MARGIN_PCT,
@@ -308,24 +309,30 @@ def rule_9_cascade_deviation(scenario: EnvironmentState, decision: Decision) -> 
         detail = f"Net import cost ${actual_cost:.0f} vs reference ${best:.0f}" + ("." if passed else f" (exceeds {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
         label, actual_val, ref_val = "net cost vs. reference ($)", actual_cost, best
     elif top_priority == "carbon":
-        actual_import = decision.market_amount_mw if decision.market_action == "buy" else 0.0
-        best, worst = ref["min_grid_import_mw"], ref["worst_grid_import_mw"]
-        tolerance = max(abs(best), 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
+        # Addendum C, point 3: emissions (tonnes) = import MWh x grid_carbon_intensity_t_per_mwh
+        # -- replaces the raw-import-MW proxy. carbon_price_per_ton is informational only
+        # (physics.decision has no cost term from it); never added to this metric.
+        actual_emissions = physics.emissions_tonnes(scenario, decision)
+        best, worst = ref["best_emissions_tonnes"], ref["worst_emissions_tonnes"]
+        tolerance = max(abs(best), 0.01) * (OBJECTIVE_TOLERANCE_PCT / 100)
         if _rule9_na(best, worst, tolerance):
-            return RuleResult(rule_id="rule_9", description="Decision matches the declared cascade (top priority: carbon)", severity="flagged", passed=True, applicable=False, detail=f"N/A — no decision could change grid import here (best and worst feasible outcomes both ~{best:.1f}MW).")
-        passed = actual_import <= best + tolerance
-        detail = f"Grid import {actual_import:.1f}MW (carbon proxy) vs reference minimum {best:.1f}MW" + ("." if passed else f" (exceeds {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
-        label, actual_val, ref_val = "grid import vs. reference minimum (MW)", actual_import, best
+            return RuleResult(rule_id="rule_9", description="Decision matches the declared cascade (top priority: carbon)", severity="flagged", passed=True, applicable=False, detail=f"N/A — no decision could change emissions here (best and worst feasible outcomes both ~{best:.2f}t).")
+        passed = actual_emissions <= best + tolerance
+        detail = f"Emissions {actual_emissions:.2f}t vs reference minimum {best:.2f}t" + ("." if passed else f" (exceeds {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
+        label, actual_val, ref_val = "emissions vs. reference minimum (t)", actual_emissions, best
     elif top_priority == "renewable_utilisation":
-        actual_curtail = decision.curtail_solar_mw + decision.curtail_wind_mw
-        best = physics.min_required_curtailment_mw(scenario)
-        worst = ref["renewable_surplus_mw"]
+        # Addendum C, point 4 + Patch 3 audit fixes 2/3: the ratio (generation-curtailment)/
+        # generation, with best/worst routed through the SAME dispatcher call as every other
+        # objective (not a separate physics.min_required_curtailment_mw call), and the SAME
+        # scale-relative tolerance mechanism the other three branches use (not a flat MW one).
+        actual_utilisation = physics.renewable_utilisation_pct(scenario, decision)
+        best, worst = ref["best_utilisation_pct"], ref["worst_utilisation_pct"]
         tolerance = max(abs(best), 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
         if _rule9_na(best, worst, tolerance):
-            return RuleResult(rule_id="rule_9", description="Decision matches the declared cascade (top priority: renewable_utilisation)", severity="flagged", passed=True, applicable=False, detail=f"N/A — no decision could change curtailment here (best and worst feasible outcomes both ~{best:.1f}MW).")
-        passed = actual_curtail <= best + CURTAIL_TOLERANCE_MW
-        detail = f"Curtailed {actual_curtail:.1f}MW vs {best:.1f}MW minimum required" + ("." if passed else f" (exceeds {CURTAIL_TOLERANCE_MW}MW tolerance).")
-        label, actual_val, ref_val = "curtailed vs. minimum required (MW)", actual_curtail, best
+            return RuleResult(rule_id="rule_9", description="Decision matches the declared cascade (top priority: renewable_utilisation)", severity="flagged", passed=True, applicable=False, detail=f"N/A — no decision could change utilisation here (best and worst feasible outcomes both ~{best:.1f}%).")
+        passed = actual_utilisation >= best - tolerance
+        detail = f"Utilisation {actual_utilisation:.1f}% vs reference best {best:.1f}%" + ("." if passed else f" (below {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
+        label, actual_val, ref_val = "utilisation vs. reference best (%)", actual_utilisation, best
     else:  # profit
         profit = physics.decision_profit(scenario, decision)
         actual_profit = profit["net_profit"]
@@ -359,6 +366,28 @@ def rule_10_repair_magnitude(repairs: list[FieldRepair]) -> RuleResult:
     return RuleResult(rule_id="rule_10", description="Proposal needed no more than minor balancer repair", severity="flagged", passed=passed, detail=detail)
 
 
+def rule_11_no_grid_charging(scenario: EnvironmentState, decision: Decision) -> RuleResult:
+    """Addendum C, point 6: battery charge may not exceed the renewable surplus (generation
+    - total_demand, floored at 0) — charging beyond it means buying from the grid to charge,
+    which isn't supported (grid pre-charging ahead of a forecast event is a documented
+    limitation, not implemented). The balancer caps this on the applied decision and logs a
+    repair; this rule flags the RAW proposal for proposing it — a strategy error, not a
+    golden-rule violation."""
+    surplus = physics.renewable_surplus_mw(scenario)
+    proposed_charge = sum(a.amount_mw for a in decision.battery_actions if a.action == "charge")
+    excess = proposed_charge - surplus
+    passed = excess <= GRID_CHARGE_CAP_TOLERANCE_MW
+    detail = (
+        f"Charging {proposed_charge:.1f}MW exceeds the {surplus:.1f}MW renewable surplus by {excess:.1f}MW — this would charge from the grid, which isn't supported."
+        if not passed
+        else f"Charging {proposed_charge:.1f}MW is within the {surplus:.1f}MW renewable surplus."
+    )
+    return RuleResult(
+        rule_id="rule_11", description="Battery charge should not exceed the renewable surplus (no buying to charge)", severity="flagged", passed=passed, detail=detail,
+        value_label="proposed charge vs. renewable surplus (MW)", value_actual=round(proposed_charge, 1), value_reference=round(surplus, 1),
+    )
+
+
 def run_rules(scenario: EnvironmentState, decision: Decision, repairs: list[FieldRepair] | None = None, include_repair_rule: bool = True) -> list[RuleResult]:
     """include_repair_rule=False for the 'raw' stage (pre-balancer) — rule_10 measures
     balancer repair, which doesn't apply to a decision that hasn't been through it yet."""
@@ -379,6 +408,7 @@ def run_rules(scenario: EnvironmentState, decision: Decision, repairs: list[Fiel
         rule_8d_floor_justification_present(scenario, decision),
         rule_8e_floor_clamped_or_ramped(scenario, decision),
         rule_9_cascade_deviation(scenario, decision),
+        rule_11_no_grid_charging(scenario, decision),
     ]
     if include_repair_rule:
         rules.append(rule_10_repair_magnitude(repairs))

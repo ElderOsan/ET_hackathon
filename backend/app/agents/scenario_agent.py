@@ -18,6 +18,7 @@ import random
 
 from app.data import fleet, physics
 from app.data.tuning import (
+    CARBON_INTENSITY_RANGE_T_PER_MWH,
     DEFAULT_PREVIOUS_FLOOR_PCT,
     DEMAND_BAND_MW,
     FLOOR_BANDS,
@@ -137,6 +138,10 @@ def generate_scenario(
 ) -> EnvironmentState:
     concrete_seed = seed if seed is not None else random.SystemRandom().randint(0, 2**31 - 1)
     rng = random.Random(concrete_seed)
+    # Addendum C, point 9 (seed stability): a SEPARATE stream for new fields, keyed off the
+    # same seed but never drawing from `rng` -- adding a field here must never shift any
+    # existing field's value for a seed that already reproduces a known scenario.
+    carbon_rng = random.Random(f"carbon:{concrete_seed}")
 
     events = list(_PROFILE_EVENTS[difficulty])
     degraded = "battery_2_offline" in events
@@ -231,6 +236,7 @@ def generate_scenario(
         buy_price_per_mwh=physics.buy_price_per_mwh(price),
         sell_price_per_mwh=physics.sell_price_per_mwh(price),
         carbon_price_per_ton=round(rng.uniform(20, 40), 1),
+        grid_carbon_intensity_t_per_mwh=round(carbon_rng.uniform(*CARBON_INTENSITY_RANGE_T_PER_MWH), 3),
         demand_response_incentive_per_mwh=round(rng.uniform(10, 30), 1),
         weather_forecast="storm" if "storm_alert" in events else "clear",
         storm_alert="storm_alert" in events,

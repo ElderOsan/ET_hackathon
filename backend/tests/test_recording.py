@@ -66,6 +66,18 @@ def test_02_resume_skips_already_recorded_calls(tmp_path, monkeypatch):
     assert client.models.generate_content.call_count == 1
 
 
+def test_03b_scrub_redacts_todays_actual_configured_key_whatever_its_shape():
+    # The real key in this project (AQ.<...>, an AI Studio key) does NOT match the AIza
+    # pattern -- this is the defense that actually covers it, found by testing against the
+    # real configured value rather than assuming the classic shape.
+    from app.core.config import GEMINI_API_KEY
+    assert GEMINI_API_KEY, "GEMINI_API_KEY must be configured for this test to mean anything"
+    text = f"some request text containing {GEMINI_API_KEY} embedded in it"
+    scrubbed = recording.scrub(text)
+    assert GEMINI_API_KEY not in scrubbed
+    assert "[REDACTED_API_KEY]" in scrubbed
+
+
 def test_03_scrub_redacts_api_key_pattern():
     fake_key = "AIza" + "x" * 35
     text = f"Authorization used key {fake_key} for this call."

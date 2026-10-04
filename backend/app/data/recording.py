@@ -18,17 +18,24 @@ from typing import Protocol
 
 from app.agents import orchestrator_agent
 from app.agents.orchestrator_agent import CallFailure, args_from_response, build_request, decision_from_args
+from app.core.config import GEMINI_API_KEY
 from app.models.schemas import Decision, EnvironmentState
 
 RECORDINGS_ROOT = Path(__file__).resolve().parents[3] / "recordings"  # .../app/data/recording.py -> repo root
 
-# Google API keys (what GEMINI_API_KEY holds) look like "AIza" + 35 more chars. Scrub
-# anything matching this out of every string written to disk, regardless of context.
+# Two defenses, not one: a shape-based pattern for the classic Google Cloud Console key
+# format ("AIza" + 35 chars) AND a literal scrub of today's actual configured key, whatever
+# shape it has. Checking only the pattern would have MISSED this project's real key: it's
+# "AQ." + base64url-ish chars (an AI Studio key), not "AIza..." — found by actually comparing
+# scrub()'s coverage against backend/.env's real value rather than assuming the common shape.
 _API_KEY_PATTERN = re.compile(r"AIza[0-9A-Za-z_\-]{35}")
 
 
 def scrub(text: str) -> str:
-    return _API_KEY_PATTERN.sub("[REDACTED_API_KEY]", text)
+    text = _API_KEY_PATTERN.sub("[REDACTED_API_KEY]", text)
+    if GEMINI_API_KEY and GEMINI_API_KEY in text:
+        text = text.replace(GEMINI_API_KEY, "[REDACTED_API_KEY]")
+    return text
 
 
 def _scrub_json_text(text: str) -> str:

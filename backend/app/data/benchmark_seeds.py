@@ -16,3 +16,11 @@ HELD_OUT_SEED_SET = {
     "name": "held_out",
     "base_seed": 20261104,
 }
+
+# T1 smoke (Patch 3 evidence checklist): one scenario per profile plus two hard cascades,
+# fixed seeds, run whenever the prompt, input schema or model path changes -- never the full
+# benchmark. 8 scenarios, ~8 calls. See scripts/smoke.py.
+SMOKE_SEED_SET = {
+    "name": "smoke",
+    "base_seed": 90000001,
+}

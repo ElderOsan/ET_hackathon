@@ -60,6 +60,7 @@ export default function BatchRunPanel() {
             <option value="live">Live agent (not recorded)</option>
             <option value="record">Live agent, recorded (default)</option>
             <option value="replay">Recorded run (no key, no network)</option>
+            <option value="safe">Safe mode (no live attempt)</option>
           </select>
         </label>
         {mode === "replay" && (
@@ -116,12 +117,12 @@ export default function BatchRunPanel() {
           <div className="row" style={{ marginTop: 14, gap: 24 }}>
             <p style={{ fontSize: 20, margin: 0 }}>
               First-attempt pass rate: <strong>{summary.first_attempt_pass_rate_pct}%</strong>{" "}
-              <span style={{ fontSize: 12, color: "#9aa4b2" }}>({summary.first_attempt_passed}/{summary.total}) — the model's own score, before the balancer</span>
+              <span style={{ fontSize: 12, color: "#9aa4b2" }}>({summary.first_attempt_passed}/{summary.judged_count}) — the model's own score, before the balancer. Agent-only: excludes safe-mode/unresolved rows.</span>
             </p>
           </div>
           <div className="row" style={{ marginTop: 6, gap: 24 }}>
             <p style={{ fontSize: 16, margin: 0 }}>
-              Applied pass rate: <strong>{summary.applied_pass_rate_pct}%</strong> ({summary.applied_passed}/{summary.total} passed, {summary.applied_failed} failed, {summary.applied_flagged} flagged)
+              Applied pass rate: <strong>{summary.applied_pass_rate_pct}%</strong> ({summary.applied_passed}/{summary.judged_count} passed, {summary.applied_failed} failed, {summary.applied_flagged} flagged)
             </p>
             <p style={{ fontSize: 16, margin: 0 }}>
               Repair rate: <strong style={{ color: summary.repair_rate_pct > 20 ? "#f5a666" : "#9aa4b2" }}>{summary.repair_rate_pct}%</strong>{" "}
@@ -134,8 +135,16 @@ export default function BatchRunPanel() {
               margin-infeasible: {summary.margin_infeasible_count} <span style={{ fontSize: 11 }}>(reserve-margin target unreachable — expected sometimes, not a bug)</span>
             </p>
             <p style={{ fontSize: 13, margin: 0, color: "#9aa4b2" }}>
-              rule_9 N/A: {summary.na_count} <span style={{ fontSize: 11 }}>(excluded from the pass rates above)</span>
+              rule_9 N/A: {summary.na_counts_by_rule?.rule_9 || 0} <span style={{ fontSize: 11 }}>(the rule had nothing to judge — the scenario still counts in the pass rates via its other rules)</span>
             </p>
+            <p style={{ fontSize: 13, margin: 0, color: summary.safe_mode_count > 0 ? "#f5a666" : "#9aa4b2" }}>
+              safe mode: {summary.safe_mode_count} <span style={{ fontSize: 11 }}>({summary.safe_mode_passed} passed, {summary.safe_mode_pass_rate_pct}% — separate rate, never mixed into the agent's score)</span>
+            </p>
+            {summary.unresolved_count > 0 && (
+              <p style={{ fontSize: 13, margin: 0, color: "#ff8a8a" }}>
+                unresolved: {summary.unresolved_count} <span style={{ fontSize: 11 }}>(even Safe mode did not run — see the table below)</span>
+              </p>
+            )}
             <p style={{ fontSize: 13, margin: 0, color: "#9aa4b2" }}>seed: {summary.seed}{summary.seed_set ? ` (${summary.seed_set})` : ""}</p>
           </div>
 
@@ -173,6 +182,7 @@ export default function BatchRunPanel() {
                 <th>Tick</th>
                 <th>Difficulty</th>
                 <th>Objective</th>
+                <th>Mode</th>
                 <th>Raw</th>
                 <th>Applied</th>
                 <th>Repaired</th>
@@ -185,12 +195,18 @@ export default function BatchRunPanel() {
                 const appliedStage = r.stages.find((s) => s.name === "applied");
                 const failedRules = appliedStage.evaluation.rules.filter((x) => !x.passed && x.applicable).map((x) => x.rule_id);
                 const isOpen = expandedTick === r.scenario.tick;
+                const rowMode = appliedStage.decision.mode;
                 return (
                   <Fragment key={r.scenario.tick}>
                     <tr style={{ cursor: "pointer" }} onClick={() => setExpandedTick(isOpen ? null : r.scenario.tick)}>
                       <td>{r.scenario.tick}</td>
                       <td>{r.scenario.difficulty}</td>
                       <td>{r.scenario.objective || "none"}</td>
+                      <td>{rowMode !== "agent" && (
+                        <span className="badge" style={{ background: rowMode === "safe_mode" ? "#3a2a1f" : "#4a1f23", color: rowMode === "safe_mode" ? "#f5a666" : "#ff8a8a" }}>
+                          {rowMode}
+                        </span>
+                      )}</td>
                       <td><span className={`badge ${rawStage.evaluation.status}`}>{rawStage.evaluation.status}</span></td>
                       <td><span className={`badge ${appliedStage.evaluation.status}`}>{appliedStage.evaluation.status}</span></td>
                       <td>{r.repaired ? "yes" : "no"}</td>
@@ -198,7 +214,7 @@ export default function BatchRunPanel() {
                     </tr>
                     {isOpen && (
                       <tr>
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
                             <div style={{ flex: 1 }}>
                               <p style={{ fontSize: 11, color: "#9aa4b2" }}>Scenario (seed {r.scenario.seed})</p>

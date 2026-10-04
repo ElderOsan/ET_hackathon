@@ -13,6 +13,23 @@ function plainActions(decision) {
   return lines;
 }
 
+// Patch 3, Step 4: "model errors are shown clearly with a next action." Maps the raw
+// failure_detail text to a short, specific cause + what to do about it.
+function classifyError(detail) {
+  if (!detail) return null;
+  const d = detail.toLowerCase();
+  if (d.includes("safe mode selected")) return null; // an intentional choice, not a failure -- no "next action" needed
+  if (d.includes("gemini_api_key is not set")) return { cause: "No API key configured", action: "Add GEMINI_API_KEY to backend/.env, or keep using Safe mode / a Recorded run — neither needs one." };
+  if (d.includes("simulated api outage")) return { cause: "Outage simulated manually", action: "Uncheck “Simulate API outage” in Controls to resume live calls." };
+  if (d.includes("401") || d.includes("403") || d.includes("permission") || d.includes("invalid") && d.includes("key")) return { cause: "Invalid or unauthorized API key", action: "Check GEMINI_API_KEY in backend/.env against aistudio.google.com." };
+  if (d.includes("404") || d.includes("not found") || d.includes("model")) return { cause: "Model unavailable or retired", action: "Check GEMINI_MODEL in backend/.env against the current model list." };
+  if (d.includes("429") || d.includes("resource_exhausted") || d.includes("quota")) return { cause: "Rate limited (free-tier quota)", action: "Wait a minute and try again, or use a paid key." };
+  if (d.includes("503") || d.includes("unavailable") || d.includes("overload")) return { cause: "Gemini temporarily overloaded", action: "Try again shortly — this is usually transient." };
+  if (d.includes("timeout") || d.includes("connection")) return { cause: "Network/connection problem", action: "Check your internet connection and try again." };
+  if (d.includes("parse")) return { cause: "The model's response could not be parsed", action: "Usually transient — try again; if it persists, check the model/schema version." };
+  return { cause: "Unexpected error", action: "See the detail below." };
+}
+
 // Mirrors physics.decision_profit exactly — must stay in sync with backend/app/data/physics.py.
 function decisionProfit(scenario, decision) {
   const saleMw = decision.market_action === "sell" ? decision.market_amount_mw : 0;
@@ -27,10 +44,23 @@ export default function DecisionPanel({ scenario, rawStage, appliedStage, repair
   const applied = appliedStage.decision;
   const floorAdjusted = applied.proposed_floor_pct !== applied.applied_floor_pct;
   const profit = decisionProfit(scenario, applied);
+  const errorInfo = applied.mode !== "agent" ? classifyError(applied.failure_detail) : null;
 
   return (
     <div className="panel">
       <h2>2. Orchestrator Decision</h2>
+      {applied.mode === "safe_mode" && (
+        <p style={{ fontSize: 13, color: "#f5a666", background: "#3a2a1f", padding: 8, borderRadius: 6, fontWeight: 600 }}>
+          ⚠ SAFE MODE — the Orchestrator could not respond, so this decision is the deterministic dispatcher's own (no model call).
+          {errorInfo && <><br /><span style={{ fontWeight: 400 }}>{errorInfo.cause}. {errorInfo.action}</span></>}
+        </p>
+      )}
+      {(applied.mode === "model_call_failed" || applied.mode === "parse_failed") && (
+        <p style={{ fontSize: 13, color: "#ff8a8a", background: "#3a2a1f", padding: 8, borderRadius: 6, fontWeight: 600 }}>
+          ⚠ UNRESOLVED — even the Safe-mode fallback did not run for this scenario; it is marked FAIL.
+          {errorInfo && <><br /><span style={{ fontWeight: 400 }}>{errorInfo.cause}. {errorInfo.action}</span></>}
+        </p>
+      )}
       {infeasible && (
         <p style={{ fontSize: 13, color: "#f5a666", background: "#3a2a1f", padding: 8, borderRadius: 6 }}>
           This scenario is physically infeasible — no decision could serve full demand. A generator bug, not a model error.

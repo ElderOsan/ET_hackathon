@@ -8,7 +8,9 @@ import ManualEntryForm from "./components/ManualEntryForm";
 
 export default function App() {
   const [presets, setPresets] = useState({ difficulties: [], objectives: [] });
-  const [mode, setMode] = useState("auto");
+  const [mode, setMode] = useState("auto"); // scenario entry mode: auto / manual
+  const [runMode, setRunMode] = useState("live"); // model-call mode: live / safe (Patch 3, Step 4)
+  const [status, setStatus] = useState(null); // {key_configured, model, simulating_outage}
   const [difficulty, setDifficulty] = useState("");
   const [objective, setObjective] = useState("");
   const [generatedScenario, setGeneratedScenario] = useState(null);
@@ -24,7 +26,24 @@ export default function App() {
         setDifficulty(p.difficulties[0] || "");
       })
       .catch((e) => setError(String(e)));
+    api
+      .status()
+      .then((s) => {
+        setStatus(s);
+        if (!s.key_configured) setRunMode("safe"); // no key -> default straight to Safe mode, no error shown
+      })
+      .catch(() => {});
   }, []);
+
+  async function toggleSimulateOutage(e) {
+    const enabled = e.target.checked;
+    try {
+      const s = await api.setSimulateOutage(enabled);
+      setStatus((prev) => ({ ...prev, simulating_outage: s.simulating_outage }));
+    } catch (err) {
+      setError(String(err));
+    }
+  }
 
   function reset() {
     setGeneratedScenario(null);
@@ -36,7 +55,7 @@ export default function App() {
     reset();
     setLoading(true);
     try {
-      const r = await api.runSingle({ difficulty, objective: objective || null });
+      const r = await api.runSingle({ difficulty, objective: objective || null, mode: runMode });
       setResult(r);
     } catch (e) {
       setError(String(e));
@@ -63,7 +82,7 @@ export default function App() {
     setResult(null);
     setLoading(true);
     try {
-      const r = await api.runFromScenario(editedScenario);
+      const r = await api.runFromScenario(editedScenario, runMode);
       setResult(r);
     } catch (e) {
       setError(String(e));
@@ -95,11 +114,29 @@ export default function App() {
               <option key={o} value={o}>{o}</option>
             ))}
           </select>
+          <select value={runMode} onChange={(e) => setRunMode(e.target.value)} title="Live calls the Orchestrator (auto-falls back to Safe mode on failure). Safe mode uses the deterministic dispatcher directly, no model call.">
+            <option value="live">Live agent</option>
+            <option value="safe">Safe mode</option>
+          </select>
 
           {mode === "auto" ? (
             <button onClick={runAuto} disabled={loading}>{loading ? "Running…" : "Run Scenario (Auto)"}</button>
           ) : (
             <button onClick={generateScenario} disabled={loading}>{loading ? "Working…" : "Generate Scenario"}</button>
+          )}
+        </div>
+
+        <div className="row" style={{ marginTop: 8, fontSize: 13 }}>
+          {status && !status.key_configured && (
+            <span className="badge" style={{ background: "#1f2b45", color: "#8fb4ff" }}>
+              No API key configured — Recorded run and Safe mode are available
+            </span>
+          )}
+          {status && (
+            <label className="row" style={{ gap: 6 }}>
+              <input type="checkbox" checked={!!status.simulating_outage} onChange={toggleSimulateOutage} />
+              Simulate API outage (forces an instant fallback to Safe mode — for demoing the fallback path)
+            </label>
           )}
         </div>
 

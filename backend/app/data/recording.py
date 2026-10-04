@@ -23,23 +23,27 @@ from app.models.schemas import Decision, EnvironmentState
 
 RECORDINGS_ROOT = Path(__file__).resolve().parents[3] / "recordings"  # .../app/data/recording.py -> repo root
 
-# Two defenses, not one: a shape-based pattern for the classic Google Cloud Console key
-# format ("AIza" + 35 chars) AND a literal scrub of today's actual configured key, whatever
-# shape it has. Checking only the pattern would have MISSED this project's real key: it's
-# "AQ." + base64url-ish chars (an AI Studio key), not "AIza..." — found by actually comparing
-# scrub()'s coverage against backend/.env's real value rather than assuming the common shape.
-_API_KEY_PATTERN = re.compile(r"AIza[0-9A-Za-z_\-]{35}")
+# Two defenses layered, not one: shape-based patterns for both known Google key formats,
+# PLUS a literal scrub of the exact key active for a given call. Checking only a pattern
+# would have MISSED this project's real key on first use: it's "AQ." + base64url-ish chars
+# (an AI Studio key), not "AIza..." — found by actually comparing scrub()'s coverage against
+# backend/.env's real value rather than assuming the common shape.
+_API_KEY_PATTERNS = [
+    re.compile(r"AIza[0-9A-Za-z_\-]{35}"),  # classic Google Cloud Console key
+    re.compile(r"AQ\.[0-9A-Za-z_\-]{20,}"),  # AI Studio key (this project's actual format)
+]
 
 
-def scrub(text: str) -> str:
-    text = _API_KEY_PATTERN.sub("[REDACTED_API_KEY]", text)
-    if GEMINI_API_KEY and GEMINI_API_KEY in text:
-        text = text.replace(GEMINI_API_KEY, "[REDACTED_API_KEY]")
+def scrub(text: str, extra_key: str | None = None) -> str:
+    """extra_key: the literal key actually used for THIS call, scrubbed in addition to the
+    two shape patterns and the currently-configured GEMINI_API_KEY — so a recording stays
+    clean even across a key rotation, not just for whichever key happens to be active now."""
+    for pattern in _API_KEY_PATTERNS:
+        text = pattern.sub("[REDACTED_API_KEY]", text)
+    for key in (GEMINI_API_KEY, extra_key):
+        if key and key in text:
+            text = text.replace(key, "[REDACTED_API_KEY]")
     return text
-
-
-def _scrub_json_text(text: str) -> str:
-    return scrub(text)
 
 
 def cache_key(scenario_hash: str, prompt_version: str, model: str, temperature: float, sample_index: int = 0) -> str:
@@ -93,6 +97,13 @@ class RecordingRecorder:
             "tick": scenario.tick, "seed": scenario.seed, "recorded_at": time.time(),
             "request": {"contents": request["contents"]},
         }
+        # The key actually used for this call. get_client() is a process-wide singleton
+        # built once from config.GEMINI_API_KEY (see app/core/llm_client.py) -- there is no
+        # per-call key rotation in this codebase, so "the key used for this call" and "the
+        # configured key" are the same value today. Read fresh from config (not a cached
+        # module-level name) so this stays correct if that ever changes.
+        from app.core.config import GEMINI_API_KEY as call_key
+
         t0 = time.monotonic()
         try:
             response = orchestrator_agent._call_gemini_live(request)
@@ -100,14 +111,14 @@ class RecordingRecorder:
             record["status"] = "ok"
             record["response_args"] = args
             record["latency_ms"] = round((time.monotonic() - t0) * 1000, 1)
-            path.write_text(_scrub_json_text(json.dumps(record, indent=2, default=str)))
+            path.write_text(scrub(json.dumps(record, indent=2, default=str), extra_key=call_key))
             return decision_from_args(scenario, args)
         except CallFailure as e:
             record["status"] = "failed"
             record["failure_kind"] = e.kind
             record["failure_detail"] = e.detail
             record["latency_ms"] = round((time.monotonic() - t0) * 1000, 1)
-            path.write_text(_scrub_json_text(json.dumps(record, indent=2, default=str)))
+            path.write_text(scrub(json.dumps(record, indent=2, default=str), extra_key=call_key))
             raise
 
 
@@ -142,7 +153,7 @@ def write_run_meta(run_id: str, **meta) -> Path:
     run_dir = RECORDINGS_ROOT / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     path = run_dir / "meta.json"
-    path.write_text(_scrub_json_text(json.dumps({"run_id": run_id, **meta}, indent=2, default=str)))
+    path.write_text(scrub(json.dumps({"run_id": run_id, **meta}, indent=2, default=str)))
     return path
 
 

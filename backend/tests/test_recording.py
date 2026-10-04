@@ -86,6 +86,16 @@ def test_03_scrub_redacts_api_key_pattern():
     assert "[REDACTED_API_KEY]" in scrubbed
 
 
+def test_03c_scrub_redacts_aq_shaped_key_generically():
+    # A DIFFERENT AQ.-shaped key than this project's real one -- proves the shape pattern
+    # catches a judge's own key, not just the one literal value we happen to have.
+    fake_key = "AQ." + "Zz9-xQ_kLm3pR8vWn5tY7cF1hD2bN6" * 2
+    text = f"request used {fake_key} as credentials"
+    scrubbed = recording.scrub(text)
+    assert fake_key not in scrubbed
+    assert "[REDACTED_API_KEY]" in scrubbed
+
+
 def test_04_recorded_file_never_contains_a_key_shaped_string(tmp_path, monkeypatch):
     monkeypatch.setattr(recording, "RECORDINGS_ROOT", tmp_path)
     fake_key = "AIza" + "y" * 35

@@ -363,6 +363,33 @@ def test_20_buy_sell_prices_present_and_zero_spread_reproduces_old_behaviour():
         assert physics.sell_price_per_mwh(100.0) == 100.0
 
 
+def test_21_rule5_avoidable_charge_only_and_na_for_carbon_and_renewable():
+    # Brief 2 Patch 2, acceptance test 6: rule_5 doesn't flag charging that absorbs
+    # unsellable surplus, flags only the sellable part otherwise, and is N/A for
+    # min_carbon / max_renewable_utilisation.
+    base = dict(difficulty=Difficulty.D2_PRICE_SPIKE, total_demand_mw=90.0, total_demand_forecast_mw=90.0, transmission_headroom_mw=5.0)
+    # generation 101.7 - demand 90 = surplus 11.7MW; sellable 5.0MW (headroom); unsellable 6.7MW.
+
+    scenario = _tick88_scenario(**base, objective=Objective.COST_EFFICIENCY)
+    fully_unavoidable = _decision(battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=6.7), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)])
+    r = evaluate(scenario, fully_unavoidable)
+    rule5 = next(x for x in r.rules if x.rule_id == "rule_5")
+    assert rule5.passed, rule5.detail
+
+    partly_avoidable = _decision(battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=6.7), BatteryAction(battery_id="battery_2", action="charge", amount_mw=3.3)])
+    r2 = evaluate(scenario, partly_avoidable)
+    rule5b = next(x for x in r2.rules if x.rule_id == "rule_5")
+    assert not rule5b.passed, rule5b.detail
+    assert rule5b.value_actual == 3.3
+
+    for objective in (Objective.MIN_CARBON, Objective.MAX_RENEWABLE_UTILISATION):
+        na_scenario = _tick88_scenario(**base, objective=objective)
+        r3 = evaluate(na_scenario, partly_avoidable)
+        rule5c = next(x for x in r3.rules if x.rule_id == "rule_5")
+        assert rule5c.applicable is False
+        assert rule5c.passed is True
+
+
 def test_15_regression_rules_3_and_4_never_disagree_on_unmet():
     scenario = _tick88_scenario()
     for curtail, sell, charge in [(0.0, 0.0, 0.0), (0.0, 17.3, 16.0), (0.0, 0.0, 16.0)]:

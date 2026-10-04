@@ -140,20 +140,38 @@ def rule_4_no_sell_while_unmet(scenario: EnvironmentState, decision: Decision) -
 
 
 def rule_5_no_charge_at_price_peak(scenario: EnvironmentState, decision: Decision) -> RuleResult:
+    description = "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies"
+    if scenario.objective in (Objective.MIN_CARBON, Objective.MAX_RENEWABLE_UTILISATION):
+        return RuleResult(rule_id="rule_5", description=description, severity="flagged", passed=True, applicable=False, detail=f"N/A — this objective ({scenario.objective.value}) doesn't trade cost against a price-peak charging decision.")
+
     threshold = _daily_high_threshold(scenario)
-    charging = any(a.action == "charge" and a.amount_mw > 0 for a in decision.battery_actions)
     at_peak = scenario.electricity_price_per_mwh >= threshold
     emergency = physics.is_emergency(scenario, decision.applied_floor_pct)
-    passed = not (charging and at_peak) or emergency
-    if emergency and charging and at_peak:
-        detail = "Charging at a price peak, but legitimate given the emergency."
-    else:
+
+    generation = physics.total_generation_mw(scenario)
+    surplus_mw = max(0.0, generation - scenario.total_demand_mw)
+    sellable_surplus_mw = min(surplus_mw, scenario.transmission_headroom_mw)
+    unsellable_surplus_mw = max(0.0, surplus_mw - sellable_surplus_mw)
+    charge = sum(a.amount_mw for a in decision.battery_actions if a.action == "charge")
+    avoidable_charge_mw = max(0.0, charge - unsellable_surplus_mw)
+
+    violation = avoidable_charge_mw > BALANCE_TOLERANCE_MW and at_peak and not emergency
+    passed = not violation
+    if emergency and avoidable_charge_mw > BALANCE_TOLERANCE_MW and at_peak:
+        detail = f"Charging {avoidable_charge_mw:.1f}MW (avoidable) at a price peak, but legitimate given the emergency."
+    elif not passed:
         detail = (
-            f"Charging battery while price ${scenario.electricity_price_per_mwh:.0f}/MWh is at/near the daily high (${threshold:.0f})."
-            if not passed
-            else "No charging during a price peak."
+            f"Charging {avoidable_charge_mw:.1f}MW beyond the {unsellable_surplus_mw:.1f}MW of unsellable surplus "
+            f"(sellable surplus {sellable_surplus_mw:.1f}MW) while price ${scenario.electricity_price_per_mwh:.0f}/MWh is at/near the daily high (${threshold:.0f})."
         )
-    return RuleResult(rule_id="rule_5", description="Should not charge the battery at a daily price high outside an emergency", severity="flagged", passed=passed, detail=detail)
+    elif charge > BALANCE_TOLERANCE_MW and at_peak:
+        detail = f"Charging {charge:.1f}MW at a price peak, but all of it absorbs the {unsellable_surplus_mw:.1f}MW of surplus that couldn't be sold (the alternative was curtailment) — not avoidable."
+    else:
+        detail = "No avoidable charging during a price peak."
+    return RuleResult(
+        rule_id="rule_5", description=description, severity="flagged", passed=passed, detail=detail,
+        value_label="avoidable charge vs. tolerance (MW)", value_actual=round(avoidable_charge_mw, 1), value_reference=BALANCE_TOLERANCE_MW,
+    )
 
 
 def rule_6_curtailment_amount(scenario: EnvironmentState, decision: Decision) -> RuleResult:

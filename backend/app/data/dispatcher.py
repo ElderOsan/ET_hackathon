@@ -60,10 +60,13 @@ def choose_floor(scenario: EnvironmentState) -> tuple[float, str]:
 
 def _shortfall_ladder(scenario: EnvironmentState, floor_pct: float) -> tuple[list[BatteryAction], float]:
     """renewables (implicit — generation is already fixed) -> battery discharge above floor
-    -> grid import -> emergency discharge below floor only if physics.is_emergency agrees.
-    Same ladder for every objective: in a shortfall there is nothing to sell, so cost,
-    carbon and renewable-utilisation all point the same way (use free battery capacity
-    before paying for grid import)."""
+    -> grid import -> emergency discharge below floor, only as the last resort and only if
+    physics.is_emergency agrees. Import is tried BEFORE the reserve floor is touched, on
+    purpose (Brief 1: the reserve floor is the last rung of the ladder, after grid import,
+    not an interchangeable cost-minimization lever) — a cheaper outcome that spends reserve
+    margin when paid import could have covered it is not a better one; the margin exists for
+    the tick import can't help. (Patch 3 addendum: corrected from an earlier, wrong docstring
+    that said the opposite — the ladder order itself was never changed.)"""
     generation = physics.total_generation_mw(scenario)
     shortfall = max(0.0, scenario.total_demand_mw - generation)
     actions: list[BatteryAction] = []

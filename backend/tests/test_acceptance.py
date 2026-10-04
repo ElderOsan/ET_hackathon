@@ -1,9 +1,8 @@
-"""Acceptance tests from the physical-layer brief (Brief 2), section "Acceptance tests".
-
-Built around the tick-12 fixture from the brief's own bug report (solar 15.3, wind 89.9,
-base demand 71.2, industrial demand 32.6, transmission constraint 94.7, battery_1 at 89%
-SoC, battery_2 offline, storm alert) — since those numbers were computed by hand in the
-brief, reproducing them exactly is a good independent check of the physics module.
+"""Acceptance tests from the Brief 2 Patch (calibration, balancer unwind-order fix, raw+applied
+scoreboard). Built around the tick-88 fixture from the patch's own bug report: generation
+101.7MW (solar 40 + wind 61.7), total demand 139.0MW, original proposal charged 16MW
+(battery_1 10 + battery_2 6) and sold 17.3MW. These numbers were computed by hand in the
+brief, so reproducing them exactly is a good independent check.
 """
 from __future__ import annotations
 
@@ -11,55 +10,59 @@ from unittest.mock import patch
 
 from app.agents import pipeline
 from app.agents.evaluator import evaluate
+from app.agents.orchestrator_agent import SUBMIT_DECISION_SCHEMA
 from app.agents.scenario_agent import generate_scenario, normalize_scenario
-from app.data import physics
+from app.data import fleet, physics
 from app.data.balancer import balance
+from app.data.tuning import PROFILE_RATIO_RANGES
 from app.models.schemas import Battery, BatteryAction, Decision, Difficulty, EnvironmentState, Objective
 
 
-def _tick12_scenario(objective=None, transmission_headroom_mw=94.7) -> EnvironmentState:
-    return EnvironmentState(
-        tick=12,
-        seed=12,
-        difficulty=Difficulty.D3_MULTI_FAILURE_CASCADE,
-        objective=objective,
-        solar_output_mw=15.3,
-        solar_forecast_mw=15.0,
-        wind_output_mw=89.9,
-        wind_forecast_mw=90.0,
+def _tick88_scenario(**overrides) -> EnvironmentState:
+    base = dict(
+        tick=88,
+        seed=88,
+        difficulty=Difficulty.D1_STABLE_DAY,
+        objective=None,
+        solar_output_mw=40.0,
+        solar_forecast_mw=40.0,
+        wind_output_mw=61.7,
+        wind_forecast_mw=61.7,
         solar_farms=[],
         wind_farms=[],
-        base_demand_mw=71.2,
-        base_demand_forecast_mw=71.0,
-        total_demand_mw=103.8,
-        total_demand_forecast_mw=103.6,
+        base_demand_mw=100.0,
+        base_demand_forecast_mw=100.0,
+        total_demand_mw=139.0,
+        total_demand_forecast_mw=139.0,
         grid_frequency_hz=50.0,
-        transmission_constraint_mw=94.7,
-        transmission_headroom_mw=transmission_headroom_mw,
+        transmission_constraint_mw=180.0,
+        transmission_headroom_mw=180.0,
         batteries=[
-            Battery(id="battery_1", capacity_mwh=40.0, state_of_charge_pct=89.0, min_safe_soc_pct=10.0, max_charge_rate_mw=10.0, max_discharge_rate_mw=10.0, charging_efficiency_pct=92.0, degradation_pct=2.0, available=True),
-            Battery(id="battery_2", capacity_mwh=25.0, state_of_charge_pct=50.0, min_safe_soc_pct=10.0, max_charge_rate_mw=6.0, max_discharge_rate_mw=6.0, charging_efficiency_pct=90.0, degradation_pct=2.0, available=False),
+            Battery(id="battery_1", capacity_mwh=40.0, state_of_charge_pct=80.0, min_safe_soc_pct=10.0, max_charge_rate_mw=10.0, max_discharge_rate_mw=10.0, charging_efficiency_pct=92.0, degradation_pct=2.0, available=True),
+            Battery(id="battery_2", capacity_mwh=25.0, state_of_charge_pct=80.0, min_safe_soc_pct=10.0, max_charge_rate_mw=6.0, max_discharge_rate_mw=6.0, charging_efficiency_pct=90.0, degradation_pct=2.0, available=True),
         ],
-        previous_floor_pct=45.0,
-        electricity_price_per_mwh=100.0,
+        previous_floor_pct=25.0,
+        electricity_price_per_mwh=60.0,
         carbon_price_per_ton=30.0,
         demand_response_incentive_per_mwh=20.0,
-        weather_forecast="storm",
-        storm_alert=True,
+        weather_forecast="clear",
+        storm_alert=False,
         maintenance_scheduled=False,
-        industrial_demand_mw=32.6,
-        events=["battery_2_offline", "storm_alert"],
+        industrial_demand_mw=39.0,
+        events=[],
         expected_behavior="fixture",
-        expected_floor_min_pct=45.0,
-        expected_floor_max_pct=60.0,
+        expected_floor_min_pct=20.0,
+        expected_floor_max_pct=30.0,
         expected_ladder_step="fixture",
         expected_emergency=False,
     )
+    base.update(overrides)
+    return EnvironmentState(**base)
 
 
 def _decision(**overrides) -> Decision:
     base = dict(
-        tick=12,
+        tick=88,
         objective_used="cost_efficiency",
         battery_actions=[BatteryAction(battery_id="battery_1", action="hold", amount_mw=0.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)],
         market_action="hold",
@@ -67,8 +70,8 @@ def _decision(**overrides) -> Decision:
         curtail_solar_mw=0.0,
         curtail_wind_mw=0.0,
         demand_response_triggered=False,
-        proposed_floor_pct=45.0,
-        applied_floor_pct=45.0,
+        proposed_floor_pct=25.0,
+        applied_floor_pct=25.0,
         floor_justification="fixture",
         reasoning="fixture",
     )
@@ -76,175 +79,179 @@ def _decision(**overrides) -> Decision:
     return Decision(**base)
 
 
-def test_1_original_decision_unserved_42_3():
-    scenario = _tick12_scenario()
-    decision = _decision(
-        battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=10.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)],
-        market_action="sell", market_amount_mw=7.9,
-        curtail_wind_mw=25.8,
+def _original_tick88_proposal() -> Decision:
+    return _decision(
+        battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=10.0), BatteryAction(battery_id="battery_2", action="charge", amount_mw=6.0)],
+        market_action="sell", market_amount_mw=17.3,
     )
-    unserved = physics.unserved_mw(scenario, decision)
-    assert round(unserved, 1) == 42.3
 
+
+def test_1_display_single_result_element_and_na():
+    scenario = _tick88_scenario()
+    decision = _decision()  # fully served (101.7 generation vs... actually unserved here, see test below)
+    result = evaluate(scenario, decision)
+    rule3b = next(r for r in result.rules if r.rule_id == "rule_3b")
+    # load is unserved for this hold-everything decision -> rule_3b must be N/A, not a disguised pass
+    assert rule3b.applicable is False
+
+
+def test_2_fixed_fleet_identical_across_scenarios():
+    s1 = generate_scenario(Difficulty.D1_STABLE_DAY, Objective.COST_EFFICIENCY, seed=1)
+    s2 = generate_scenario(Difficulty.D3_MULTI_FAILURE_CASCADE, Objective.MAX_PROFIT, seed=2)
+    for s in (s1, s2):
+        solar_ids = {f.id: f.capacity_mw for f in s.solar_farms}
+        wind_ids = {f.id: f.capacity_mw for f in s.wind_farms}
+        assert solar_ids == fleet.SOLAR_FARM_CAPACITIES_MW
+        assert wind_ids == fleet.WIND_FARM_CAPACITIES_MW
+        battery_specs = {b.id: (b.capacity_mwh, b.max_charge_rate_mw, b.max_discharge_rate_mw) for b in s.batteries}
+        expected = {spec["id"]: (spec["capacity_mwh"], spec["max_charge_rate_mw"], spec["max_discharge_rate_mw"]) for spec in fleet.BATTERY_SPECS}
+        assert battery_specs == expected
+
+
+def test_4_profile_ratios_in_range():
+    for difficulty in Difficulty:
+        lo, hi = PROFILE_RATIO_RANGES[difficulty.value]
+        for seed in range(30):
+            s = generate_scenario(difficulty, None, seed=1000 * (list(Difficulty).index(difficulty) + 1) + seed)
+            ratio = (s.solar_output_mw + s.wind_output_mw) / s.total_demand_mw
+            assert lo - 0.01 <= ratio <= hi + 0.01, f"{difficulty.value} seed={seed}: ratio {ratio}"
+            assert physics.min_achievable_unserved_mw(s) == 0.0
+    # stable_day always a surplus, shortfall_day always below 1.0 (explicit brief requirement)
+    for seed in range(10):
+        s_stable = generate_scenario(Difficulty.D1_STABLE_DAY, None, seed=seed)
+        assert (s_stable.solar_output_mw + s_stable.wind_output_mw) / s_stable.total_demand_mw > 1.0
+        s_short = generate_scenario(Difficulty.D5_SHORTFALL_DAY, None, seed=seed)
+        assert (s_short.solar_output_mw + s_short.wind_output_mw) / s_short.total_demand_mw < 1.0
+
+
+def test_5_orchestrator_facts_derived_from_state_only():
+    scenario = _tick88_scenario()
+    facts = physics.orchestrator_facts(scenario, scenario.previous_floor_pct)
+    assert facts["total_generation_mw"] == round(scenario.solar_output_mw + scenario.wind_output_mw, 1)
+    assert facts["net_position_mw"] == round(facts["total_generation_mw"] - scenario.total_demand_mw, 1)
+    assert facts["position"] == "shortfall"
+    forbidden_keys = {"expected_behavior", "expected_emergency", "expected_floor_min_pct", "expected_floor_max_pct", "status", "rules", "passed"}
+    assert forbidden_keys.isdisjoint(facts.keys())
+    for b in facts["per_battery"]:
+        assert set(b.keys()) == {"battery_id", "discharge_available_mw", "charge_headroom_mw"}
+
+
+def test_6_reasoning_first_in_schema():
+    assert list(SUBMIT_DECISION_SCHEMA["properties"].keys())[0] == "reasoning"
+    assert SUBMIT_DECISION_SCHEMA["required"][0] == "reasoning"
+
+
+def test_7_charging_unwound_tick88_fixture():
+    scenario = _tick88_scenario()
+    proposal = _original_tick88_proposal()
+    applied, repairs = balance(scenario, proposal)
+
+    assert applied.market_action == "hold"
+    assert all(a.action == "hold" or a.amount_mw == 0 for a in applied.battery_actions)
+    unserved = physics.unserved_mw(scenario, applied)
+    assert round(unserved, 1) == 37.3
+
+    repaired_fields = {r.field for r in repairs}
+    assert any("sell" in f for f in repaired_fields)
+    assert any("battery_1" in f for f in repaired_fields) or any("battery_2" in f for f in repaired_fields)
+
+
+def test_8_balancer_never_adds_discharge_or_purchase():
+    scenario = _tick88_scenario()
+    proposal = _decision()  # proposes nothing at all — pure shortfall
+    applied, repairs = balance(scenario, proposal)
+    assert all(a.action != "discharge" for a in applied.battery_actions)
+    assert applied.market_action != "buy"
+    # the shortfall is left standing, not invented away
+    assert round(physics.unserved_mw(scenario, applied), 1) == round(scenario.total_demand_mw - (scenario.solar_output_mw + scenario.wind_output_mw), 1)
+
+
+def test_9_rule3_avoidable_shows_both_numbers():
+    scenario = _tick88_scenario()
+    proposal = _original_tick88_proposal()
+    applied, repairs = balance(scenario, proposal)
+    achievable = physics.min_achievable_unserved_mw(scenario)
+    assert achievable == 0.0  # generation + 16MW emergency discharge + headroom covers demand
+    result = evaluate(scenario, applied, repairs)
+    rule3 = next(r for r in result.rules if r.rule_id == "rule_3")
+    assert not rule3.passed
+    assert rule3.value_actual == round(physics.unserved_mw(scenario, applied), 1)
+    assert rule3.value_reference == 0.0
+
+
+def test_10_rule3_infeasible_scenario_not_failed():
+    # Crank demand far beyond anything the fleet + batteries + headroom could ever cover.
+    scenario = _tick88_scenario(total_demand_mw=5000.0, total_demand_forecast_mw=5000.0, transmission_headroom_mw=1.0)
+    achievable = physics.min_achievable_unserved_mw(scenario)
+    assert achievable > 0
+    # A decision that uses every lever maximally (full emergency discharge + full import) —
+    # the best ANYONE could do — must match the achievable minimum exactly, not exceed it.
+    decision = _decision(
+        battery_actions=[BatteryAction(battery_id="battery_1", action="discharge", amount_mw=10.0), BatteryAction(battery_id="battery_2", action="discharge", amount_mw=6.0)],
+        market_action="buy", market_amount_mw=1.0,
+    )
     result = evaluate(scenario, decision)
     rule3 = next(r for r in result.rules if r.rule_id == "rule_3")
-    rule4 = next(r for r in result.rules if r.rule_id == "rule_4")
-    assert not rule3.passed
-    assert not rule4.passed  # selling while unserved — rules 3 and 4 agree
+    # unserved == achievable (within tolerance) -> not the decision's fault -> passes
+    assert rule3.passed, rule3.detail
 
 
-def test_2_balanced_decision_passes():
-    scenario = _tick12_scenario(objective=Objective.MAX_RENEWABLE_UTILISATION)
-    decision = _decision(
-        objective_used="max_renewable_utilisation",
-        battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=1.4), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)],
-        market_action="hold", market_amount_mw=0.0,
-        curtail_wind_mw=0.0,
-    )
-    result = evaluate(scenario, decision)
-    for rule_id in ("rule_3", "rule_4", "rule_6", "rule_7"):
-        r = next(x for x in result.rules if x.rule_id == rule_id)
-        assert r.passed, f"{rule_id}: {r.detail}"
-    rule9 = next(r for r in result.rules if r.rule_id == "rule_9")
-    assert rule9.passed, rule9.detail
+def test_11_scoreboard_fields_present():
+    scenario = _tick88_scenario()
+    stub_proposal = _original_tick88_proposal()
+    with patch.object(pipeline, "decide", return_value=stub_proposal):
+        result = pipeline.run_decision_pipeline(scenario)
+    assert {s.name for s in result.stages} == {"raw", "applied"}
+    raw = next(s for s in result.stages if s.name == "raw")
+    applied = next(s for s in result.stages if s.name == "applied")
+    assert not any(r.rule_id == "rule_10" for r in raw.evaluation.rules)
+    assert any(r.rule_id == "rule_10" for r in applied.evaluation.rules)
 
 
-def test_3_curtailment_25_8_fails_rule6_and_flags_rule9():
-    scenario = _tick12_scenario(objective=Objective.MAX_RENEWABLE_UTILISATION)
-    decision = _decision(
-        objective_used="max_renewable_utilisation",
-        battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=10.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)],
-        market_action="sell", market_amount_mw=7.9,
-        curtail_wind_mw=25.8,
-    )
-    min_required = physics.min_required_curtailment_mw(scenario)
-    assert min_required < 1.0
-    result = evaluate(scenario, decision)
-    rule6 = next(r for r in result.rules if r.rule_id == "rule_6")
-    rule9 = next(r for r in result.rules if r.rule_id == "rule_9")
-    assert not rule6.passed
-    assert not rule9.passed
+def test_12_raw_fails_3_and_4_applied_fails_3_only():
+    scenario = _tick88_scenario()
+    stub_proposal = _original_tick88_proposal()
+    with patch.object(pipeline, "decide", return_value=stub_proposal):
+        result = pipeline.run_decision_pipeline(scenario)
+    raw = next(s for s in result.stages if s.name == "raw")
+    applied = next(s for s in result.stages if s.name == "applied")
+
+    raw_rule3 = next(r for r in raw.evaluation.rules if r.rule_id == "rule_3")
+    raw_rule4 = next(r for r in raw.evaluation.rules if r.rule_id == "rule_4")
+    assert not raw_rule3.passed
+    assert not raw_rule4.passed  # sold 17.3MW while demand was unmet
+
+    applied_rule3 = next(r for r in applied.evaluation.rules if r.rule_id == "rule_3")
+    applied_rule4 = next(r for r in applied.evaluation.rules if r.rule_id == "rule_4")
+    assert not applied_rule3.passed  # shortfall remains (37.3MW) — a model mistake, not infeasible
+    assert applied_rule4.passed  # balancer already stripped the sale
 
 
-def test_4_balancer_repairs_original_proposal():
-    scenario = _tick12_scenario()
-    proposal = _decision(
-        battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=10.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)],
-        market_action="sell", market_amount_mw=7.9,
-        curtail_wind_mw=25.8,
-    )
-    applied, repairs = balance(scenario, proposal)
-    assert len(repairs) > 0
-    assert abs(physics.power_balance_residual(scenario, applied)) < 0.2
-    result = evaluate(scenario, applied, repairs)
-    rule10 = next(r for r in result.rules if r.rule_id == "rule_10")
-    assert not rule10.passed  # repair magnitude exceeded tolerance
+def test_13_seed_sets_reproducible():
+    from app.data.benchmark_seeds import DEV_SEED_SET, HELD_OUT_SEED_SET
+    assert DEV_SEED_SET["name"] == "dev"
+    assert HELD_OUT_SEED_SET["name"] == "held_out"
+    a = generate_scenario(Difficulty.D2_PRICE_SPIKE, Objective.MIN_CARBON, seed=DEV_SEED_SET["base_seed"])
+    b = generate_scenario(Difficulty.D2_PRICE_SPIKE, Objective.MIN_CARBON, seed=DEV_SEED_SET["base_seed"])
+    assert a.model_dump(exclude={"tick"}) == b.model_dump(exclude={"tick"})
 
 
-def test_5_over_discharge_capped_and_flagged():
-    scenario = _tick12_scenario()
-    proposal = _decision(
-        battery_actions=[BatteryAction(battery_id="battery_1", action="discharge", amount_mw=10.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)],
-        proposed_floor_pct=45.0, applied_floor_pct=45.0,
-    )
-    # battery_1 at 46% SoC, floor 45%: only 1 point of headroom = 0.4MWh = 1.6MW this tick —
-    # well under the proposed 10MW, so the balancer must cap it.
-    near_floor_battery = scenario.batteries[0].model_copy(update={"state_of_charge_pct": 46.0})
-    scenario = scenario.model_copy(update={"batteries": [near_floor_battery, scenario.batteries[1]]})
-    applied, repairs = balance(scenario, proposal)
-    b1_action = next(a for a in applied.battery_actions if a.battery_id == "battery_1")
-    resulting_soc = physics.resulting_soc_pct(near_floor_battery, b1_action.amount_mw)
-    assert b1_action.amount_mw < 10.0  # the proposed amount was actually capped
-    assert resulting_soc >= 45.0 - 0.1  # capped at (or above) the applied floor
-    assert any("battery_1" in r.field for r in repairs)
+def test_14_manual_consistency_recomputes_ladder_from_position():
+    scenario = _tick88_scenario()  # shortfall scenario tagged with placeholder ladder text
+    normalized, corrections = normalize_scenario(scenario)
+    assert "shortfall" in normalized.expected_ladder_step.lower() or "import" in normalized.expected_ladder_step.lower()
+    assert any("expected_ladder_step" in c for c in corrections)
 
 
-def test_6_offline_battery_forced_to_zero():
-    scenario = _tick12_scenario()
-    proposal = _decision(
-        battery_actions=[BatteryAction(battery_id="battery_1", action="hold", amount_mw=0.0), BatteryAction(battery_id="battery_2", action="discharge", amount_mw=5.0)],
-    )
-    applied, repairs = balance(scenario, proposal)
-    b2_action = next(a for a in applied.battery_actions if a.battery_id == "battery_2")
-    assert b2_action.amount_mw == 0.0
-    assert any("battery_2" in r.field for r in repairs)
-
-
-def test_7_computed_emergency():
-    # tick-12 as given: generation (105.2MW) alone already exceeds total demand (103.8MW),
-    # so it can never be an emergency regardless of transmission headroom — confirms the
-    # calm case.
-    calm_scenario = _tick12_scenario(transmission_headroom_mw=94.7)
-    assert physics.is_emergency(calm_scenario, 45.0) is False
-
-    # A genuine shortfall case: generation alone falls well short of demand, and with
-    # transmission headroom and battery both constrained, even the full ladder can't close it.
-    shortfall_scenario = _tick12_scenario(transmission_headroom_mw=2.0).model_copy(update={"wind_output_mw": 10.0})
-    assert physics.is_emergency(shortfall_scenario, 45.0) is True
-
-    # Same shortfall, but with transmission headroom open — the ladder (import) covers it.
-    shortfall_but_importable = shortfall_scenario.model_copy(update={"transmission_headroom_mw": 94.7})
-    assert physics.is_emergency(shortfall_but_importable, 45.0) is False
-
-
-def test_8_rules_3_and_4_never_disagree():
-    scenario = _tick12_scenario()
-    for curtail, sell in [(0.0, 0.0), (25.8, 7.9), (0.0, 7.9), (10.0, 20.0)]:
-        decision = _decision(market_action="sell" if sell else "hold", market_amount_mw=sell, curtail_wind_mw=curtail)
+def test_15_regression_rules_3_and_4_never_disagree_on_unmet():
+    scenario = _tick88_scenario()
+    for curtail, sell, charge in [(0.0, 0.0, 0.0), (0.0, 17.3, 16.0), (0.0, 0.0, 16.0)]:
+        battery_actions = [BatteryAction(battery_id="battery_1", action="charge", amount_mw=charge * (10 / 16) if charge else 0.0), BatteryAction(battery_id="battery_2", action="charge", amount_mw=charge * (6 / 16) if charge else 0.0)]
+        decision = _decision(battery_actions=battery_actions, market_action="sell" if sell else "hold", market_amount_mw=sell, curtail_wind_mw=curtail)
         result = evaluate(scenario, decision)
         rule3 = next(r for r in result.rules if r.rule_id == "rule_3")
         rule4 = next(r for r in result.rules if r.rule_id == "rule_4")
-        unserved = physics.unserved_mw(scenario, decision)
-        assert rule3.passed == (unserved <= 0.1)
         if not rule3.passed and sell > 0:
             assert not rule4.passed
-
-
-def test_9_seed_reproducibility():
-    a = generate_scenario(Difficulty.D2_PRICE_SPIKE, Objective.MIN_CARBON, seed=777)
-    b = generate_scenario(Difficulty.D2_PRICE_SPIKE, Objective.MIN_CARBON, seed=777)
-    a_data = a.model_dump(exclude={"tick"})
-    b_data = b.model_dump(exclude={"tick"})
-    assert a_data == b_data
-    assert a.seed == b.seed == 777
-
-
-def test_10_full_matrix_generates_without_error():
-    for difficulty in Difficulty:
-        for objective in list(Objective) + [None]:
-            s = generate_scenario(difficulty, objective, seed=1)
-            assert s.total_demand_mw == round(s.base_demand_mw + s.industrial_demand_mw, 1)
-
-
-def test_11_same_pipeline_for_every_mode():
-    scenario = _tick12_scenario()
-    stub_proposal = _decision(
-        battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=1.4), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)],
-    )
-    with patch.object(pipeline, "decide", return_value=stub_proposal):
-        result_a = pipeline.run_decision_pipeline(scenario)
-        result_b = pipeline.run_decision_pipeline(scenario)
-    assert result_a.applied == result_b.applied
-    assert result_a.evaluation.status == result_b.evaluation.status
-    # Confirm it's literally the same balance()/evaluate() functions, not a parallel copy:
-    applied_direct, repairs_direct = balance(scenario, stub_proposal)
-    eval_direct = evaluate(scenario, applied_direct, repairs_direct)
-    assert result_a.applied == applied_direct
-    assert result_a.evaluation.status == eval_direct.status
-
-
-def test_12_manual_consistency():
-    scenario = _tick12_scenario()
-    edited = scenario.model_copy(update={"industrial_demand_mw": 50.0})
-    normalized, corrections = normalize_scenario(edited)
-    assert normalized.total_demand_mw == round(edited.base_demand_mw + 50.0, 1)
-    assert any("total_demand_mw" in c for c in corrections)
-
-    inconsistent = scenario.model_copy(update={
-        "events": ["battery_2_offline"],
-        "batteries": [scenario.batteries[0], scenario.batteries[1].model_copy(update={"available": True})],
-    })
-    normalized2, corrections2 = normalize_scenario(inconsistent)
-    battery_2 = next(b for b in normalized2.batteries if b.id == "battery_2")
-    assert battery_2.available is False
-    assert any("battery_2" in c for c in corrections2)
+        if rule4 and not rule4.passed:
+            assert not rule3.passed

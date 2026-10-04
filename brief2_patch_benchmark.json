@@ -1,0 +1,333 @@
+{
+  "seed": 20261004,
+  "seed_set": "dev",
+  "total": 16,
+  "first_attempt_passed": 4,
+  "applied_passed": 4,
+  "applied_failed": 0,
+  "applied_flagged": 12,
+  "repaired": 0,
+  "infeasible": 0,
+  "rule_fail_counts": {
+    "rule_9": 2,
+    "rule_8b": 4,
+    "rule_5": 3,
+    "rule_3b": 4
+  },
+  "results": [
+    {
+      "tick": 1,
+      "seed": 20261004,
+      "difficulty": "stable_day",
+      "objective": "cost_efficiency",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": 12.2,
+      "raw_failed_rules": [],
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 2,
+      "seed": 20261104,
+      "difficulty": "stable_day",
+      "objective": "min_carbon",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": 21.7,
+      "raw_failed_rules": [],
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 3,
+      "seed": 20261204,
+      "difficulty": "stable_day",
+      "objective": "max_renewable_utilisation",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": 9.4,
+      "raw_failed_rules": [],
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 4,
+      "seed": 20261304,
+      "difficulty": "stable_day",
+      "objective": "max_profit",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": 12.6,
+      "raw_failed_rules": [
+        "rule_9"
+      ],
+      "applied_failed_rules": [
+        "rule_9"
+      ]
+    },
+    {
+      "tick": 5,
+      "seed": 20271004,
+      "difficulty": "cloudy_afternoon",
+      "objective": "cost_efficiency",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": -12.0,
+      "raw_failed_rules": [
+        "rule_8b"
+      ],
+      "applied_failed_rules": [
+        "rule_8b"
+      ],
+      "rule_8b_detail": "Proposed floor 25.0% is outside the expected 30.0-45.0% band for this scenario's volatility.",
+      "rule_8b_proposed_floor": 25.0,
+      "storm_alert": false,
+      "events": [
+        "cloud_cover"
+      ]
+    },
+    {
+      "tick": 6,
+      "seed": 20271104,
+      "difficulty": "cloudy_afternoon",
+      "objective": "min_carbon",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": -17.9,
+      "raw_failed_rules": [
+        "rule_8b"
+      ],
+      "applied_failed_rules": [
+        "rule_8b"
+      ],
+      "rule_8b_detail": "Proposed floor 25.0% is outside the expected 30.0-45.0% band for this scenario's volatility.",
+      "rule_8b_proposed_floor": 25.0,
+      "storm_alert": false,
+      "events": [
+        "cloud_cover"
+      ]
+    },
+    {
+      "tick": 7,
+      "seed": 20271204,
+      "difficulty": "cloudy_afternoon",
+      "objective": "max_renewable_utilisation",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": -3.5,
+      "raw_failed_rules": [
+        "rule_8b"
+      ],
+      "applied_failed_rules": [
+        "rule_8b"
+      ],
+      "rule_8b_detail": "Proposed floor 25.0% is outside the expected 30.0-45.0% band for this scenario's volatility.",
+      "rule_8b_proposed_floor": 25.0,
+      "storm_alert": false,
+      "events": [
+        "cloud_cover"
+      ]
+    },
+    {
+      "tick": 8,
+      "seed": 20271304,
+      "difficulty": "cloudy_afternoon",
+      "objective": "max_profit",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": -6.3,
+      "raw_failed_rules": [
+        "rule_8b"
+      ],
+      "applied_failed_rules": [
+        "rule_8b"
+      ],
+      "rule_8b_detail": "Proposed floor 25.0% is outside the expected 30.0-45.0% band for this scenario's volatility.",
+      "rule_8b_proposed_floor": 25.0,
+      "storm_alert": false,
+      "events": [
+        "cloud_cover"
+      ]
+    },
+    {
+      "tick": 9,
+      "seed": 20281004,
+      "difficulty": "price_spike",
+      "objective": "cost_efficiency",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": 0.1,
+      "raw_failed_rules": [
+        "rule_5"
+      ],
+      "applied_failed_rules": [
+        "rule_5"
+      ]
+    },
+    {
+      "tick": 10,
+      "seed": 20281104,
+      "difficulty": "price_spike",
+      "objective": "min_carbon",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": 16.1,
+      "raw_failed_rules": [
+        "rule_5"
+      ],
+      "applied_failed_rules": [
+        "rule_5"
+      ]
+    },
+    {
+      "tick": 11,
+      "seed": 20281204,
+      "difficulty": "price_spike",
+      "objective": "max_renewable_utilisation",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": -1.3,
+      "raw_failed_rules": [],
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 12,
+      "seed": 20281304,
+      "difficulty": "price_spike",
+      "objective": "max_profit",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": 5.9,
+      "raw_failed_rules": [
+        "rule_5",
+        "rule_9"
+      ],
+      "applied_failed_rules": [
+        "rule_5",
+        "rule_9"
+      ]
+    },
+    {
+      "tick": 13,
+      "seed": 20291004,
+      "difficulty": "multi_failure_cascade",
+      "objective": "cost_efficiency",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": -7.2,
+      "raw_failed_rules": [
+        "rule_3b"
+      ],
+      "applied_failed_rules": [
+        "rule_3b"
+      ]
+    },
+    {
+      "tick": 14,
+      "seed": 20291104,
+      "difficulty": "multi_failure_cascade",
+      "objective": "min_carbon",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0999999999999659,
+      "achievable_mw": 0.0,
+      "net_position_mw": -10.4,
+      "raw_failed_rules": [
+        "rule_3b"
+      ],
+      "applied_failed_rules": [
+        "rule_3b"
+      ]
+    },
+    {
+      "tick": 15,
+      "seed": 20291204,
+      "difficulty": "multi_failure_cascade",
+      "objective": "max_renewable_utilisation",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": -8.4,
+      "raw_failed_rules": [
+        "rule_3b"
+      ],
+      "applied_failed_rules": [
+        "rule_3b"
+      ]
+    },
+    {
+      "tick": 16,
+      "seed": 20291304,
+      "difficulty": "multi_failure_cascade",
+      "objective": "max_profit",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "unserved_mw": 0.0,
+      "achievable_mw": 0.0,
+      "net_position_mw": -5.7,
+      "raw_failed_rules": [
+        "rule_3b"
+      ],
+      "applied_failed_rules": [
+        "rule_3b"
+      ]
+    }
+  ]
+}

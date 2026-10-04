@@ -49,7 +49,11 @@ _PROFILE_EVENTS = {
 
 _VOLATILITY_CLASS = {
     Difficulty.D1_STABLE_DAY: "stable",
-    Difficulty.D2_CLOUDY_AFTERNOON: "some_volatility",
+    # Reclassified from "some_volatility" (Brief 2 Patch, Step 5 diagnostic): cloud cover is
+    # a known current-tick condition, not forward-looking uncertainty, and rules.py's own
+    # _volatility_signal_present() never treated "cloud_cover" as a signal either — the old
+    # 30-45% expected band contradicted the code's own definition of what counts as volatile.
+    Difficulty.D2_CLOUDY_AFTERNOON: "stable",
     Difficulty.D2_PRICE_SPIKE: "some_volatility",
     Difficulty.D3_MULTI_FAILURE_CASCADE: "heavy_volatility",
     Difficulty.D4_SURPLUS_DAY: "stable",

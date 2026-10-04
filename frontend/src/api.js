@@ -19,4 +19,6 @@ export const api = {
   runSingle: (body) => request("/run/single", { method: "POST", body: JSON.stringify(body) }),
   runFromScenario: (scenario) => request("/run/from-scenario", { method: "POST", body: JSON.stringify({ scenario }) }),
   runBatch: (body) => request("/run/batch", { method: "POST", body: JSON.stringify(body) }),
+  listRecordings: () => request("/recordings"),
+  verifyRecording: (runId) => request(`/recordings/${encodeURIComponent(runId)}/verify`, { method: "POST" }),
 };

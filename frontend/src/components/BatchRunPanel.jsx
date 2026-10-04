@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { api } from "../api";
 
 export default function BatchRunPanel() {
@@ -11,15 +11,30 @@ export default function BatchRunPanel() {
   const [error, setError] = useState(null);
   const [expandedTick, setExpandedTick] = useState(null);
 
+  // Mode selector (Patch 3, Step 2) -- "safe" is added in Step 4.
+  const [mode, setMode] = useState("record");
+  const [recordings, setRecordings] = useState([]);
+  const [selectedRunId, setSelectedRunId] = useState("");
+  const [verifyResult, setVerifyResult] = useState(null);
+
+  useEffect(() => {
+    if (mode === "replay") {
+      api.listRecordings().then(setRecordings).catch(() => setRecordings([]));
+    }
+  }, [mode]);
+
   async function runBatch() {
     setLoading(true);
     setError(null);
+    setVerifyResult(null);
     try {
       const result = await api.runBatch({
         n_per_cell: Number(nPerCell),
         seed: seed === "" ? null : Number(seed),
         full_matrix: fullMatrix,
         strip_objective: stripObjective,
+        mode,
+        run_id: mode === "replay" ? selectedRunId : null,
       });
       setSummary(result);
     } catch (e) {
@@ -29,28 +44,68 @@ export default function BatchRunPanel() {
     }
   }
 
+  async function runVerify() {
+    if (!selectedRunId) return;
+    const result = await api.verifyRecording(selectedRunId);
+    setVerifyResult(result);
+  }
+
   return (
     <div className="panel">
       <h2>Batch Run</h2>
+      <div className="row" style={{ marginBottom: 8 }}>
+        <label>
+          Mode:{" "}
+          <select value={mode} onChange={(e) => setMode(e.target.value)}>
+            <option value="live">Live agent (not recorded)</option>
+            <option value="record">Live agent, recorded (default)</option>
+            <option value="replay">Recorded run (no key, no network)</option>
+          </select>
+        </label>
+        {mode === "replay" && (
+          <>
+            <label>
+              Run:{" "}
+              <select value={selectedRunId} onChange={(e) => setSelectedRunId(e.target.value)}>
+                <option value="">select a recorded run…</option>
+                {recordings.map((r) => (
+                  <option key={r.run_id} value={r.run_id}>
+                    {r.run_id} {r.model ? `(${r.model}, seed ${r.seed}, ${r.scenario_count} scenarios)` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="secondary" onClick={runVerify} disabled={!selectedRunId}>
+              Verify (SHA-256)
+            </button>
+          </>
+        )}
+      </div>
+      {verifyResult && (
+        <p style={{ fontSize: 13, color: verifyResult.ok ? "#6fe382" : "#ff8a8a" }}>
+          {verifyResult.ok ? "✓ verified — no file in this run has been modified." : `✗ tampered: ${verifyResult.problems.join("; ")}`}
+        </p>
+      )}
+
       <div className="row">
         <label>
           Scenarios per cell:{" "}
-          <input type="number" min="1" max="10" value={nPerCell} onChange={(e) => setNPerCell(e.target.value)} style={{ width: 60 }} />
+          <input type="number" min="1" max="10" value={nPerCell} onChange={(e) => setNPerCell(e.target.value)} style={{ width: 60 }} disabled={mode === "replay"} />
         </label>
         <label>
           Seed (optional, reuse to reproduce):{" "}
-          <input type="number" value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="random" style={{ width: 110 }} />
+          <input type="number" value={seed} onChange={(e) => setSeed(e.target.value)} placeholder="random" style={{ width: 110 }} disabled={mode === "replay"} />
         </label>
         <label className="row" style={{ gap: 6 }}>
-          <input type="checkbox" checked={fullMatrix} onChange={(e) => setFullMatrix(e.target.checked)} disabled={stripObjective} />
+          <input type="checkbox" checked={fullMatrix} onChange={(e) => setFullMatrix(e.target.checked)} disabled={stripObjective || mode === "replay"} />
           Full matrix (every difficulty × all 4 objectives)
         </label>
         <label className="row" style={{ gap: 6 }}>
-          <input type="checkbox" checked={stripObjective} onChange={(e) => setStripObjective(e.target.checked)} />
+          <input type="checkbox" checked={stripObjective} onChange={(e) => setStripObjective(e.target.checked)} disabled={mode === "replay"} />
           Strip objective (test cost_efficiency fallback)
         </label>
-        <button onClick={runBatch} disabled={loading}>
-          {loading ? "Running…" : "Run Batch"}
+        <button onClick={runBatch} disabled={loading || (mode === "replay" && !selectedRunId)}>
+          {loading ? "Running…" : mode === "replay" ? "Replay" : "Run Batch"}
         </button>
       </div>
 

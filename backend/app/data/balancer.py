@@ -175,6 +175,8 @@ def balance(scenario: EnvironmentState, proposal: Decision) -> tuple[Decision, l
         applied_floor_pct=proposal.applied_floor_pct,
         floor_justification=proposal.floor_justification,
         reasoning=proposal.reasoning,
+        mode=proposal.mode,  # the balancer repairs the decision, not where it came from -- carry mode/failure_detail through, don't silently default back to "agent"
+        failure_detail=proposal.failure_detail,
     )
     return applied, repairs
 

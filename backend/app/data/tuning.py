@@ -63,6 +63,15 @@ PRICE_SPREAD_PCT = 5.0
 GEMINI_RETRY_ATTEMPTS = 5
 GEMINI_RETRY_MAX_WAIT_S = 20.0
 
+# Patch 3, Step 4 — safe mode.
+PARSE_RETRY_ATTEMPTS = 2  # whole fresh model calls retried on a parse/schema failure specifically (infra retries are separate, see GEMINI_RETRY_ATTEMPTS)
+SAFE_MODE_FALLBACK_TIMEOUT_S = 15.0  # the live attempt + fallback to the dispatcher must complete within this, so the UI never hangs
+# The NORMAL live-call retry policy (GEMINI_RETRY_ATTEMPTS=5, max wait 20s) can take ~50s
+# worst case -- far more than SAFE_MODE_FALLBACK_TIMEOUT_S allows. Safe mode's own live
+# attempt uses this tighter policy instead so the 15s budget is actually honorable.
+SAFE_MODE_RETRY_ATTEMPTS = 2
+SAFE_MODE_RETRY_MAX_WAIT_S = 5.0
+
 # Patch 3 addendum — pinned explicitly rather than left as an unset, undocumented default.
 # This is NOT a tuning change: 1.0 is Google's own documented default for the Gemini 3
 # family (which gemini-3.5-flash-lite belongs to), and their docs strongly recommend

@@ -67,6 +67,60 @@ class LiveRecorder:
         return orchestrator_agent.decide(scenario)
 
 
+class SafeModeRecorder:
+    """Patch 3, Step 4. Wraps an inner recorder (or none) and falls back to the single
+    deterministic dispatcher (app/data/dispatcher.py — the same module used for rule_9's
+    reference) on any CallFailure, tagging the result mode="safe_mode" with a templated
+    reasoning stating why. The Evaluator then judges it exactly like any other decision — it
+    is never force-FAILed the way an unresolved model_call_failed/parse_failed row is.
+
+    inner=None skips the live attempt entirely (explicit Safe-mode selection in the UI, or
+    no API key configured) and goes straight to the dispatcher. inner is otherwise expected
+    to make its live attempt with the BOUNDED retry policy (orchestrator_agent.decide(...,
+    bounded=True) / decide_with_retries(..., bounded=True)) so the combined live-attempt +
+    fallback time stays within SAFE_MODE_FALLBACK_TIMEOUT_S — an unbounded inner recorder
+    (e.g. a plain LiveRecorder using the normal ~50s-worst-case retry policy) would blow
+    through that budget before the fallback ever got a chance.
+    """
+
+    mode = "safe_mode"
+
+    def __init__(self, inner: "Recorder | None" = None):
+        self.inner = inner
+
+    def get_decision(self, scenario: EnvironmentState) -> Decision:
+        if self.inner is not None:
+            try:
+                return self.inner.get_decision(scenario)
+            except CallFailure as e:
+                failure_reason = f"{e.kind}: {e.detail}"
+        else:
+            failure_reason = "Safe mode selected — no live attempt made"
+
+        from app.data import dispatcher
+        decision = dispatcher.dispatch(scenario, scenario.objective)
+        return decision.model_copy(update={
+            "mode": "safe_mode",
+            "failure_detail": failure_reason,
+            "reasoning": (
+                f"SAFE MODE: the Orchestrator could not produce a decision ({failure_reason}). "
+                "This is the deterministic dispatcher's own decision — the golden rules, the "
+                "declared cascade, and the dispatch ladder applied directly, with no model call."
+            ),
+        })
+
+
+class BoundedLiveRecorder:
+    """A live attempt using the tighter SAFE_MODE_RETRY_* policy and the parse-retry wrapper
+    (decide_with_retries) — meant only as SafeModeRecorder's inner attempt, never used on its
+    own, so the combined time stays within SAFE_MODE_FALLBACK_TIMEOUT_S."""
+
+    mode = "live"
+
+    def get_decision(self, scenario: EnvironmentState) -> Decision:
+        return orchestrator_agent.decide_with_retries(scenario, bounded=True)
+
+
 class RecordingRecorder:
     """Calls Gemini and saves every call under recordings/<run_id>/calls/<key>.json. Resume
     is automatic: if a call for this exact key is already on disk, it's reused instead of

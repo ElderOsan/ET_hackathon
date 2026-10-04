@@ -22,7 +22,10 @@ from app.data.tuning import (
     GEMINI_RETRY_ATTEMPTS,
     GEMINI_RETRY_MAX_WAIT_S,
     GEMINI_TEMPERATURE,
+    PARSE_RETRY_ATTEMPTS,
     REASONING_CHAR_CAP,
+    SAFE_MODE_RETRY_ATTEMPTS,
+    SAFE_MODE_RETRY_MAX_WAIT_S,
 )
 from app.models.schemas import BatteryAction, Decision, EnvironmentState
 
@@ -37,6 +40,21 @@ class CallFailure(Exception):
         self.kind = kind  # "infrastructure" or "parse"
         self.detail = detail
         super().__init__(f"{kind}: {detail}")
+
+
+# Patch 3, Step 4 — a manual, instant-failure switch for exercising the safe-mode fallback
+# path in a demo without waiting through real retries or an actual outage. Off by default;
+# a session-scoped toggle, not a CONFIG constant, since it's meant to be flipped live.
+_SIMULATE_OUTAGE = False
+
+
+def set_simulate_outage(enabled: bool) -> None:
+    global _SIMULATE_OUTAGE
+    _SIMULATE_OUTAGE = enabled
+
+
+def is_simulating_outage() -> bool:
+    return _SIMULATE_OUTAGE
 
 SYSTEM_PROMPT = """You are the Orchestrator Agent for a Renewable Energy Orchestrator. Every 15 minutes \
 you receive the current grid/market state and must decide battery, market, curtailment, demand-response, \
@@ -188,6 +206,19 @@ def _call_gemini(client, **kwargs):
     return client.models.generate_content(**kwargs)
 
 
+@retry(
+    retry=retry_if_exception(_is_transient),
+    stop=stop_after_attempt(SAFE_MODE_RETRY_ATTEMPTS),
+    wait=wait_exponential(multiplier=2, min=1, max=SAFE_MODE_RETRY_MAX_WAIT_S),
+    reraise=True,
+)
+def _call_gemini_bounded(client, **kwargs):
+    """The tighter retry policy used only within safe mode's own live attempt (see
+    SAFE_MODE_RETRY_ATTEMPTS) -- the normal policy's ~50s worst case would blow through the
+    SAFE_MODE_FALLBACK_TIMEOUT_S budget before the dispatcher fallback ever got a chance."""
+    return client.models.generate_content(**kwargs)
+
+
 # ---- Patch 3, Step 2: request/response boundary, factored out so a Recorder can intercept
 # it cleanly — record/replay touch only this boundary, never physics/balancer/Evaluator. ----
 
@@ -234,10 +265,20 @@ def build_request(scenario: EnvironmentState) -> dict:
     }
 
 
-def _call_gemini_live(request: dict):
-    client = get_client()
+def _call_gemini_live(request: dict, bounded: bool = False):
+    """bounded=True uses the tighter SAFE_MODE_RETRY_* policy (_call_gemini_bounded) instead
+    of the normal patient one -- only safe mode's own live attempt should ever pass this."""
+    if _SIMULATE_OUTAGE:
+        # Fails immediately, no retries at all -- the point is to exercise the safe-mode
+        # fallback path quickly in a demo, not to simulate a real transient outage.
+        raise CallFailure("infrastructure", "simulated API outage (manual switch)")
     try:
-        return _call_gemini(
+        client = get_client()
+    except RuntimeError as e:
+        raise CallFailure("infrastructure", str(e)) from e
+    call = _call_gemini_bounded if bounded else _call_gemini
+    try:
+        return call(
             client,
             model=request["model"],
             contents=request["contents"],
@@ -292,8 +333,24 @@ def decision_from_args(scenario: EnvironmentState, args: dict) -> Decision:
         raise CallFailure("parse", f"{type(e).__name__}: {e}") from e
 
 
-def decide(scenario: EnvironmentState) -> Decision:
+def decide(scenario: EnvironmentState, bounded: bool = False) -> Decision:
     request = build_request(scenario)
-    response = _call_gemini_live(request)
+    response = _call_gemini_live(request, bounded=bounded)
     args = args_from_response(response)
     return decision_from_args(scenario, args)
+
+
+def decide_with_retries(scenario: EnvironmentState, attempts: int = PARSE_RETRY_ATTEMPTS, bounded: bool = False) -> Decision:
+    """Patch 3, Step 4 trigger: "no parseable decision after CONFIG attempts." Retries the
+    WHOLE call (a fresh model response) only on a parse failure -- an infrastructure failure
+    already exhausted its own retry budget inside _call_gemini(_bounded) and is never worth
+    repeating here. The last failure (of either kind) propagates once attempts are used up."""
+    last: CallFailure | None = None
+    for _ in range(max(1, attempts)):
+        try:
+            return decide(scenario, bounded=bounded)
+        except CallFailure as e:
+            last = e
+            if e.kind != "parse":
+                raise
+    raise last

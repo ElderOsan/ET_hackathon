@@ -117,7 +117,11 @@ def test_06_parse_failure_missing_required_key():
             assert e.kind == "parse"
 
 
-def test_07_unresolved_scenarios_counted_in_batch_denominator_as_fail():
+def test_07_unresolved_scenarios_reported_separately_not_counted_against_the_agent():
+    # Patch 3, Step 4 honesty requirement: an unresolved row (here, no SafeModeRecorder is
+    # used, so the CallFailure reaches pipeline.py's own fallback) is excluded from the
+    # agent's judged_count entirely -- never silently counted as an agent FAIL -- and
+    # reported via unresolved_count/unresolved instead.
     client = MagicMock()
     client.models.generate_content.side_effect = _client_error(429)
     scenario = _tick88_scenario(objective=Objective.MAX_PROFIT)
@@ -127,8 +131,9 @@ def test_07_unresolved_scenarios_counted_in_batch_denominator_as_fail():
     from app.api.routes import _summarize
     summary = _summarize([result], base_seed=1, seed_set_name=None, objectives=[Objective.MAX_PROFIT])
     assert summary.total == 1
-    assert summary.judged_count == 1  # not infeasible -> still in the denominator
-    assert summary.applied_failed == 1
+    assert summary.judged_count == 0  # mode != "agent" -> excluded from the agent's own denominator
+    assert summary.applied_failed == 0  # not counted as an agent fail either
     assert summary.unresolved_count == 1
     assert summary.unresolved[0].mode == "model_call_failed"
+    assert summary.applied_pass_rate_pct == 0.0  # 0/0 guard, not a real rate
     assert summary.applied_pass_rate_pct == 0.0

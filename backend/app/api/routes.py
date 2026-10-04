@@ -125,6 +125,10 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
     # matter the decision). The old na_count-based denominator shrinkage silently dropped a
     # genuine rule_3 FAIL from applied_failed because that scenario's unrelated rule_9
     # happened to be N/A — this replaces that logic entirely rather than patching it further.
+    #
+    # Patch 3, Step 4 honesty requirement: the headline first_attempt/applied rates count
+    # ONLY mode="agent" rows. A safe_mode (or the now-rare model_call_failed/parse_failed)
+    # row never inflates OR deflates the agent's own score — it's reported separately below.
     total = len(results)
     infeasible_count = sum(1 for r in results if r.infeasible)
     judged_count = total - infeasible_count
@@ -132,13 +136,19 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
 
     raw_stages = [next(s for s in r.stages if s.name == "raw") for r in results]
     applied_stages = [next(s for s in r.stages if s.name == "applied") for r in results]
-    judged_mask = [not r.infeasible for r in results]
+    agent_mask = [(not r.infeasible) and a.decision.mode == "agent" for r, a in zip(results, applied_stages)]
+    safe_mode_mask = [(not r.infeasible) and a.decision.mode == "safe_mode" for r, a in zip(results, applied_stages)]
 
-    first_attempt_passed = sum(1 for s, j in zip(raw_stages, judged_mask) if j and s.evaluation.status.value == "pass")
-    applied_passed = sum(1 for s, j in zip(applied_stages, judged_mask) if j and s.evaluation.status.value == "pass")
-    applied_failed = sum(1 for s, j in zip(applied_stages, judged_mask) if j and s.evaluation.status.value == "fail")
-    applied_flagged = sum(1 for s, j in zip(applied_stages, judged_mask) if j and s.evaluation.status.value == "flagged")
+    first_attempt_passed = sum(1 for s, j in zip(raw_stages, agent_mask) if j and s.evaluation.status.value == "pass")
+    applied_passed = sum(1 for s, j in zip(applied_stages, agent_mask) if j and s.evaluation.status.value == "pass")
+    applied_failed = sum(1 for s, j in zip(applied_stages, agent_mask) if j and s.evaluation.status.value == "fail")
+    applied_flagged = sum(1 for s, j in zip(applied_stages, agent_mask) if j and s.evaluation.status.value == "flagged")
+    agent_judged_count = sum(agent_mask)
     repaired_count = sum(1 for r in results if r.repaired)
+
+    safe_mode_count = sum(safe_mode_mask)
+    safe_mode_passed = sum(1 for s, j in zip(applied_stages, safe_mode_mask) if j and s.evaluation.status.value == "pass")
+    safe_mode_pass_rate_pct = round((safe_mode_passed / safe_mode_count) * 100, 1) if safe_mode_count else 0.0
 
     na_counts_by_rule: dict[str, int] = {}
     for stage in applied_stages:
@@ -149,7 +159,7 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
     unresolved: list[UnresolvedRun] = []
     for r, applied_stage in zip(results, applied_stages):
         mode = applied_stage.decision.mode
-        if mode != "agent":
+        if mode in ("model_call_failed", "parse_failed"):  # safe_mode is a resolution, not a failure to report here
             unresolved.append(UnresolvedRun(
                 tick=r.scenario.tick, seed=r.scenario.seed,
                 profile=r.scenario.difficulty.value, objective=(r.scenario.objective.value if r.scenario.objective else "none"),
@@ -180,17 +190,20 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
         seed_set=seed_set_name,
         total=total,
         infeasible_count=infeasible_count,
-        judged_count=judged_count,
+        judged_count=agent_judged_count,
         margin_infeasible_count=margin_infeasible_count,
         na_counts_by_rule=na_counts_by_rule,
         unresolved_count=len(unresolved),
         unresolved=unresolved,
+        safe_mode_count=safe_mode_count,
+        safe_mode_passed=safe_mode_passed,
+        safe_mode_pass_rate_pct=safe_mode_pass_rate_pct,
         first_attempt_passed=first_attempt_passed,
-        first_attempt_pass_rate_pct=round((first_attempt_passed / judged_count) * 100, 1) if judged_count else 0.0,
+        first_attempt_pass_rate_pct=round((first_attempt_passed / agent_judged_count) * 100, 1) if agent_judged_count else 0.0,
         applied_passed=applied_passed,
         applied_failed=applied_failed,
         applied_flagged=applied_flagged,
-        applied_pass_rate_pct=round((applied_passed / judged_count) * 100, 1) if judged_count else 0.0,
+        applied_pass_rate_pct=round((applied_passed / agent_judged_count) * 100, 1) if agent_judged_count else 0.0,
         repaired_count=repaired_count,
         repair_rate_pct=round((repaired_count / total) * 100, 1) if total else 0.0,
         raw_category_breakdown=[CategoryBreakdown(category=c, failed_or_flagged=n) for c, n in category_counts.items()],

@@ -140,9 +140,9 @@ class Decision(BaseModel):
     reasoning: str = Field(
         description="Step-by-step rationale: which golden rules were binding, which objective-cascade layer drove the choice, and which dispatch-ladder step was used."
     )
-    mode: Literal["agent", "model_call_failed", "parse_failed"] = Field(
+    mode: Literal["agent", "model_call_failed", "parse_failed", "safe_mode"] = Field(
         default="agent",
-        description="'agent' is a real model decision. 'model_call_failed'/'parse_failed' are placeholder decisions (hold everything) produced when the Orchestrator could not respond or its response could not be parsed, after retries were exhausted — always evaluated as FAIL, never silently dropped (Patch 3, Step 1). Safe mode (Patch 3, Step 4) adds a further mode value.",
+        description="'agent' is a real model decision. 'model_call_failed'/'parse_failed' are placeholder decisions (hold everything) produced only when EVEN the safe-mode dispatcher fallback could not run — always evaluated as FAIL (Patch 3, Step 1). 'safe_mode' (Patch 3, Step 4) is the deterministic dispatcher's own complete decision, used when the Orchestrator couldn't respond, judged by the Evaluator exactly like an agent decision — never counted in the agent's own pass rate (see BatchRunSummary.safe_mode_*).",
     )
     failure_detail: Optional[str] = Field(default=None, description="Error detail when mode is not 'agent'.")
 
@@ -222,13 +222,17 @@ class BatchRunSummary(BaseModel):
     seed_set: Optional[str] = Field(default=None, description="Name of the benchmark seed set used ('dev' or 'held_out'), if this run used one rather than an ad-hoc seed.")
     total: int
     infeasible_count: int = Field(description="Scenarios where min_achievable_unserved_mw > 0 — full service was physically impossible. Should always be 0; nonzero means a generator bug, not a model error.")
-    judged_count: int = Field(default=0, description="total - infeasible_count. Patch 3, Step 1: EVERY scenario is in the pass-rate denominator except infeasible ones — N/A is a per-rule result, never a scenario exclusion. This replaces Patch 2's na_count-based denominator shrinkage.")
+    judged_count: int = Field(default=0, description="Scenarios counted in first_attempt/applied_pass_rate_pct below: not infeasible AND mode=='agent'. Patch 3, Step 1: N/A is a per-rule result, never a scenario exclusion (replaces Patch 2's na_count-based denominator shrinkage). Patch 3, Step 4 honesty requirement: a safe_mode (or the now-rare model_call_failed/parse_failed) row is excluded here too, reported separately via safe_mode_* / unresolved below — it never inflates or deflates the agent's own score.")
     margin_infeasible_count: int = Field(default=0, description="Scenarios where load is served but no decision could reach the reserve-margin target (rule_3b). Expected to be nonzero sometimes — extreme cascades are the point, not a bug.")
     na_counts_by_rule: dict[str, int] = Field(default_factory=dict, description="Per-rule N/A counts at the applied stage (e.g. rule_9, rule_5, rule_3b) — informational only, never subtracted from any denominator.")
-    unresolved_count: int = Field(default=0, description="Scenarios where the Orchestrator never produced a usable decision (model_call_failed or parse_failed after retries) — always counted as FAIL in the rates below, never silently dropped.")
+    unresolved_count: int = Field(default=0, description="Scenarios where EVEN the safe-mode dispatcher fallback could not run (model_call_failed or parse_failed, no CallFailure handler caught it) — always evaluated as FAIL on their own merits, but excluded from judged_count like a safe_mode row (Patch 3, Step 4).")
     unresolved: list[UnresolvedRun] = Field(default_factory=list)
 
-    first_attempt_passed: int = Field(description="The Orchestrator's own raw proposal, judged before any balancer repair — the true score of the model.")
+    safe_mode_count: int = Field(default=0, description="Scenarios where the Orchestrator couldn't respond and the deterministic dispatcher (app/data/dispatcher.py) produced the decision instead, mode=='safe_mode'. The Evaluator judges these exactly like an agent decision — see safe_mode_passed/safe_mode_pass_rate_pct — but they are never mixed into the agent's own first_attempt/applied_pass_rate_pct (Patch 3, Step 4 honesty requirement).")
+    safe_mode_passed: int = Field(default=0)
+    safe_mode_pass_rate_pct: float = Field(default=0.0, description="Pass rate of safe-mode decisions alone, applied stage. Not comparable to the agent's own rate — it measures the dispatcher's floor, not the model.")
+
+    first_attempt_passed: int = Field(description="The Orchestrator's own raw proposal, judged before any balancer repair — the true score of the model. mode=='agent' rows only.")
     first_attempt_pass_rate_pct: float
 
     applied_passed: int

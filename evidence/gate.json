@@ -1,0 +1,27 @@
+{
+  "_comment": "Brief 2 Patch 2, Step 0 — pre-registered before any further benchmark run. Thresholds transcribed from the brief's own table; nothing here is tuned after seeing results.",
+  "frozen_at": "2026-10-04",
+  "freeze_deadline": "2026-10-10T11:00:00+05:30",
+  "measurement": "three passes of the dev benchmark (DEV_SEED_SET), results pooled across all three passes",
+  "stage_measured": "raw — the model's final submitted proposal before the balancer. No preflight loop exists yet (Brief 3, out of scope); if one is added later, the first proposal before that loop must also be reported separately.",
+  "pass_definition": "PASS verdict only — a flagged row does not count as a pass. The non-fail rate (pass + flagged) is reported alongside, not in place of it.",
+  "thresholds": {
+    "overall_first_attempt_pass_rate_pct": { "min": 80 },
+    "stable_surplus_shortfall_first_attempt_pass_rate_pct": {
+      "min": 92,
+      "profiles": ["stable_day", "surplus_day", "shortfall_day"]
+    },
+    "avoidable_unserved_incidence_pct": {
+      "max": 5,
+      "definition": "share of scenarios where rule_3 fails and the scenario is not infeasible (physics.min_achievable_unserved_mw == 0) — i.e. the shortfall was the decision's fault, not physics"
+    },
+    "safe_mode": {
+      "required": "demonstrated",
+      "status_this_patch": "not met — safe mode is explicitly out of scope for Brief 2 Patch 2 (it belongs to Brief 3, which is on hold). Recording this honestly as unmet rather than marking it demonstrated."
+    },
+    "unexplained_failures": {
+      "required": "none",
+      "definition": "every failed or flagged row in the Step 6 report carries a category and a root-cause note"
+    }
+  }
+}

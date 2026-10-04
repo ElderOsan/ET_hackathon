@@ -47,6 +47,15 @@ PRICE_SPREAD_PCT = 5.0
 GEMINI_RETRY_ATTEMPTS = 5
 GEMINI_RETRY_MAX_WAIT_S = 20.0
 
+# Patch 3 addendum — pinned explicitly rather than left as an unset, undocumented default.
+# This is NOT a tuning change: 1.0 is Google's own documented default for the Gemini 3
+# family (which gemini-3.5-flash-lite belongs to), and their docs strongly recommend
+# against lowering it — "may lead to unexpected behavior, such as looping or degraded
+# performance, particularly in complex... reasoning tasks." Pinned here only so the value
+# is visible and intentional in CONFIG, not because a different value was tried or wanted.
+# https://ai.google.dev/gemini-api/docs/gemini-3
+GEMINI_TEMPERATURE = 1.0
+
 # Brief 2 Patch — calibrated scenario generation ------------------------------------------
 
 # total_demand_mw is sampled within this band first; base/industrial are then split from it.

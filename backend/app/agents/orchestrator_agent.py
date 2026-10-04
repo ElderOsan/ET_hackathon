@@ -23,6 +23,7 @@ from app.data.tuning import (
     FLOOR_STEP_DOWN,
     GEMINI_RETRY_ATTEMPTS,
     GEMINI_RETRY_MAX_WAIT_S,
+    GEMINI_TEMPERATURE,
     REASONING_CHAR_CAP,
 )
 from app.models.schemas import BatteryAction, Decision, EnvironmentState
@@ -212,6 +213,7 @@ def decide(scenario: EnvironmentState) -> Decision:
             ),
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
+                temperature=GEMINI_TEMPERATURE,
                 tools=[_SUBMIT_DECISION_TOOL],
                 tool_config=types.ToolConfig(
                     function_calling_config=types.FunctionCallingConfig(

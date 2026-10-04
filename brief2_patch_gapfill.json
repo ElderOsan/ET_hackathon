@@ -1,0 +1,135 @@
+{
+  "results": [
+    {
+      "tick": 1,
+      "difficulty": "cloudy_afternoon",
+      "objective": "cost_efficiency",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 2,
+      "difficulty": "cloudy_afternoon",
+      "objective": "min_carbon",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 3,
+      "difficulty": "cloudy_afternoon",
+      "objective": "max_renewable_utilisation",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 4,
+      "difficulty": "cloudy_afternoon",
+      "objective": "max_profit",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 5,
+      "difficulty": "surplus_day",
+      "objective": "cost_efficiency",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 6,
+      "difficulty": "surplus_day",
+      "objective": "min_carbon",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 7,
+      "difficulty": "surplus_day",
+      "objective": "max_renewable_utilisation",
+      "raw_status": "pass",
+      "applied_status": "pass",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": []
+    },
+    {
+      "tick": 8,
+      "difficulty": "surplus_day",
+      "objective": "max_profit",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": [
+        "rule_9"
+      ]
+    },
+    {
+      "tick": 9,
+      "difficulty": "shortfall_day",
+      "objective": "cost_efficiency",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": [
+        "rule_8b"
+      ]
+    },
+    {
+      "tick": 10,
+      "difficulty": "shortfall_day",
+      "objective": "min_carbon",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": [
+        "rule_8b"
+      ]
+    },
+    {
+      "tick": 11,
+      "difficulty": "shortfall_day",
+      "objective": "max_renewable_utilisation",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": [
+        "rule_8b"
+      ]
+    },
+    {
+      "tick": 12,
+      "difficulty": "shortfall_day",
+      "objective": "max_profit",
+      "raw_status": "flagged",
+      "applied_status": "flagged",
+      "repaired": false,
+      "infeasible": false,
+      "applied_failed_rules": [
+        "rule_2b",
+        "rule_8b"
+      ]
+    }
+  ]
+}

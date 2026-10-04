@@ -1,84 +1,80 @@
 # Next Steps
 
-## 0. Unblock the machine (done 2026-10-03)
+*Last updated 2026-10-04, after Brief 2 (physical layer) + the Brief 2 Patch (calibration,
+balancer unwind-order fix, raw+applied scoreboard). See git log for the full history —
+every step has its own commit with a detailed message.*
 
-Python, Node, and Git are installed. Follow the setup steps in [README.md](README.md). Get
-your free Gemini API key (from [aistudio.google.com](https://aistudio.google.com)) into
-`backend/.env` before the backend will start — it calls Gemini directly and refuses to boot
-without a key.
+## 0. Setup (done)
 
-## 1. Domain grounding (Learning Guide Steps 1–5 — do this in parallel with setup)
+Python, Node, and Git are installed. The project is now a git repo (`git init` done as
+Brief 2 Patch Step 0) — `backend/.env` is gitignored, never commit it. Follow the setup
+steps in [README.md](README.md). Get your free Gemini API key (from
+[aistudio.google.com](https://aistudio.google.com)) into `backend/.env` before the backend
+will start.
 
-The team's `Renewable_Energy_Learning_Guide.docx` lays out a 2–3 hour path to ground the
-Evaluator's rules in real grid-operator principles, not guesses:
+## 1. Domain grounding (Learning Guide Steps 1–5)
 
-- **Step 1** (2–3 hrs): research merit order dispatch, battery arbitrage, curtailment
-  causes, grid frequency/reliability basics. Links are in the original doc.
-- **Step 2**: refine the 6 hard-fail rules already coded in `backend/app/data/rules.py`
-  against what you learn — especially Rule 3 (reliability hard-fail) and Rule 5 (the
-  `daily_high_threshold` is currently a crude placeholder, not a real daily-high
-  calculation).
-- **Step 3**: paste the refined checklist + objective logic into a fresh LLM conversation
-  and ask it to sanity-check as a grid-ops expert. One-time design review, not a runtime
-  component.
-- **Step 4**: already encoded as the 4 `Objective` enum values + Default Priority fallback
-  in `orchestrator_agent.py` — revisit the per-objective "optimal" definitions once Step 1
-  is done.
-- **Step 5** (optional, 15 min): show 3–4 real decisions from the running system to anyone
-  with adjacent energy/trading experience.
+Still the right background reading before touching the rule thresholds further — the
+physical layer fixes (Brief 2) made the rules internally *consistent*, not necessarily
+*correctly calibrated* against real grid-operator judgment. `backend/app/data/tuning.py`
+collects every tunable number in one place for exactly this kind of revisit.
 
-## 2. Verify the MVP actually works end-to-end
+## 2. Current benchmark (dev seed set, 2026-10-04)
 
-Once installs are done:
+Partial run (free-tier quota cut it off at 16/24 scenarios — `surplus_day`/`shortfall_day`
+still need a full pass): **0 failures, 0 infeasible scenarios, 25% clean pass rate, 12/16
+flagged**. This is a dramatic change from the pre-patch baseline (13/16 failed on `rule_3`
+alone) — the Evaluator is now catching real issues without the false positives that came
+from inconsistent demand/transmission definitions. Artifacts: `brief2_after_run.json` (old
+baseline), `brief2_patch_benchmark.json` + `brief2_patch_gapfill.json` (current).
 
-1. `POST /api/scenario/generate` with each difficulty — confirm reasonable values.
-2. `POST /api/run/single` — confirm Gemini returns a valid tool call and the reasoning is
-   sane for a `cost_efficiency` scenario vs `min_carbon`.
-3. Run the Batch Run panel with ~2–3 scenarios per difficulty, read the failures — they're
-   likely your first real signal on whether the heuristics in the system prompt
-   (`orchestrator_agent.py::SYSTEM_PROMPT`) need sharpening.
-4. Try "strip objective" batch run — confirm the orchestrator visibly falls back to
-   Default Priority rather than erroring or guessing.
+**To reproduce:** `POST /api/benchmark/run` (dev set) from the running backend, or call
+`app.agents.scenario_agent.generate_scenario` / `app.agents.pipeline.run_decision_pipeline`
+directly in a script — see `backend/tests/test_acceptance.py` for patterns.
 
 ## 3. Known gaps / stubs to close before submission
 
-- **Gemini free-tier `503 UNAVAILABLE` ("model experiencing high demand")** — happened
-  repeatedly on `gemini-3.8-flash` (the newest model, getting hammered by free-tier
-  traffic) on 2026-10-03. Fixed two ways: (1) `orchestrator_agent.py` now retries
-  automatically up to 5 times with backoff before giving up, and (2) the default model was
-  switched to `gemini-3.5-flash-lite`, which wasn't overloaded and gave equally good
-  reasoning in testing. If `gemini-3.5-flash-lite` ever gets overloaded too (e.g. right
-  before a demo), swap `GEMINI_MODEL` in `backend/.env` to another free-tier model —
-  `gemini-3.1-flash-lite` or `gemini-3.6-flash` are other options — and restart the
-  backend window. Do **not** switch to `gemini-2.5-flash` — it's been retired for new API
-  keys (confirmed via a live 404 from the API).
-- **`rule_5` daily-high threshold** (`backend/app/data/rules.py`) is a placeholder
-  (`price * 0.95` or `price + 1`) — there's no real daily price series yet. Needs either a
-  rolling price history per scenario run, or a fixed realistic daily curve.
-- **`max_profit` objective check** (`backend/app/agents/evaluator.py`) currently always
-  passes — no real check implemented yet.
-- **No time-series simulation (F3)** — current scenarios are single independent ticks.
-  F3 requires simulating a scenario over multiple ticks with evolving conditions
-  (battery state of charge carrying forward, price trajectories, etc.) — needed if you
-  want to claim F3 on the 9-blocker grid.
-- **No multimodal input (D3)** — inputs are structured JSON only. The problem statement's
-  D3 tier wants "highly heterogeneous multimodal input" (e.g. a maintenance-schedule PDF,
-  a weather map image). Decide whether you're claiming D3 before investing here — D1/D2
-  with strong reliability evidence may be the better scoped target given hackathon time.
-- **`BatteryAction` validity isn't cross-checked against `battery.available`** — the
-  orchestrator could technically still issue an action against the offline battery in
-  `multi_failure_cascade`; add a 7th evaluator rule for this once Step 1/2 research is
-  done.
-- **No persistence** — every run is stateless/in-memory. Fine for a demo; add a results
-  log (even just appending JSON lines to a file) if you want to show historical pass-rate
-  trends in the final demo.
-- **No auth/rate-limiting** — irrelevant for a local hackathon demo, skip it.
+- **Free-tier rate limiting makes a full 24-scenario benchmark hard in one sitting.**
+  15 req/min means a full-matrix run needs either patience (wait between batches) or a
+  paid key for the final demo/evidence pack.
+- **`rule_5` daily-high threshold** (`backend/app/data/rules.py::_daily_high_threshold`) is
+  still a placeholder (`price * 0.95` or `price + 1`) — flagged 3/4 `price_spike` scenarios
+  in the last run. Worth a proper look alongside the Learning Guide research.
+- **`rule_9` under `max_profit`** flagged both scenarios that ran in the last benchmark —
+  a genuine minor decision-quality gap (the model isn't always selling optimally for
+  profit), not a calibration bug as far as the evidence shows so far.
+- **No time-series simulation (F3)** — scenarios are still single independent ticks.
+  `app/agents/scenario_agent.py`'s forecast horizon is a single next-tick snapshot, not a
+  rolling simulation.
+- **No multimodal input (D3)** — inputs are structured JSON only.
+- **No persistence** — every run is stateless/in-memory; the two JSON benchmark artifacts
+  in the repo root are the only durable record right now.
+- **No auth/rate-limiting on the API itself** — irrelevant for a local hackathon demo.
 
-## 4. Before the final submission (per the PDF problem statement)
+### Resolved since the last version of this doc
 
-1. **Working demo** covering every area you claim — script the 3-beat demo narrative from
-   ARCHITECTURE.md (bulk auto run → live manual edge case → stripped-objective fallback).
-2. **Detailed structural architecture** — ARCHITECTURE.md is the starting draft; update
-   the 9-blocker table once you know your actual F/D coverage.
+Demand ambiguity, transmission definition, the balancer not existing, rule_3/rule_4
+disagreeing, rule_9 not checking curtailment, `expected_emergency` from a hardcoded
+profile, the evaluator's severity-pill-reads-as-fail display bug, no raw-vs-applied
+scoring, random (non-reproducible) scenarios, a randomly-varying fleet, and the
+`cloudy_afternoon` floor-band miscalibration are all fixed — see git log for Brief 2 and
+the Brief 2 Patch commits.
+
+## 4. Brief 3 (on hold — do not start without explicit approval)
+
+Demand response as a quantified amount (not yes/no), a forecast horizon with uncertainty,
+a preflight tool-use loop (`simulate_decision`) so the Orchestrator can check its own
+arithmetic before committing, safe mode for API outages, and a repeatability runner for
+consistency evidence. This was explicitly paused mid-Brief-2-Patch and hasn't resumed.
+
+## 5. Before the final submission (per the PDF problem statement)
+
+1. **Working demo** covering every area you claim — the architecture doc's 3-beat demo
+   narrative (bulk auto run → live manual edge case → stripped-objective fallback) still
+   applies; consider adding "first-attempt vs. applied pass rate" as a 4th beat now that
+   it exists.
+2. **Detailed structural architecture** — [ARCHITECTURE.md](ARCHITECTURE.md) needs a
+   refresh for the physics module, balancer, and raw+applied scoring (not yet done as of
+   this note).
 3. **Self-declare your 9-blocker grid position** and make sure the demo evidence backs it
-   up exactly — the hackathon explicitly penalizes over- and under-estimation.
+   up exactly.

@@ -57,7 +57,14 @@ _VOLATILITY_CLASS = {
     Difficulty.D2_PRICE_SPIKE: "some_volatility",
     Difficulty.D3_MULTI_FAILURE_CASCADE: "heavy_volatility",
     Difficulty.D4_SURPLUS_DAY: "stable",
-    Difficulty.D5_SHORTFALL_DAY: "some_volatility",
+    # Reclassified from "some_volatility" (Brief 2 Patch, Step 5 diagnostic #2): same root
+    # cause as cloudy_afternoon above — shortfall_day has no events by default, and
+    # _daily_high_threshold() is structurally untriggerable for any difficulty except
+    # price_spike (price >= price+1 is never true), so _volatility_signal_present() is
+    # always False here too. Stronger physical argument this time: shortfall_day is an
+    # ACTIVE current-tick shortfall — using battery capacity now rather than hoarding it
+    # behind a high reserve floor is the economically sensible move, not a mistake.
+    Difficulty.D5_SHORTFALL_DAY: "stable",
 }
 
 _PRICE_RANGES = {

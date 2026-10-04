@@ -179,11 +179,19 @@ def balance(scenario: EnvironmentState, proposal: Decision) -> tuple[Decision, l
     return applied, repairs
 
 
-def reference_dispatch(scenario: EnvironmentState) -> dict:
+def reference_dispatch(scenario: EnvironmentState, floor_pct: float) -> dict:
     """The autonomous optimal dispatch (no proposal): cheapest/cleanest way to meet demand
-    using renewables, then battery down to the scenario's expected floor band, then grid
-    import for whatever's left — and the maximum sellable surplus, for the profit side.
-    This is what rule 9 compares the actual decision against.
+    using renewables, then battery down to floor_pct, then grid import for whatever's left —
+    and the maximum sellable surplus, for the profit side. This is what rule 9 compares the
+    actual decision against.
+
+    floor_pct is the DECISION's own applied_floor_pct (Patch 3 addendum) — not
+    expected_floor_min_pct. Scoring the model against more battery headroom than its own
+    floor choice allowed itself isn't a fair comparison; a higher floor may be the right,
+    deliberate call (e.g. a cascade's own volatility), and the reference must respect it the
+    same way the balancer does. An informational (not scored) alternate — what the reference
+    cost would have been at expected_floor_min_pct instead — is also returned, so the size of
+    that gap stays visible without it silently driving rule_9's verdict.
 
     Also returns the WORST still-feasible outcome per metric (Brief 2 Patch 2, Step 2): the
     dispatch that still serves load and never curtails/sells more than exists, but makes no
@@ -192,16 +200,22 @@ def reference_dispatch(scenario: EnvironmentState) -> dict:
     rule_9 reports N/A when best and worst coincide (within tolerance): no decision could
     have moved this metric, so there's nothing to judge the model's choice against.
     """
-    floor_assumption = scenario.expected_floor_min_pct
     generation = scenario.solar_output_mw + scenario.wind_output_mw
     total_demand = scenario.total_demand_mw
-
-    battery_headroom = sum(physics.max_discharge_mw(b, floor_assumption, emergency=False) for b in scenario.batteries)
     shortfall = max(0.0, total_demand - generation)
+
+    def _min_import_at(floor: float) -> float:
+        headroom = sum(physics.max_discharge_mw(b, floor, emergency=False) for b in scenario.batteries)
+        used = min(shortfall, headroom)
+        return max(0.0, shortfall - used)
+
+    battery_headroom = sum(physics.max_discharge_mw(b, floor_pct, emergency=False) for b in scenario.batteries)
     battery_used = min(shortfall, battery_headroom)
     remaining = max(0.0, shortfall - battery_used)
     min_grid_import_mw = round(remaining, 1)
     worst_grid_import_mw = round(shortfall, 1)  # no battery help at all, still feasible
+
+    reference_cost_at_expected_floor_pct = round(_min_import_at(scenario.expected_floor_min_pct) * scenario.buy_price_per_mwh, 1)
 
     renewable_surplus_mw = max(0.0, generation - total_demand)
     max_sellable_mw = round(physics.sellable_surplus_mw(scenario), 1)  # same definition as rule_5 and orchestrator_facts
@@ -224,4 +238,6 @@ def reference_dispatch(scenario: EnvironmentState) -> dict:
         "worst_revenue": worst_revenue,
         "reference_profit": round(reference_revenue - reference_cost, 1),
         "worst_profit": round(worst_revenue - worst_cost, 1),
+        "floor_used_for_reference_pct": floor_pct,
+        "reference_cost_at_expected_floor_pct": reference_cost_at_expected_floor_pct,  # informational only, not scored
     }

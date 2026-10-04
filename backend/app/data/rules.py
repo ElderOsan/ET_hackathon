@@ -14,6 +14,7 @@ from app.data.tuning import (
     FLOOR_BANDS,
     FLOOR_MAX,
     FLOOR_MIN,
+    FLOOR_SOC_TOLERANCE_PCT,
     FREQ_BAND_HZ,
     OBJECTIVE_TOLERANCE_PCT,
     REPAIR_TOLERANCE_MW,
@@ -226,8 +227,11 @@ def rule_2b_battery_applied_floor(scenario: EnvironmentState, decision: Decision
         if battery is None or action.action != "discharge" or action.amount_mw <= 0:
             continue
         resulting_soc = physics.resulting_soc_pct(battery, action.amount_mw)
-        if resulting_soc < decision.applied_floor_pct:
-            violations.append(f"{battery.id} would drop to {resulting_soc:.1f}% (applied floor {decision.applied_floor_pct}%)")
+        # Patch 3 addendum: a discharge rounded to 1 decimal MW can land 0.02-0.1pp below the
+        # floor by rounding noise alone (e.g. 6.6MW on a 40MWh battery -> 24.975%, not exactly
+        # 25.0%) -- reaching the floor should pass, not just clearing it with room to spare.
+        if resulting_soc < decision.applied_floor_pct - FLOOR_SOC_TOLERANCE_PCT:
+            violations.append(f"{battery.id} would drop to {resulting_soc:.2f}% (applied floor {decision.applied_floor_pct}%)")
     passed = not violations or emergency
     if emergency and violations:
         detail = "Discharged below the applied floor, but the Evaluator's own emergency check agrees this was necessary."
@@ -292,7 +296,7 @@ def _rule9_na(best: float, worst: float, tolerance: float) -> bool:
 
 def rule_9_cascade_deviation(scenario: EnvironmentState, decision: Decision) -> RuleResult:
     top_priority = _CASCADE_PRIORITY[scenario.objective]
-    ref = reference_dispatch(scenario)
+    ref = reference_dispatch(scenario, decision.applied_floor_pct)
 
     if top_priority == "cost":
         actual_cost = (decision.market_amount_mw if decision.market_action == "buy" else 0.0) * scenario.buy_price_per_mwh

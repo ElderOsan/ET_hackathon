@@ -26,6 +26,14 @@ FLOOR_BANDS = {
 
 DEFAULT_PREVIOUS_FLOOR_PCT = 25.0  # used when a scenario doesn't carry a prior tick's applied floor
 
+# Patch 3 addendum: percentage-point tolerance for "did this discharge reach the floor,
+# not go below it." A discharge rounded to 1 decimal MW cannot always land exactly on the
+# floor given a battery's capacity (e.g. 6.6MW on a 40MWh battery resolves to 24.975%, not
+# precisely 25.0%) -- without this, rule_2b spuriously flagged a discharge that correctly
+# stopped AT the floor. Sized to the rounding noise from the smallest representable MW step
+# (0.1MW) against the smaller battery's capacity (25MWh): 0.1*TICK_HOURS/25*100 = 0.1pp.
+FLOOR_SOC_TOLERANCE_PCT = 0.1
+
 # Physics module (Brief 2) — the single CONFIG location for every physical-layer number.
 TICK_HOURS = 0.25  # 15-minute tick: MWh of usable battery capacity -> max deliverable MW this tick
 BALANCE_TOLERANCE_MW = 0.1  # power-balance residual allowed before it's treated as a real imbalance

@@ -10,7 +10,7 @@ import os
 from app.agents.evaluator import evaluate
 from app.data import physics
 from app.data.tuning import PRICE_SPREAD_PCT
-from app.models.schemas import BatteryAction, Difficulty, Objective
+from app.models.schemas import Battery, BatteryAction, Difficulty, Objective
 from tests.test_acceptance import _decision, _tick88_scenario
 
 # ---- rule_3b: 8 cases -----------------------------------------------------------------
@@ -253,6 +253,58 @@ def test_9na_06_real_surplus_renewable_has_freedom_not_na():
 # ---- consistency over a REAL stored batch (not synthetic fixtures) ----------------------
 
 
+def test_reference_dispatch_uses_applied_floor_not_expected_floor():
+    # Patch 3 addendum: reference_dispatch must score against decision.applied_floor_pct,
+    # not scenario.expected_floor_min_pct -- a higher applied floor gives the reference LESS
+    # battery headroom credit, matching what the balancer actually allowed the decision.
+    from app.data.balancer import reference_dispatch
+    scenario = _tick88_scenario()  # expected_floor_min_pct=20.0, shortfall 37.3MW
+    ref_at_low_floor = reference_dispatch(scenario, 20.0)
+    ref_at_high_floor = reference_dispatch(scenario, 75.0)  # binds SoC, not just rate (see test_3b_07)
+    assert ref_at_high_floor["min_grid_import_mw"] > ref_at_low_floor["min_grid_import_mw"]
+    assert ref_at_high_floor["floor_used_for_reference_pct"] == 75.0
+    # The informational (not scored) expected-floor comparison is always present and
+    # independent of which floor was actually used to score.
+    assert "reference_cost_at_expected_floor_pct" in ref_at_high_floor
+    assert ref_at_high_floor["reference_cost_at_expected_floor_pct"] == ref_at_low_floor["reference_cost_at_expected_floor_pct"]
+
+
+def test_rule2b_passes_when_discharge_lands_exactly_on_floor():
+    # Patch 3 addendum, reproducing tick 63's exact numbers: battery_1 at 29.1% SoC,
+    # discharging 6.6MW (rounded to 1 decimal) lands at 24.975% -- 0.025pp below a 25.0%
+    # floor from rounding alone. Must pass, not be flagged.
+    scenario = _tick88_scenario(
+        batteries=[
+            Battery(id="battery_1", capacity_mwh=40.0, state_of_charge_pct=29.1, min_safe_soc_pct=10.0, max_charge_rate_mw=10.0, max_discharge_rate_mw=10.0, charging_efficiency_pct=92.0, degradation_pct=2.0, available=True),
+            Battery(id="battery_2", capacity_mwh=25.0, state_of_charge_pct=67.5, min_safe_soc_pct=10.0, max_charge_rate_mw=6.0, max_discharge_rate_mw=6.0, charging_efficiency_pct=90.0, degradation_pct=2.0, available=True),
+        ],
+    )
+    decision = _decision(
+        battery_actions=[BatteryAction(battery_id="battery_1", action="discharge", amount_mw=6.6), BatteryAction(battery_id="battery_2", action="discharge", amount_mw=6.0)],
+        market_action="buy", market_amount_mw=29.2,
+        proposed_floor_pct=25.0, applied_floor_pct=25.0,
+    )
+    rule2b = next(r for r in evaluate(scenario, decision).rules if r.rule_id == "rule_2b")
+    assert rule2b.passed, rule2b.detail
+
+
+def test_rule2b_still_flags_a_real_violation_beyond_tolerance():
+    # The tolerance must not swallow a genuine violation -- 2MW further below the floor
+    # (well beyond the 0.1pp rounding tolerance) must still be flagged.
+    scenario = _tick88_scenario(
+        batteries=[
+            Battery(id="battery_1", capacity_mwh=40.0, state_of_charge_pct=20.0, min_safe_soc_pct=10.0, max_charge_rate_mw=10.0, max_discharge_rate_mw=10.0, charging_efficiency_pct=92.0, degradation_pct=2.0, available=True),
+            Battery(id="battery_2", capacity_mwh=25.0, state_of_charge_pct=67.5, min_safe_soc_pct=10.0, max_charge_rate_mw=6.0, max_discharge_rate_mw=6.0, charging_efficiency_pct=90.0, degradation_pct=2.0, available=True),
+        ],
+    )
+    decision = _decision(
+        battery_actions=[BatteryAction(battery_id="battery_1", action="discharge", amount_mw=8.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)],
+        proposed_floor_pct=25.0, applied_floor_pct=25.0,
+    )
+    rule2b = next(r for r in evaluate(scenario, decision).rules if r.rule_id == "rule_2b")
+    assert not rule2b.passed
+
+
 def test_facts_sellable_surplus_and_max_import_shared_definition():
     # Patch 3 addendum: sellable_surplus_mw / max_import_mw must be the SAME function rule_5
     # and reference_dispatch use, exposed in orchestrator_facts for the model to see directly.
@@ -266,7 +318,7 @@ def test_facts_sellable_surplus_and_max_import_shared_definition():
     assert facts["max_import_mw"] == 5.0
 
     from app.data.balancer import reference_dispatch
-    ref = reference_dispatch(scenario.model_copy(update={"objective": Objective.MAX_PROFIT}))
+    ref = reference_dispatch(scenario.model_copy(update={"objective": Objective.MAX_PROFIT}), scenario.previous_floor_pct)
     assert ref["max_sellable_mw"] == 5.0  # same value as the shared function
 
 

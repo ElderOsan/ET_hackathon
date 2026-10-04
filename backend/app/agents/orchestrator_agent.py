@@ -45,7 +45,9 @@ LAYER 2 — OBJECTIVE CASCADE (reorders priorities, subject to Layer 1 always ho
 - cost_efficiency (the default when no objective is declared): cost, then carbon, then renewable utilisation.
 - min_carbon: carbon, then cost, then renewable utilisation.
 - max_renewable_utilisation: renewable utilisation, then cost, then carbon.
-- max_profit: profit, then cost, then carbon (carbon drops to last).
+- max_profit: profit, then cost, then carbon (carbon drops to last). Profit is sale revenue minus purchase \
+cost for this tick: a purchase costs buy_price_per_mwh (above electricity_price_per_mwh), a sale earns \
+sell_price_per_mwh (below it) — never use electricity_price_per_mwh directly for either side.
 Within the cascade: find the best option on the top priority, treat every option within a small tolerance \
 of it as tied, then choose the best of those tied options on the next priority. Do not let a lower \
 priority override a clearly better option on a higher one.

@@ -43,6 +43,8 @@ def _tick88_scenario(**overrides) -> EnvironmentState:
         ],
         previous_floor_pct=25.0,
         electricity_price_per_mwh=60.0,
+        buy_price_per_mwh=63.0,
+        sell_price_per_mwh=57.0,
         carbon_price_per_ton=30.0,
         demand_response_incentive_per_mwh=20.0,
         weather_forecast="clear",
@@ -288,6 +290,77 @@ def test_17_rule3b_flags_when_achievable_exceeds_requirement_but_decision_falls_
     rule3b = next(r for r in result.rules if r.rule_id == "rule_3b")
     assert not rule3b.passed, rule3b.detail
     assert "margin infeasible" not in rule3b.detail.lower()
+
+
+def test_18_profit_nets_purchase_cost_not_zero():
+    # Brief 2 Patch 2, acceptance test 3: a decision that buys 1.8MW shows a negative
+    # profit equal to the purchase cost, with components shown — never $0.
+    scenario = _tick88_scenario(objective=Objective.MAX_PROFIT)
+    decision = _decision(market_action="buy", market_amount_mw=1.8)
+    profit = physics.decision_profit(scenario, decision)
+    assert profit["cost"] == round(1.8 * scenario.buy_price_per_mwh, 1)
+    assert profit["revenue"] == 0.0
+    assert profit["net_profit"] == -profit["cost"]
+    assert profit["net_profit"] != 0.0
+
+    result = evaluate(scenario, decision)
+    rule9 = next(r for r in result.rules if r.rule_id == "rule_9")
+    assert f"${profit['cost']:.0f}" in rule9.detail
+    assert "buy 1.8MW" in rule9.detail
+
+
+def test_19_rule9_na_when_no_decision_freedom():
+    # Brief 2 Patch 2, acceptance test 4: rule_9 is N/A with a reason when the top-priority
+    # metric has no real decision freedom, and N/A rows are excluded from batch pass rates.
+    balanced = _tick88_scenario(
+        objective=Objective.MAX_PROFIT,
+        wind_output_mw=99.0, wind_forecast_mw=99.0,  # generation == demand (139.0): no shortfall, no surplus
+        transmission_headroom_mw=0.0,  # nothing sellable even if there were a surplus
+    )
+    decision = _decision()  # hold everything
+    result = evaluate(balanced, decision)
+    rule9 = next(r for r in result.rules if r.rule_id == "rule_9")
+    assert rule9.applicable is False
+    assert rule9.passed is True
+    assert "N/A" in rule9.detail and "decision" in rule9.detail.lower()
+
+    from app.api.routes import _summarize
+    from app.models.schemas import DecisionStage, ScenarioRunResult
+    na_result = ScenarioRunResult(
+        scenario=balanced,
+        stages=[DecisionStage(name="raw", decision=decision, evaluation=result), DecisionStage(name="applied", decision=decision, evaluation=evaluate(balanced, decision, repairs=[]))],
+        repairs=[], repaired=False,
+    )
+    normal_scenario = _tick88_scenario(objective=Objective.MAX_PROFIT)
+    failing_decision = _decision()  # holds everything -> unserved -> fails rule_3, rule_9 judged normally
+    normal_eval_raw = evaluate(normal_scenario, failing_decision, include_repair_rule=False)
+    normal_eval_applied = evaluate(normal_scenario, failing_decision, repairs=[])
+    normal_result = ScenarioRunResult(
+        scenario=normal_scenario,
+        stages=[DecisionStage(name="raw", decision=failing_decision, evaluation=normal_eval_raw), DecisionStage(name="applied", decision=failing_decision, evaluation=normal_eval_applied)],
+        repairs=[], repaired=False,
+    )
+    summary = _summarize([na_result, normal_result], base_seed=1, seed_set_name=None, objectives=[Objective.MAX_PROFIT])
+    assert summary.total == 2
+    assert summary.na_count == 1
+    # judged_total is 1 (the non-NA scenario) -> the NA scenario contributes to neither
+    # numerator nor denominator of the pass rate.
+    assert summary.first_attempt_pass_rate_pct == 0.0  # the one judged scenario fails rule_3
+    assert summary.applied_passed + summary.applied_failed + summary.applied_flagged == 1
+
+
+def test_20_buy_sell_prices_present_and_zero_spread_reproduces_old_behaviour():
+    # Brief 2 Patch 2, acceptance test 5: buy/sell prices appear on the scenario (and so in
+    # the prompt input and manual form, which both consume the scenario as-is) and in the
+    # physics module; a spread of 0 reproduces the old single-price behaviour.
+    s = generate_scenario(Difficulty.D1_STABLE_DAY, Objective.MAX_PROFIT, seed=5)
+    assert s.buy_price_per_mwh == physics.buy_price_per_mwh(s.electricity_price_per_mwh)
+    assert s.sell_price_per_mwh == physics.sell_price_per_mwh(s.electricity_price_per_mwh)
+    assert s.buy_price_per_mwh > s.electricity_price_per_mwh > s.sell_price_per_mwh
+
+    with patch.object(physics, "PRICE_SPREAD_PCT", 0.0):
+        assert physics.buy_price_per_mwh(100.0) == 100.0
+        assert physics.sell_price_per_mwh(100.0) == 100.0
 
 
 def test_15_regression_rules_3_and_4_never_disagree_on_unmet():

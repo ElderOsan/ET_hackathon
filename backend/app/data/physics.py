@@ -15,8 +15,32 @@ used in the power balance.
 """
 from __future__ import annotations
 
-from app.data.tuning import BALANCE_TOLERANCE_MW, TICK_HOURS
+from app.data.tuning import BALANCE_TOLERANCE_MW, PRICE_SPREAD_PCT, TICK_HOURS
 from app.models.schemas import Battery, Decision, EnvironmentState
+
+
+def buy_price_per_mwh(electricity_price_per_mwh: float) -> float:
+    """What a purchase costs — above the quoted price by the spread (Brief 2 Patch 2, Step
+    2). A spread of 0 reproduces the old single-price behaviour exactly."""
+    return round(electricity_price_per_mwh * (1 + PRICE_SPREAD_PCT / 100), 2)
+
+
+def sell_price_per_mwh(electricity_price_per_mwh: float) -> float:
+    """What a sale earns — below the quoted price by the spread. A spread of 0 reproduces
+    the old single-price behaviour exactly."""
+    return round(electricity_price_per_mwh * (1 - PRICE_SPREAD_PCT / 100), 2)
+
+
+def decision_profit(scenario: EnvironmentState, decision: Decision) -> dict:
+    """Sale revenue minus purchase cost for this tick, using the scenario's own buy/sell
+    prices (Brief 2 Patch 2, Step 2) — never the single electricity_price_per_mwh, which
+    silently showed $0 net when a purchase was netted against nothing. The single source of
+    truth for this arithmetic; rule_9's profit branch and the Decision panel both show it."""
+    sale_mw = decision.market_amount_mw if decision.market_action == "sell" else 0.0
+    purchase_mw = decision.market_amount_mw if decision.market_action == "buy" else 0.0
+    revenue = round(sale_mw * scenario.sell_price_per_mwh, 1)
+    cost = round(purchase_mw * scenario.buy_price_per_mwh, 1)
+    return {"sale_mw": sale_mw, "purchase_mw": purchase_mw, "revenue": revenue, "cost": cost, "net_profit": round(revenue - cost, 1)}
 
 
 def max_charge_mw(battery: Battery) -> float:

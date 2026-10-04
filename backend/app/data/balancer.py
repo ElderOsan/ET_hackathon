@@ -179,27 +179,44 @@ def reference_dispatch(scenario: EnvironmentState) -> dict:
     using renewables, then battery down to the scenario's expected floor band, then grid
     import for whatever's left — and the maximum sellable surplus, for the profit side.
     This is what rule 9 compares the actual decision against.
+
+    Also returns the WORST still-feasible outcome per metric (Brief 2 Patch 2, Step 2): the
+    dispatch that still serves load and never curtails/sells more than exists, but makes no
+    use of the free levers (battery discharge, selling surplus) — e.g. covering the entire
+    shortfall from the grid alone, or curtailing the entire surplus instead of selling it.
+    rule_9 reports N/A when best and worst coincide (within tolerance): no decision could
+    have moved this metric, so there's nothing to judge the model's choice against.
     """
     floor_assumption = scenario.expected_floor_min_pct
     generation = scenario.solar_output_mw + scenario.wind_output_mw
     total_demand = scenario.total_demand_mw
 
     battery_headroom = sum(physics.max_discharge_mw(b, floor_assumption, emergency=False) for b in scenario.batteries)
-    remaining = max(0.0, total_demand - generation)
-    battery_used = min(remaining, battery_headroom)
-    remaining = max(0.0, remaining - battery_used)
+    shortfall = max(0.0, total_demand - generation)
+    battery_used = min(shortfall, battery_headroom)
+    remaining = max(0.0, shortfall - battery_used)
     min_grid_import_mw = round(remaining, 1)
+    worst_grid_import_mw = round(shortfall, 1)  # no battery help at all, still feasible
 
     renewable_surplus_mw = max(0.0, generation - total_demand)
     max_sellable_mw = round(min(renewable_surplus_mw, scenario.transmission_headroom_mw), 1)
+    worst_sellable_mw = 0.0  # sell nothing (curtail or waste the surplus instead), still feasible
 
-    reference_cost = round(min_grid_import_mw * scenario.electricity_price_per_mwh, 1)
-    reference_revenue = round(max_sellable_mw * scenario.electricity_price_per_mwh, 1)
+    reference_cost = round(min_grid_import_mw * scenario.buy_price_per_mwh, 1)
+    worst_cost = round(worst_grid_import_mw * scenario.buy_price_per_mwh, 1)
+    reference_revenue = round(max_sellable_mw * scenario.sell_price_per_mwh, 1)
+    worst_revenue = round(worst_sellable_mw * scenario.sell_price_per_mwh, 1)
 
     return {
         "min_grid_import_mw": min_grid_import_mw,
+        "worst_grid_import_mw": worst_grid_import_mw,
         "renewable_surplus_mw": round(renewable_surplus_mw, 1),
         "max_sellable_mw": max_sellable_mw,
+        "worst_sellable_mw": worst_sellable_mw,
         "reference_cost": reference_cost,
+        "worst_cost": worst_cost,
         "reference_revenue": reference_revenue,
+        "worst_revenue": worst_revenue,
+        "reference_profit": round(reference_revenue - reference_cost, 1),
+        "worst_profit": round(worst_revenue - worst_cost, 1),
     }

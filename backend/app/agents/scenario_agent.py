@@ -228,6 +228,8 @@ def generate_scenario(
         batteries=accepted["batteries"],
         previous_floor_pct=previous_floor_pct,
         electricity_price_per_mwh=price,
+        buy_price_per_mwh=physics.buy_price_per_mwh(price),
+        sell_price_per_mwh=physics.sell_price_per_mwh(price),
         carbon_price_per_ton=round(rng.uniform(20, 40), 1),
         demand_response_incentive_per_mwh=round(rng.uniform(10, 30), 1),
         weather_forecast="storm" if "storm_alert" in events else "clear",
@@ -262,6 +264,16 @@ def normalize_scenario(scenario: EnvironmentState) -> tuple[EnvironmentState, li
     if total_demand_forecast != data["total_demand_forecast_mw"]:
         corrections.append(f"total_demand_forecast_mw recomputed: {data['total_demand_forecast_mw']} -> {total_demand_forecast}")
     data["total_demand_forecast_mw"] = total_demand_forecast
+
+    buy_price = physics.buy_price_per_mwh(data["electricity_price_per_mwh"])
+    if buy_price != data.get("buy_price_per_mwh"):
+        corrections.append(f"buy_price_per_mwh recomputed from electricity_price_per_mwh: {data.get('buy_price_per_mwh')} -> {buy_price}")
+    data["buy_price_per_mwh"] = buy_price
+
+    sell_price = physics.sell_price_per_mwh(data["electricity_price_per_mwh"])
+    if sell_price != data.get("sell_price_per_mwh"):
+        corrections.append(f"sell_price_per_mwh recomputed from electricity_price_per_mwh: {data.get('sell_price_per_mwh')} -> {sell_price}")
+    data["sell_price_per_mwh"] = sell_price
 
     battery_2_event = "battery_2_offline" in data["events"]
     for b in data["batteries"]:

@@ -107,10 +107,18 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
     raw_stages = [next(s for s in r.stages if s.name == "raw") for r in results]
     applied_stages = [next(s for s in r.stages if s.name == "applied") for r in results]
 
-    first_attempt_passed = sum(1 for s in raw_stages if s.evaluation.status.value == "pass")
-    applied_passed = sum(1 for s in applied_stages if s.evaluation.status.value == "pass")
-    applied_failed = sum(1 for s in applied_stages if s.evaluation.status.value == "fail")
-    applied_flagged = sum(1 for s in applied_stages if s.evaluation.status.value == "flagged")
+    def _rule9_na(stage) -> bool:
+        rule9 = next((rule for rule in stage.evaluation.rules if rule.rule_id == "rule_9"), None)
+        return rule9 is not None and not rule9.applicable
+
+    na_mask = [_rule9_na(a) for a in applied_stages]
+    na_count = sum(na_mask)
+    judged_total = total - na_count
+
+    first_attempt_passed = sum(1 for s, na in zip(raw_stages, na_mask) if not na and s.evaluation.status.value == "pass")
+    applied_passed = sum(1 for s, na in zip(applied_stages, na_mask) if not na and s.evaluation.status.value == "pass")
+    applied_failed = sum(1 for s, na in zip(applied_stages, na_mask) if not na and s.evaluation.status.value == "fail")
+    applied_flagged = sum(1 for s, na in zip(applied_stages, na_mask) if not na and s.evaluation.status.value == "flagged")
     repaired_count = sum(1 for r in results if r.repaired)
 
     category_counts: dict[str, int] = {"arithmetic": 0, "strategy": 0, "outcome": 0}
@@ -138,12 +146,13 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
         total=total,
         infeasible_count=infeasible_count,
         margin_infeasible_count=margin_infeasible_count,
+        na_count=na_count,
         first_attempt_passed=first_attempt_passed,
-        first_attempt_pass_rate_pct=round((first_attempt_passed / total) * 100, 1) if total else 0.0,
+        first_attempt_pass_rate_pct=round((first_attempt_passed / judged_total) * 100, 1) if judged_total else 0.0,
         applied_passed=applied_passed,
         applied_failed=applied_failed,
         applied_flagged=applied_flagged,
-        applied_pass_rate_pct=round((applied_passed / total) * 100, 1) if total else 0.0,
+        applied_pass_rate_pct=round((applied_passed / judged_total) * 100, 1) if judged_total else 0.0,
         repaired_count=repaired_count,
         repair_rate_pct=round((repaired_count / total) * 100, 1) if total else 0.0,
         raw_category_breakdown=[CategoryBreakdown(category=c, failed_or_flagged=n) for c, n in category_counts.items()],

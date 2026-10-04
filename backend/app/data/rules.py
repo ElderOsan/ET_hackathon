@@ -266,34 +266,58 @@ _CASCADE_PRIORITY = {
 }
 
 
+def _rule9_na(best: float, worst: float, tolerance: float) -> bool:
+    """No real decision freedom: best and worst feasible outcomes coincide, or both the
+    reference and the gap are already ~0 (Brief 2 Patch 2, Step 2)."""
+    return abs(best - worst) < tolerance
+
+
 def rule_9_cascade_deviation(scenario: EnvironmentState, decision: Decision) -> RuleResult:
     top_priority = _CASCADE_PRIORITY[scenario.objective]
     ref = reference_dispatch(scenario)
 
     if top_priority == "cost":
-        actual_cost = (decision.market_amount_mw if decision.market_action == "buy" else 0.0) * scenario.electricity_price_per_mwh
-        tolerance = max(ref["reference_cost"], 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
-        passed = actual_cost <= ref["reference_cost"] + tolerance
-        detail = f"Net import cost ${actual_cost:.0f} vs reference ${ref['reference_cost']:.0f}" + ("." if passed else f" (exceeds {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
-        label, actual_val, ref_val = "net cost vs. reference ($)", actual_cost, ref["reference_cost"]
+        actual_cost = (decision.market_amount_mw if decision.market_action == "buy" else 0.0) * scenario.buy_price_per_mwh
+        best, worst = ref["reference_cost"], ref["worst_cost"]
+        tolerance = max(abs(best), 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
+        if _rule9_na(best, worst, tolerance):
+            return RuleResult(rule_id="rule_9", description="Decision matches the declared cascade (top priority: cost)", severity="flagged", passed=True, applicable=False, detail=f"N/A — no decision could change net import cost here (best and worst feasible outcomes both ~${best:.0f}).")
+        passed = actual_cost <= best + tolerance
+        detail = f"Net import cost ${actual_cost:.0f} vs reference ${best:.0f}" + ("." if passed else f" (exceeds {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
+        label, actual_val, ref_val = "net cost vs. reference ($)", actual_cost, best
     elif top_priority == "carbon":
         actual_import = decision.market_amount_mw if decision.market_action == "buy" else 0.0
-        tolerance = max(ref["min_grid_import_mw"], 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
-        passed = actual_import <= ref["min_grid_import_mw"] + tolerance
-        detail = f"Grid import {actual_import:.1f}MW (carbon proxy) vs reference minimum {ref['min_grid_import_mw']:.1f}MW" + ("." if passed else f" (exceeds {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
-        label, actual_val, ref_val = "grid import vs. reference minimum (MW)", actual_import, ref["min_grid_import_mw"]
+        best, worst = ref["min_grid_import_mw"], ref["worst_grid_import_mw"]
+        tolerance = max(abs(best), 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
+        if _rule9_na(best, worst, tolerance):
+            return RuleResult(rule_id="rule_9", description="Decision matches the declared cascade (top priority: carbon)", severity="flagged", passed=True, applicable=False, detail=f"N/A — no decision could change grid import here (best and worst feasible outcomes both ~{best:.1f}MW).")
+        passed = actual_import <= best + tolerance
+        detail = f"Grid import {actual_import:.1f}MW (carbon proxy) vs reference minimum {best:.1f}MW" + ("." if passed else f" (exceeds {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
+        label, actual_val, ref_val = "grid import vs. reference minimum (MW)", actual_import, best
     elif top_priority == "renewable_utilisation":
         actual_curtail = decision.curtail_solar_mw + decision.curtail_wind_mw
-        min_required = physics.min_required_curtailment_mw(scenario)
-        passed = actual_curtail <= min_required + CURTAIL_TOLERANCE_MW
-        detail = f"Curtailed {actual_curtail:.1f}MW vs {min_required:.1f}MW minimum required" + ("." if passed else f" (exceeds {CURTAIL_TOLERANCE_MW}MW tolerance).")
-        label, actual_val, ref_val = "curtailed vs. minimum required (MW)", actual_curtail, min_required
+        best = physics.min_required_curtailment_mw(scenario)
+        worst = ref["renewable_surplus_mw"]
+        tolerance = max(abs(best), 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
+        if _rule9_na(best, worst, tolerance):
+            return RuleResult(rule_id="rule_9", description="Decision matches the declared cascade (top priority: renewable_utilisation)", severity="flagged", passed=True, applicable=False, detail=f"N/A — no decision could change curtailment here (best and worst feasible outcomes both ~{best:.1f}MW).")
+        passed = actual_curtail <= best + CURTAIL_TOLERANCE_MW
+        detail = f"Curtailed {actual_curtail:.1f}MW vs {best:.1f}MW minimum required" + ("." if passed else f" (exceeds {CURTAIL_TOLERANCE_MW}MW tolerance).")
+        label, actual_val, ref_val = "curtailed vs. minimum required (MW)", actual_curtail, best
     else:  # profit
-        actual_revenue = (decision.market_amount_mw if decision.market_action == "sell" else 0.0) * scenario.electricity_price_per_mwh
-        tolerance = max(ref["reference_revenue"], 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
-        passed = actual_revenue >= ref["reference_revenue"] - tolerance
-        detail = f"Net revenue ${actual_revenue:.0f} vs reference ${ref['reference_revenue']:.0f}" + ("." if passed else f" (below {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
-        label, actual_val, ref_val = "net revenue vs. reference ($)", actual_revenue, ref["reference_revenue"]
+        profit = physics.decision_profit(scenario, decision)
+        actual_profit = profit["net_profit"]
+        best, worst = ref["reference_profit"], ref["worst_profit"]
+        tolerance = max(abs(best), 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
+        if _rule9_na(best, worst, tolerance) or (abs(best) < tolerance and abs(actual_profit) < tolerance):
+            return RuleResult(rule_id="rule_9", description="Decision matches the declared cascade (top priority: profit)", severity="flagged", passed=True, applicable=False, detail=f"N/A — no decision could change net profit here (best and worst feasible outcomes both ~${best:.0f}).")
+        passed = actual_profit >= best - tolerance
+        detail = (
+            f"Revenue ${profit['revenue']:.0f} (sell {profit['sale_mw']:.1f}MW @ ${scenario.sell_price_per_mwh:.0f}/MWh) "
+            f"- cost ${profit['cost']:.0f} (buy {profit['purchase_mw']:.1f}MW @ ${scenario.buy_price_per_mwh:.0f}/MWh) "
+            f"= net profit ${actual_profit:.0f} vs reference ${best:.0f}"
+        ) + ("." if passed else f" (below {OBJECTIVE_TOLERANCE_PCT:.0f}% tolerance).")
+        label, actual_val, ref_val = "net profit vs. reference ($)", actual_profit, best
 
     return RuleResult(
         rule_id="rule_9", description=f"Decision matches the declared cascade (top priority: {top_priority})", severity="flagged", passed=passed, detail=detail,

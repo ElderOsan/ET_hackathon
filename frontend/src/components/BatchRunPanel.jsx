@@ -75,6 +75,12 @@ export default function BatchRunPanel() {
             <p style={{ fontSize: 13, margin: 0, color: summary.infeasible_count > 0 ? "#f5a666" : "#9aa4b2" }}>
               infeasible scenarios: {summary.infeasible_count}{summary.infeasible_count > 0 ? " (generator bug — should be 0)" : ""}
             </p>
+            <p style={{ fontSize: 13, margin: 0, color: "#9aa4b2" }}>
+              margin-infeasible: {summary.margin_infeasible_count} <span style={{ fontSize: 11 }}>(reserve-margin target unreachable — expected sometimes, not a bug)</span>
+            </p>
+            <p style={{ fontSize: 13, margin: 0, color: "#9aa4b2" }}>
+              rule_9 N/A: {summary.na_count} <span style={{ fontSize: 11 }}>(excluded from the pass rates above)</span>
+            </p>
             <p style={{ fontSize: 13, margin: 0, color: "#9aa4b2" }}>seed: {summary.seed}{summary.seed_set ? ` (${summary.seed_set})` : ""}</p>
           </div>
 

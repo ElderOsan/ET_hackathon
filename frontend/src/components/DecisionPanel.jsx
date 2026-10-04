@@ -13,10 +13,20 @@ function plainActions(decision) {
   return lines;
 }
 
-export default function DecisionPanel({ rawStage, appliedStage, repairs, repaired, infeasible }) {
+// Mirrors physics.decision_profit exactly — must stay in sync with backend/app/data/physics.py.
+function decisionProfit(scenario, decision) {
+  const saleMw = decision.market_action === "sell" ? decision.market_amount_mw : 0;
+  const purchaseMw = decision.market_action === "buy" ? decision.market_amount_mw : 0;
+  const revenue = Math.round(saleMw * scenario.sell_price_per_mwh * 10) / 10;
+  const cost = Math.round(purchaseMw * scenario.buy_price_per_mwh * 10) / 10;
+  return { saleMw, purchaseMw, revenue, cost, netProfit: Math.round((revenue - cost) * 10) / 10 };
+}
+
+export default function DecisionPanel({ scenario, rawStage, appliedStage, repairs, repaired, infeasible, marginInfeasible }) {
   if (!appliedStage) return null;
   const applied = appliedStage.decision;
   const floorAdjusted = applied.proposed_floor_pct !== applied.applied_floor_pct;
+  const profit = decisionProfit(scenario, applied);
 
   return (
     <div className="panel">
@@ -24,6 +34,11 @@ export default function DecisionPanel({ rawStage, appliedStage, repairs, repaire
       {infeasible && (
         <p style={{ fontSize: 13, color: "#f5a666", background: "#3a2a1f", padding: 8, borderRadius: 6 }}>
           This scenario is physically infeasible — no decision could serve full demand. A generator bug, not a model error.
+        </p>
+      )}
+      {!infeasible && marginInfeasible && (
+        <p style={{ fontSize: 13, color: "#f5a666", background: "#3a2a1f", padding: 8, borderRadius: 6 }}>
+          Load is served, but the reserve-margin requirement is unreachable this tick (margin infeasible) — rule_3b judges against the best achievable headroom, not the unmet requirement.
         </p>
       )}
       <div className="row" style={{ marginBottom: 8 }}>
@@ -42,6 +57,15 @@ export default function DecisionPanel({ rawStage, appliedStage, repairs, repaire
         </span>
       </div>
       <p style={{ fontSize: 13, color: "#9aa4b2" }}><strong>Floor justification:</strong> {applied.floor_justification}</p>
+      {(profit.saleMw > 0 || profit.purchaseMw > 0) && (
+        <p style={{ fontSize: 13, color: profit.netProfit >= 0 ? "#6fe382" : "#ff8a8a" }}>
+          <strong>Net profit this tick:</strong> ${profit.netProfit.toFixed(1)}{" "}
+          <span style={{ color: "#9aa4b2" }}>
+            (revenue ${profit.revenue.toFixed(1)} from selling {profit.saleMw}MW @ ${scenario.sell_price_per_mwh}/MWh
+            {" − "}cost ${profit.cost.toFixed(1)} from buying {profit.purchaseMw}MW @ ${scenario.buy_price_per_mwh}/MWh)
+          </span>
+        </p>
+      )}
 
       <h3 style={{ fontSize: 13, color: "#9aa4b2", margin: "12px 0 4px" }}>Applied actions (plain words)</h3>
       <ul style={{ fontSize: 13, margin: 0, paddingLeft: 18 }}>

@@ -38,6 +38,10 @@ REPAIR_TOLERANCE_MW = 0.5  # total balancer repair magnitude allowed before rule
 TRANSMISSION_LINE_RATING_MW = 180.0
 TRANSMISSION_HEADROOM_CONSTRAINED_MW = 2.0  # near-zero headroom left when the line is "at capacity"
 
+# Brief 2 Patch 2, Step 2 — buy/sell price spread around electricity_price_per_mwh. 0 must
+# reproduce the old single-price behaviour exactly (buy == sell == electricity_price).
+PRICE_SPREAD_PCT = 5.0
+
 # Brief 2 Patch — calibrated scenario generation ------------------------------------------
 
 # total_demand_mw is sampled within this band first; base/industrial are then split from it.

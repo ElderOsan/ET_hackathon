@@ -295,6 +295,14 @@ export default function ManualEntryForm({ original, presets, onSubmit, loading }
             {numField(scenario.demand_response_incentive_per_mwh, (v) => patch({ demand_response_incentive_per_mwh: v }))}
           </Field>
         </div>
+        <div className="row" style={{ marginTop: 10 }}>
+          <Field label="Buy price" unit="$/MWh" hint="computed: electricity price + spread — what a purchase costs">
+            <input type="number" value={scenario.buy_price_per_mwh} disabled />
+          </Field>
+          <Field label="Sell price" unit="$/MWh" hint="computed: electricity price - spread — what a sale earns">
+            <input type="number" value={scenario.sell_price_per_mwh} disabled />
+          </Field>
+        </div>
       </div>
 
       <div className="panel" style={{ background: "#14181e" }}>

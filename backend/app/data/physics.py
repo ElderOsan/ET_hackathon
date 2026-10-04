@@ -110,6 +110,18 @@ def reserve_margin_headroom_mw(scenario: EnvironmentState, decision: Decision, f
     return unused_discharge + unused_import_headroom
 
 
+def max_achievable_headroom_mw(scenario: EnvironmentState, floor_pct: float) -> float:
+    """The best reserve-margin headroom any decision could achieve this tick: available
+    battery discharge above floor_pct (rate- and SoC-limited) plus import headroom, with
+    any current shortfall covered first (Brief 2 Patch 2, Step 1). Tells rule_3b's target
+    apart from an unattainable one — judging a decision against more margin than physically
+    exists would be unfair, not strict."""
+    generation = total_generation_mw(scenario)
+    shortfall = max(0.0, scenario.total_demand_mw - generation)
+    lever_capacity = sum(max_discharge_mw(b, floor_pct, emergency=False) for b in scenario.batteries) + scenario.transmission_headroom_mw
+    return max(0.0, lever_capacity - shortfall)
+
+
 def min_achievable_unserved_mw(scenario: EnvironmentState) -> float:
     """The best ANY decision could do: generation + every battery discharged all the way to
     its absolute minimum safe charge (not just the reserve floor — this is "what's physically

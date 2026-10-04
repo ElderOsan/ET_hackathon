@@ -243,6 +243,53 @@ def test_14_manual_consistency_recomputes_ladder_from_position():
     assert any("expected_ladder_step" in c for c in corrections)
 
 
+def test_16_rule3b_tick1_tick60_margin_infeasible_not_flagged():
+    # Brief 2 Patch 2, acceptance test 1: ticks 1 (seed 472264643) and 60 (seed 1039876167)
+    # reproduce; rule_3b reports margin infeasible with best possible 0.2MW / 1.6MW, and
+    # does not flag a decision that reaches that achievable max.
+    s1 = generate_scenario(Difficulty.D3_MULTI_FAILURE_CASCADE, None, seed=472264643)
+    s60 = generate_scenario(Difficulty.D3_MULTI_FAILURE_CASCADE, Objective.MAX_PROFIT, seed=1039876167)
+    for scenario, expected_best in [(s1, 0.2), (s60, 1.6)]:
+        achievable = physics.max_achievable_headroom_mw(scenario, scenario.previous_floor_pct)
+        assert round(achievable, 1) == expected_best, f"seed {scenario.seed}: achievable={achievable}"
+        # A decision that maxes every lever (full discharge above floor + full import) should
+        # reach that achievable max and not be flagged by rule_3b.
+        battery_actions = [
+            BatteryAction(battery_id=b.id, action="discharge", amount_mw=physics.max_discharge_mw(b, scenario.previous_floor_pct, emergency=False))
+            for b in scenario.batteries
+        ]
+        shortfall = max(0.0, scenario.total_demand_mw - physics.total_generation_mw(scenario) - sum(a.amount_mw for a in battery_actions))
+        decision = _decision(
+            battery_actions=battery_actions,
+            market_action="buy" if shortfall > 0 else "hold",
+            market_amount_mw=round(min(shortfall, scenario.transmission_headroom_mw), 1),
+            proposed_floor_pct=scenario.previous_floor_pct, applied_floor_pct=scenario.previous_floor_pct,
+        )
+        result = evaluate(scenario, decision)
+        rule3b = next(r for r in result.rules if r.rule_id == "rule_3b")
+        assert rule3b.passed, rule3b.detail
+        assert "margin infeasible" in rule3b.detail.lower()
+
+
+def test_17_rule3b_flags_when_achievable_exceeds_requirement_but_decision_falls_short():
+    # Brief 2 Patch 2, acceptance test 2: achievable margin exceeds the requirement, but the
+    # decision leaves less than that — still flagged.
+    scenario = _tick88_scenario(total_demand_mw=100.0, total_demand_forecast_mw=100.0)
+    # generation 101.7 already exceeds demand 100 -> no shortfall to cover; achievable headroom
+    # is the full lever capacity (16MW batteries + 180MW transmission = 196MW), comfortably
+    # above the 5% requirement (5.0MW), so target == required == 5.0MW, not the achievable max.
+    # A decision that uses almost all of both levers (leaving only ~0.15MW unused) still falls
+    # short of that 5.0MW target and must be flagged.
+    decision = _decision(
+        battery_actions=[BatteryAction(battery_id="battery_1", action="discharge", amount_mw=9.9), BatteryAction(battery_id="battery_2", action="discharge", amount_mw=6.0)],
+        market_action="buy", market_amount_mw=179.95,
+    )
+    result = evaluate(scenario, decision)
+    rule3b = next(r for r in result.rules if r.rule_id == "rule_3b")
+    assert not rule3b.passed, rule3b.detail
+    assert "margin infeasible" not in rule3b.detail.lower()
+
+
 def test_15_regression_rules_3_and_4_never_disagree_on_unmet():
     scenario = _tick88_scenario()
     for curtail, sell, charge in [(0.0, 0.0, 0.0), (0.0, 17.3, 16.0), (0.0, 0.0, 16.0)]:

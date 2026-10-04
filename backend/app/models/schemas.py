@@ -185,6 +185,7 @@ class ScenarioRunResult(BaseModel):
     repairs: list[FieldRepair] = Field(default_factory=list)
     repaired: bool = Field(description="True if any repair's magnitude exceeded REPAIR_TOLERANCE_MW.")
     infeasible: bool = Field(default=False, description="True if this scenario's min_achievable_unserved_mw > 0 — full service was physically impossible no matter the decision. The generator should never produce these; a nonzero count means a generator bug, not a model error.")
+    margin_infeasible: bool = Field(default=False, description="True if load is served but max_achievable_headroom_mw is below the reserve-margin requirement — no decision could reach rule_3b's target this tick. Unlike `infeasible`, this is expected to happen sometimes (extreme cascades are the point) and is reported, not treated as a bug.")
 
 
 class ObjectiveBreakdown(BaseModel):
@@ -205,6 +206,8 @@ class BatchRunSummary(BaseModel):
     seed_set: Optional[str] = Field(default=None, description="Name of the benchmark seed set used ('dev' or 'held_out'), if this run used one rather than an ad-hoc seed.")
     total: int
     infeasible_count: int = Field(description="Scenarios where min_achievable_unserved_mw > 0 — full service was physically impossible. Should always be 0; nonzero means a generator bug, not a model error.")
+    margin_infeasible_count: int = Field(default=0, description="Scenarios where load is served but no decision could reach the reserve-margin target (rule_3b). Expected to be nonzero sometimes — extreme cascades are the point, not a bug.")
+    na_count: int = Field(default=0, description="Scenarios where rule_9 (the cascade-deviation check) reported N/A because the top-priority metric had no real decision freedom. Excluded from pass-rate denominators conceptually, though total/passed/failed/flagged counts are unchanged — see the applied_rules for which rows these are.")
 
     first_attempt_passed: int = Field(description="The Orchestrator's own raw proposal, judged before any balancer repair — the true score of the model.")
     first_attempt_pass_rate_pct: float

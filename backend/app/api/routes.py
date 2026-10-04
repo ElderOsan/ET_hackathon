@@ -102,6 +102,7 @@ def _categorize_rule(rule_id: str, repairs: list[FieldRepair]) -> str:
 def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: str | None, objectives: list) -> BatchRunSummary:
     total = len(results)
     infeasible_count = sum(1 for r in results if r.infeasible)
+    margin_infeasible_count = sum(1 for r in results if r.margin_infeasible)
 
     raw_stages = [next(s for s in r.stages if s.name == "raw") for r in results]
     applied_stages = [next(s for s in r.stages if s.name == "applied") for r in results]
@@ -136,6 +137,7 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
         seed_set=seed_set_name,
         total=total,
         infeasible_count=infeasible_count,
+        margin_infeasible_count=margin_infeasible_count,
         first_attempt_passed=first_attempt_passed,
         first_attempt_pass_rate_pct=round((first_attempt_passed / total) * 100, 1) if total else 0.0,
         applied_passed=applied_passed,

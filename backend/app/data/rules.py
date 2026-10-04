@@ -99,18 +99,30 @@ def rule_3_unserved_load(scenario: EnvironmentState, decision: Decision) -> Rule
 def rule_3b_reserve_margin(scenario: EnvironmentState, decision: Decision) -> RuleResult:
     unserved = physics.unserved_mw(scenario, decision)
     if unserved > BALANCE_TOLERANCE_MW:
-        return RuleResult(rule_id="rule_3b", description="Reserve-margin headroom meets the requirement", severity="flagged", passed=True, applicable=False, detail="N/A — load is already unserved (see rule_3).")
+        return RuleResult(rule_id="rule_3b", description="Reserve-margin headroom meets the achievable target", severity="flagged", passed=True, applicable=False, detail="N/A — load is already unserved (see rule_3).")
     headroom = physics.reserve_margin_headroom_mw(scenario, decision, decision.applied_floor_pct)
+    achievable = physics.max_achievable_headroom_mw(scenario, decision.applied_floor_pct)
     required = scenario.total_demand_mw * (RESERVE_MARGIN_PCT / 100)
-    passed = headroom >= required
-    detail = (
-        f"Reserve-margin headroom {headroom:.1f}MW meets the {required:.1f}MW requirement ({RESERVE_MARGIN_PCT:.0f}% of total demand)."
-        if passed
-        else f"Reserve-margin headroom {headroom:.1f}MW is below the {required:.1f}MW requirement ({RESERVE_MARGIN_PCT:.0f}% of total demand) — load is served now but with thin margin."
-    )
+    target = min(required, achievable)
+    margin_infeasible = achievable < required - BALANCE_TOLERANCE_MW
+    passed = headroom >= target - BALANCE_TOLERANCE_MW
+    if margin_infeasible:
+        detail = (
+            f"Reserve-margin headroom {headroom:.1f}MW meets the best achievable {achievable:.1f}MW — "
+            f"margin infeasible this tick; best possible {achievable:.1f}MW (the {required:.1f}MW requirement cannot be reached by any decision)."
+            if passed
+            else f"Reserve-margin headroom {headroom:.1f}MW is below the best achievable {achievable:.1f}MW — "
+            f"margin infeasible this tick; best possible {achievable:.1f}MW (the {required:.1f}MW requirement cannot be reached by any decision)."
+        )
+    else:
+        detail = (
+            f"Reserve-margin headroom {headroom:.1f}MW meets the {required:.1f}MW requirement ({RESERVE_MARGIN_PCT:.0f}% of total demand)."
+            if passed
+            else f"Reserve-margin headroom {headroom:.1f}MW is below the {required:.1f}MW requirement ({RESERVE_MARGIN_PCT:.0f}% of total demand) — load is served now but with thin margin."
+        )
     return RuleResult(
-        rule_id="rule_3b", description="Reserve-margin headroom meets the requirement", severity="flagged", passed=passed, detail=detail,
-        value_label="headroom vs. required", value_actual=round(headroom, 1), value_reference=round(required, 1),
+        rule_id="rule_3b", description="Reserve-margin headroom meets the achievable target", severity="flagged", passed=passed, detail=detail,
+        value_label="headroom vs. target", value_actual=round(headroom, 1), value_reference=round(target, 1),
     )
 
 

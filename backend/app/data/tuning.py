@@ -42,6 +42,11 @@ TRANSMISSION_HEADROOM_CONSTRAINED_MW = 2.0  # near-zero headroom left when the l
 # reproduce the old single-price behaviour exactly (buy == sell == electricity_price).
 PRICE_SPREAD_PCT = 5.0
 
+# Patch 3, Step 1 — the cap on retries for an infrastructure failure (503/429/timeout/
+# network) before a scenario is reported unresolved rather than retried forever.
+GEMINI_RETRY_ATTEMPTS = 5
+GEMINI_RETRY_MAX_WAIT_S = 20.0
+
 # Brief 2 Patch — calibrated scenario generation ------------------------------------------
 
 # total_demand_mw is sampled within this band first; base/industrial are then split from it.

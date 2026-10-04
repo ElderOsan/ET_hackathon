@@ -140,6 +140,11 @@ class Decision(BaseModel):
     reasoning: str = Field(
         description="Step-by-step rationale: which golden rules were binding, which objective-cascade layer drove the choice, and which dispatch-ladder step was used."
     )
+    mode: Literal["agent", "model_call_failed", "parse_failed"] = Field(
+        default="agent",
+        description="'agent' is a real model decision. 'model_call_failed'/'parse_failed' are placeholder decisions (hold everything) produced when the Orchestrator could not respond or its response could not be parsed, after retries were exhausted — always evaluated as FAIL, never silently dropped (Patch 3, Step 1). Safe mode (Patch 3, Step 4) adds a further mode value.",
+    )
+    failure_detail: Optional[str] = Field(default=None, description="Error detail when mode is not 'agent'.")
 
 
 class FieldRepair(BaseModel):
@@ -203,13 +208,25 @@ class CategoryBreakdown(BaseModel):
     failed_or_flagged: int
 
 
+class UnresolvedRun(BaseModel):
+    tick: int
+    seed: int
+    profile: str
+    objective: str
+    mode: str = Field(description="'model_call_failed' (infrastructure, retries exhausted) or 'parse_failed' (schema/parse error).")
+    detail: str
+
+
 class BatchRunSummary(BaseModel):
     seed: int = Field(description="The base seed for this batch — reusing it reproduces every scenario in the run.")
     seed_set: Optional[str] = Field(default=None, description="Name of the benchmark seed set used ('dev' or 'held_out'), if this run used one rather than an ad-hoc seed.")
     total: int
     infeasible_count: int = Field(description="Scenarios where min_achievable_unserved_mw > 0 — full service was physically impossible. Should always be 0; nonzero means a generator bug, not a model error.")
+    judged_count: int = Field(default=0, description="total - infeasible_count. Patch 3, Step 1: EVERY scenario is in the pass-rate denominator except infeasible ones — N/A is a per-rule result, never a scenario exclusion. This replaces Patch 2's na_count-based denominator shrinkage.")
     margin_infeasible_count: int = Field(default=0, description="Scenarios where load is served but no decision could reach the reserve-margin target (rule_3b). Expected to be nonzero sometimes — extreme cascades are the point, not a bug.")
-    na_count: int = Field(default=0, description="Scenarios excluded from first_attempt_pass_rate_pct / applied_pass_rate_pct as a vacuous pass: rule_9 reported N/A AND both raw and applied stages were a clean PASS. A scenario that fails or is flagged for any other reason is never excluded just because rule_9 had nothing to judge. `total` still counts them, so (total - na_count) is the judged denominator.")
+    na_counts_by_rule: dict[str, int] = Field(default_factory=dict, description="Per-rule N/A counts at the applied stage (e.g. rule_9, rule_5, rule_3b) — informational only, never subtracted from any denominator.")
+    unresolved_count: int = Field(default=0, description="Scenarios where the Orchestrator never produced a usable decision (model_call_failed or parse_failed after retries) — always counted as FAIL in the rates below, never silently dropped.")
+    unresolved: list[UnresolvedRun] = Field(default_factory=list)
 
     first_attempt_passed: int = Field(description="The Orchestrator's own raw proposal, judged before any balancer repair — the true score of the model.")
     first_attempt_pass_rate_pct: float

@@ -309,20 +309,22 @@ def test_18_profit_nets_purchase_cost_not_zero():
     assert "buy 1.8MW" in rule9.detail
 
 
-def test_19_rule9_na_when_no_decision_freedom():
-    # Brief 2 Patch 2, acceptance test 4: rule_9 is N/A with a reason when the top-priority
-    # metric has no real decision freedom, and N/A rows are excluded from batch pass rates.
+def test_19_rule9_na_gives_verdict_from_other_rules_and_stays_in_denominator():
+    # Patch 3, Step 1 (replaces the Patch 2 wording): N/A applies to a rule's result, never
+    # to the whole scenario. A scenario with an N/A rule_9 still gets a verdict from its
+    # other rules, and is never excluded from the batch's pass-rate denominator.
     balanced = _tick88_scenario(
         objective=Objective.MAX_PROFIT,
         wind_output_mw=99.0, wind_forecast_mw=99.0,  # generation == demand (139.0): no shortfall, no surplus
         transmission_headroom_mw=0.0,  # nothing sellable even if there were a surplus
     )
-    decision = _decision()  # hold everything
+    decision = _decision()  # hold everything -- passes every other rule here
     result = evaluate(balanced, decision)
     rule9 = next(r for r in result.rules if r.rule_id == "rule_9")
     assert rule9.applicable is False
     assert rule9.passed is True
     assert "N/A" in rule9.detail and "decision" in rule9.detail.lower()
+    assert result.status.value == "pass"  # verdict comes from the other (all-passing) rules
 
     from app.api.routes import _summarize
     from app.models.schemas import DecisionStage, ScenarioRunResult
@@ -342,11 +344,11 @@ def test_19_rule9_na_when_no_decision_freedom():
     )
     summary = _summarize([na_result, normal_result], base_seed=1, seed_set_name=None, objectives=[Objective.MAX_PROFIT])
     assert summary.total == 2
-    assert summary.na_count == 1
-    # judged_total is 1 (the non-NA scenario) -> the NA scenario contributes to neither
-    # numerator nor denominator of the pass rate.
-    assert summary.first_attempt_pass_rate_pct == 0.0  # the one judged scenario fails rule_3
-    assert summary.applied_passed + summary.applied_failed + summary.applied_flagged == 1
+    assert summary.judged_count == 2  # neither scenario is infeasible -- both stay in the denominator
+    assert summary.na_counts_by_rule.get("rule_9") == 1  # reported per-rule, not subtracted from anything
+    # na_result's raw stage is a clean PASS (counted); normal's raw stage fails rule_3 -> 1/2.
+    assert summary.first_attempt_pass_rate_pct == 50.0
+    assert summary.applied_passed + summary.applied_failed + summary.applied_flagged == 2
 
 
 def test_20_buy_sell_prices_present_and_zero_spread_reproduces_old_behaviour():

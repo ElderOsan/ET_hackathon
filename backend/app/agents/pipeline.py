@@ -9,17 +9,61 @@ from __future__ import annotations
 import logging
 
 from app.agents.evaluator import evaluate
-from app.agents.orchestrator_agent import decide
+from app.agents.orchestrator_agent import CallFailure, decide
 from app.data import physics
 from app.data.balancer import balance
 from app.data.tuning import BALANCE_TOLERANCE_MW, RESERVE_MARGIN_PCT
-from app.models.schemas import DecisionStage, EnvironmentState, ScenarioRunResult
+from app.models.schemas import (
+    BatteryAction,
+    Decision,
+    DecisionStage,
+    EnvironmentState,
+    EvalResult,
+    EvalStatus,
+    RuleResult,
+    ScenarioRunResult,
+)
 
 logger = logging.getLogger(__name__)
 
 
+def _call_failure_result(scenario: EnvironmentState, failure: CallFailure) -> ScenarioRunResult:
+    """Patch 3, Step 1: a model-call or parse failure is never silently dropped from a batch
+    and never crashes it — it becomes a placeholder (hold-everything) decision, always
+    evaluated as FAIL, so it's counted in every report exactly like any other scenario."""
+    mode = "model_call_failed" if failure.kind == "infrastructure" else "parse_failed"
+    placeholder = Decision(
+        tick=scenario.tick,
+        objective_used=scenario.objective.value if scenario.objective else "cost_efficiency",
+        battery_actions=[BatteryAction(battery_id=b.id, action="hold", amount_mw=0.0) for b in scenario.batteries],
+        market_action="hold", market_amount_mw=0.0,
+        curtail_solar_mw=0.0, curtail_wind_mw=0.0,
+        demand_response_triggered=False,
+        proposed_floor_pct=scenario.previous_floor_pct, applied_floor_pct=scenario.previous_floor_pct,
+        floor_justification=f"N/A — {mode}", reasoning=f"No decision produced: {failure.detail}",
+        mode=mode, failure_detail=failure.detail,
+    )
+    fail_rule = RuleResult(
+        rule_id="rule_model_call", description="The Orchestrator must return a usable decision", severity="fail",
+        passed=False, detail=f"{mode}: {failure.detail}",
+    )
+    fail_eval = EvalResult(tick=scenario.tick, status=EvalStatus.FAIL, rules=[fail_rule], notes=f"Model call failed ({failure.kind}) — scenario could not be judged on its merits.")
+    infeasible = physics.min_achievable_unserved_mw(scenario) > 0
+    return ScenarioRunResult(
+        scenario=scenario,
+        stages=[
+            DecisionStage(name="raw", decision=placeholder, evaluation=fail_eval),
+            DecisionStage(name="applied", decision=placeholder, evaluation=fail_eval),
+        ],
+        repairs=[], repaired=False, infeasible=infeasible, margin_infeasible=False,
+    )
+
+
 def run_decision_pipeline(scenario: EnvironmentState) -> ScenarioRunResult:
-    proposal = decide(scenario)
+    try:
+        proposal = decide(scenario)
+    except CallFailure as e:
+        return _call_failure_result(scenario, e)
     raw_evaluation = evaluate(scenario, proposal, repairs=None, include_repair_rule=False)
 
     applied, repairs = balance(scenario, proposal)

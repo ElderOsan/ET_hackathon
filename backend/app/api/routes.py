@@ -20,6 +20,7 @@ from app.models.schemas import (
     ObjectiveBreakdown,
     Objective,
     ScenarioRunResult,
+    UnresolvedRun,
 )
 
 router = APIRouter()
@@ -100,34 +101,41 @@ def _categorize_rule(rule_id: str, repairs: list[FieldRepair]) -> str:
 
 
 def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: str | None, objectives: list) -> BatchRunSummary:
+    # Patch 3, Step 1: N/A is a per-rule result, never a scenario exclusion. Every scenario is
+    # in the denominator except an infeasible one (full service was physically impossible no
+    # matter the decision). The old na_count-based denominator shrinkage silently dropped a
+    # genuine rule_3 FAIL from applied_failed because that scenario's unrelated rule_9
+    # happened to be N/A — this replaces that logic entirely rather than patching it further.
     total = len(results)
     infeasible_count = sum(1 for r in results if r.infeasible)
+    judged_count = total - infeasible_count
     margin_infeasible_count = sum(1 for r in results if r.margin_infeasible)
 
     raw_stages = [next(s for s in r.stages if s.name == "raw") for r in results]
     applied_stages = [next(s for s in r.stages if s.name == "applied") for r in results]
+    judged_mask = [not r.infeasible for r in results]
 
-    def _rule9_na(stage) -> bool:
-        rule9 = next((rule for rule in stage.evaluation.rules if rule.rule_id == "rule_9"), None)
-        return rule9 is not None and not rule9.applicable
-
-    def _excluded_as_vacuous_na(raw_stage, applied_stage) -> bool:
-        # Exclude only a genuinely vacuous pass (rule_9 N/A and BOTH stages clean PASS) --
-        # never a scenario that fails or is flagged for an unrelated reason. rule_9 is a
-        # flagged-severity check; its N/A-ness must never hide a golden-rule (fail-severity)
-        # violation found elsewhere, which an applied-stage-only mask did (a real bug: a
-        # rule_3 FAIL with an N/A rule_9 was silently dropped from applied_failed).
-        return _rule9_na(applied_stage) and raw_stage.evaluation.status.value == "pass" and applied_stage.evaluation.status.value == "pass"
-
-    na_mask = [_excluded_as_vacuous_na(r, a) for r, a in zip(raw_stages, applied_stages)]
-    na_count = sum(na_mask)
-    judged_total = total - na_count
-
-    first_attempt_passed = sum(1 for s, na in zip(raw_stages, na_mask) if not na and s.evaluation.status.value == "pass")
-    applied_passed = sum(1 for s, na in zip(applied_stages, na_mask) if not na and s.evaluation.status.value == "pass")
-    applied_failed = sum(1 for s, na in zip(applied_stages, na_mask) if not na and s.evaluation.status.value == "fail")
-    applied_flagged = sum(1 for s, na in zip(applied_stages, na_mask) if not na and s.evaluation.status.value == "flagged")
+    first_attempt_passed = sum(1 for s, j in zip(raw_stages, judged_mask) if j and s.evaluation.status.value == "pass")
+    applied_passed = sum(1 for s, j in zip(applied_stages, judged_mask) if j and s.evaluation.status.value == "pass")
+    applied_failed = sum(1 for s, j in zip(applied_stages, judged_mask) if j and s.evaluation.status.value == "fail")
+    applied_flagged = sum(1 for s, j in zip(applied_stages, judged_mask) if j and s.evaluation.status.value == "flagged")
     repaired_count = sum(1 for r in results if r.repaired)
+
+    na_counts_by_rule: dict[str, int] = {}
+    for stage in applied_stages:
+        for rule in stage.evaluation.rules:
+            if not rule.applicable:
+                na_counts_by_rule[rule.rule_id] = na_counts_by_rule.get(rule.rule_id, 0) + 1
+
+    unresolved: list[UnresolvedRun] = []
+    for r, applied_stage in zip(results, applied_stages):
+        mode = applied_stage.decision.mode
+        if mode != "agent":
+            unresolved.append(UnresolvedRun(
+                tick=r.scenario.tick, seed=r.scenario.seed,
+                profile=r.scenario.difficulty.value, objective=(r.scenario.objective.value if r.scenario.objective else "none"),
+                mode=mode, detail=applied_stage.decision.failure_detail or "",
+            ))
 
     category_counts: dict[str, int] = {"arithmetic": 0, "strategy": 0, "outcome": 0}
     for r, raw_stage in zip(results, raw_stages):
@@ -153,14 +161,17 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
         seed_set=seed_set_name,
         total=total,
         infeasible_count=infeasible_count,
+        judged_count=judged_count,
         margin_infeasible_count=margin_infeasible_count,
-        na_count=na_count,
+        na_counts_by_rule=na_counts_by_rule,
+        unresolved_count=len(unresolved),
+        unresolved=unresolved,
         first_attempt_passed=first_attempt_passed,
-        first_attempt_pass_rate_pct=round((first_attempt_passed / judged_total) * 100, 1) if judged_total else 0.0,
+        first_attempt_pass_rate_pct=round((first_attempt_passed / judged_count) * 100, 1) if judged_count else 0.0,
         applied_passed=applied_passed,
         applied_failed=applied_failed,
         applied_flagged=applied_flagged,
-        applied_pass_rate_pct=round((applied_passed / judged_total) * 100, 1) if judged_total else 0.0,
+        applied_pass_rate_pct=round((applied_passed / judged_count) * 100, 1) if judged_count else 0.0,
         repaired_count=repaired_count,
         repair_rate_pct=round((repaired_count / total) * 100, 1) if total else 0.0,
         raw_category_breakdown=[CategoryBreakdown(category=c, failed_or_flagged=n) for c, n in category_counts.items()],

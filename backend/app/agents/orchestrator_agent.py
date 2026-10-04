@@ -12,12 +12,32 @@ import json
 
 from google.genai import errors as genai_errors
 from google.genai import types
+from pydantic import ValidationError
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 from app.core.llm_client import MODEL, get_client
 from app.data import physics
-from app.data.tuning import FLOOR_MAX, FLOOR_MIN, FLOOR_STEP_DOWN, REASONING_CHAR_CAP
+from app.data.tuning import (
+    FLOOR_MAX,
+    FLOOR_MIN,
+    FLOOR_STEP_DOWN,
+    GEMINI_RETRY_ATTEMPTS,
+    GEMINI_RETRY_MAX_WAIT_S,
+    REASONING_CHAR_CAP,
+)
 from app.models.schemas import BatteryAction, Decision, EnvironmentState
+
+
+class CallFailure(Exception):
+    """Raised when decide() cannot produce a real Decision — never a rule violation, always
+    an infrastructure or parsing problem (Patch 3, Step 1). Caught by the pipeline, which
+    turns it into a FAIL-evaluated placeholder decision rather than crashing the whole batch
+    or silently dropping the scenario from any count."""
+
+    def __init__(self, kind: str, detail: str):
+        self.kind = kind  # "infrastructure" or "parse"
+        self.detail = detail
+        super().__init__(f"{kind}: {detail}")
 
 SYSTEM_PROMPT = """You are the Orchestrator Agent for a Renewable Energy Orchestrator. Every 15 minutes \
 you receive the current grid/market state and must decide battery, market, curtailment, demand-response, \
@@ -145,14 +165,21 @@ _HIDDEN_FIELDS = {
 
 def _is_transient(exc: BaseException) -> bool:
     # Gemini's free tier returns 503 ("model overloaded") or 429 (rate limit) fairly often
-    # under load — these are worth retrying; anything else (bad request, auth, etc.) is not.
-    return isinstance(exc, genai_errors.ServerError) and getattr(exc, "code", None) in (503, 429)
+    # under load — both are worth retrying. The google-genai SDK raises ClientError for 429
+    # and ServerError for 503 (both subclass APIError) — matching on APIError + code catches
+    # both; matching ServerError alone (the original bug) let every 429 crash immediately
+    # with zero retries, discovered while diagnosing a Patch 2 Step 5 run failure. Network-
+    # level failures (timeout, connection drop) are not APIErrors at all and are also
+    # transient — anything else (bad request, auth) is not.
+    if isinstance(exc, genai_errors.APIError) and getattr(exc, "code", None) in (503, 429):
+        return True
+    return isinstance(exc, (TimeoutError, ConnectionError))
 
 
 @retry(
     retry=retry_if_exception(_is_transient),
-    stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=2, min=2, max=20),
+    stop=stop_after_attempt(GEMINI_RETRY_ATTEMPTS),
+    wait=wait_exponential(multiplier=2, min=2, max=GEMINI_RETRY_MAX_WAIT_S),
     reraise=True,
 )
 def _call_gemini(client, **kwargs):
@@ -174,41 +201,54 @@ def decide(scenario: EnvironmentState) -> Decision:
     # Evaluator output, so the Evaluator's independence from the Orchestrator's input holds.
     facts = physics.orchestrator_facts(scenario, scenario.previous_floor_pct)
 
-    response = _call_gemini(
-        client,
-        model=MODEL,
-        contents=(
-            f"Declared objective for this tick: {objective or 'NONE — cost_efficiency applies under the golden rules'}\n\n"
-            f"Environment state:\n{json.dumps(user_payload, indent=2)}\n\n"
-            f"Physics facts (computed — use directly, do not recompute):\n{json.dumps(facts, indent=2)}"
-        ),
-        config=types.GenerateContentConfig(
-            system_instruction=SYSTEM_PROMPT,
-            tools=[_SUBMIT_DECISION_TOOL],
-            tool_config=types.ToolConfig(
-                function_calling_config=types.FunctionCallingConfig(
-                    mode="ANY",
-                    allowed_function_names=["submit_decision"],
-                )
+    try:
+        response = _call_gemini(
+            client,
+            model=MODEL,
+            contents=(
+                f"Declared objective for this tick: {objective or 'NONE — cost_efficiency applies under the golden rules'}\n\n"
+                f"Environment state:\n{json.dumps(user_payload, indent=2)}\n\n"
+                f"Physics facts (computed — use directly, do not recompute):\n{json.dumps(facts, indent=2)}"
             ),
-        ),
-    )
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT,
+                tools=[_SUBMIT_DECISION_TOOL],
+                tool_config=types.ToolConfig(
+                    function_calling_config=types.FunctionCallingConfig(
+                        mode="ANY",
+                        allowed_function_names=["submit_decision"],
+                    )
+                ),
+            ),
+        )
+    except genai_errors.APIError as e:
+        raise CallFailure("infrastructure", f"{getattr(e, 'code', '?')} {getattr(e, 'status', '')}: {e}") from e
+    except (TimeoutError, ConnectionError) as e:
+        raise CallFailure("infrastructure", f"{type(e).__name__}: {e}") from e
 
-    args = response.function_calls[0].args
-    proposed_floor = float(args["reserve_floor_pct"])
-    applied_floor = _apply_floor_clamp_and_ramp(proposed_floor, scenario.previous_floor_pct)
+    try:
+        if not response.function_calls:
+            raise CallFailure("parse", "no function call in the response")
+        args = response.function_calls[0].args
+        proposed_floor = float(args["reserve_floor_pct"])
+        applied_floor = _apply_floor_clamp_and_ramp(proposed_floor, scenario.previous_floor_pct)
 
-    return Decision(
-        tick=scenario.tick,
-        objective_used=objective or "cost_efficiency",
-        battery_actions=[BatteryAction(**a) for a in args["battery_actions"]],
-        market_action=args["market_action"],
-        market_amount_mw=args["market_amount_mw"],
-        curtail_solar_mw=args["curtail_solar_mw"],
-        curtail_wind_mw=args["curtail_wind_mw"],
-        demand_response_triggered=args["demand_response_triggered"],
-        proposed_floor_pct=proposed_floor,
-        applied_floor_pct=applied_floor,
-        floor_justification=args["floor_justification"],
-        reasoning=args["reasoning"],
-    )
+        return Decision(
+            tick=scenario.tick,
+            objective_used=objective or "cost_efficiency",
+            battery_actions=[BatteryAction(**a) for a in args["battery_actions"]],
+            market_action=args["market_action"],
+            market_amount_mw=args["market_amount_mw"],
+            curtail_solar_mw=args["curtail_solar_mw"],
+            curtail_wind_mw=args["curtail_wind_mw"],
+            demand_response_triggered=args["demand_response_triggered"],
+            proposed_floor_pct=proposed_floor,
+            applied_floor_pct=applied_floor,
+            floor_justification=args["floor_justification"],
+            reasoning=args["reasoning"],
+            mode="agent",
+        )
+    except CallFailure:
+        raise
+    except (KeyError, IndexError, TypeError, ValueError, ValidationError) as e:
+        raise CallFailure("parse", f"{type(e).__name__}: {e}") from e

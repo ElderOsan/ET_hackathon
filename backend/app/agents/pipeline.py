@@ -60,15 +60,11 @@ def _call_failure_result(scenario: EnvironmentState, failure: CallFailure) -> Sc
     )
 
 
-def run_decision_pipeline(scenario: EnvironmentState, recorder: Recorder | None = None) -> ScenarioRunResult:
-    """recorder selects live / record / replay (Patch 3, Step 2) — defaults to a live call
-    with nothing recorded, identical to every behavior before this step. Whichever recorder
-    is used, everything below this line (balancer, Evaluator, physics) always runs live."""
-    recorder = recorder or LiveRecorder()
-    try:
-        proposal = recorder.get_decision(scenario)
-    except CallFailure as e:
-        return _call_failure_result(scenario, e)
+def _evaluate_proposal(scenario: EnvironmentState, proposal: Decision) -> ScenarioRunResult:
+    """Everything after a proposal exists: balance, evaluate both stages, compute infeasible/
+    margin flags. Shared by run_decision_pipeline (a fresh or replayed model call) and
+    reevaluate_stored (Patch 3 addendum — re-scoring an already-obtained proposal under
+    today's rules/balancer/physics code, with no model call at all)."""
     raw_evaluation = evaluate(scenario, proposal, repairs=None, include_repair_rule=False)
 
     applied, repairs = balance(scenario, proposal)
@@ -108,3 +104,22 @@ def run_decision_pipeline(scenario: EnvironmentState, recorder: Recorder | None 
         infeasible=infeasible,
         margin_infeasible=margin_infeasible,
     )
+
+
+def run_decision_pipeline(scenario: EnvironmentState, recorder: Recorder | None = None) -> ScenarioRunResult:
+    """recorder selects live / record / replay (Patch 3, Step 2) — defaults to a live call
+    with nothing recorded, identical to every behavior before this step. Whichever recorder
+    is used, everything below this line (balancer, Evaluator, physics) always runs live."""
+    recorder = recorder or LiveRecorder()
+    try:
+        proposal = recorder.get_decision(scenario)
+    except CallFailure as e:
+        return _call_failure_result(scenario, e)
+    return _evaluate_proposal(scenario, proposal)
+
+
+def reevaluate_stored(scenario: EnvironmentState, proposal: Decision) -> ScenarioRunResult:
+    """Re-scores an already-obtained raw proposal (e.g. loaded from a stored JSONL row) under
+    the CURRENT rules/balancer/physics code — no model call, no recorder. This is how a rule
+    change is tested against old results without spending API quota (Patch 3 addendum)."""
+    return _evaluate_proposal(scenario, proposal)

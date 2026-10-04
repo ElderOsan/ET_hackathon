@@ -119,6 +119,26 @@ def test_05_verify_detects_tampering(tmp_path, monkeypatch):
     assert any("modified" in p for p in problems2)
 
 
+def test_07_reevaluate_stored_matches_live_pipeline_with_no_model_call():
+    # Patch 3 addendum: reevaluate_stored re-scores an already-obtained proposal under
+    # today's rules with zero model calls -- must match what the live pipeline would have
+    # produced for that same (scenario, proposal) pair.
+    scenario = _tick88_scenario(objective=Objective.COST_EFFICIENCY)
+    from tests.test_acceptance import _original_tick88_proposal
+    proposal = _original_tick88_proposal()
+
+    with patch.object(orchestrator_agent, "decide", return_value=proposal):
+        live_result = pipeline.run_decision_pipeline(scenario)  # LiveRecorder -> calls decide() (patched)
+
+    # No client, no get_client patch, no recorder at all -- pure re-scoring.
+    reeval_result = pipeline.reevaluate_stored(scenario, proposal)
+
+    live_applied = next(s for s in live_result.stages if s.name == "applied")
+    reeval_applied = next(s for s in reeval_result.stages if s.name == "applied")
+    assert live_applied.evaluation.status == reeval_applied.evaluation.status
+    assert live_applied.decision.model_dump() == reeval_applied.decision.model_dump()
+
+
 def test_06_replay_miss_raises_call_failure_never_falls_back_to_live(tmp_path, monkeypatch):
     monkeypatch.setattr(recording, "RECORDINGS_ROOT", tmp_path)
     (tmp_path / "run_e" / "calls").mkdir(parents=True)

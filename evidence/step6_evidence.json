@@ -1,0 +1,682 @@
+{
+  "oracle_and_baselines": {
+    "oracle (dispatcher)": {
+      "passed": 143,
+      "total": 200,
+      "pct": 71.5
+    },
+    "always-hold": {
+      "passed": 0,
+      "total": 200,
+      "pct": 0.0
+    },
+    "always-sell": {
+      "passed": 0,
+      "total": 200,
+      "pct": 0.0
+    },
+    "always-charge": {
+      "passed": 1,
+      "total": 200,
+      "pct": 0.5
+    },
+    "random": {
+      "passed": 1,
+      "total": 200,
+      "pct": 0.5
+    }
+  },
+  "fault_matrix": [
+    {
+      "profile": "stable_day",
+      "fault": "rule_1",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_2a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_2b"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_3",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_4",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_5",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_11",
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_6",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_7",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_8a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_8b",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_8d",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_8e",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "stable_day",
+      "fault": "rule_11",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_1",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6",
+        "rule_9"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_2a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_2b"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_3",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_4",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_5",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_11",
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_6",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_7",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_9"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_8a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_2b",
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_8b",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_8d",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_8e",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "cloudy_afternoon",
+      "fault": "rule_11",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_1",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_2a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_2b"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_3",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_4",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_5",
+      "intended_caught": false,
+      "cotriggered": [
+        "rule_11",
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_6",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_7",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_8a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_8b",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_8d",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_8e",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "price_spike",
+      "fault": "rule_11",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_1",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6",
+        "rule_9"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_2a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_2b",
+        "rule_3b"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_3",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_4",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6",
+        "rule_7"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_5",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_11",
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_6",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_7",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3b",
+        "rule_9"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_8a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_8b",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_8d",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_8e",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8a"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "multi_failure_cascade",
+      "fault": "rule_11",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_1",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_2a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_2b"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_3",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_4",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_5",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_6",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_7",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_8a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_8b",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_8d",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_8e",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "surplus_day",
+      "fault": "rule_11",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_4"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_1",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_2a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_2b"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_3",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_4",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3",
+        "rule_6"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_5",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_11",
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_6",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_7",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3b",
+        "rule_9"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_8a",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_2b",
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_8b",
+      "intended_caught": false,
+      "cotriggered": [
+        "rule_8e"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_8d",
+      "intended_caught": true,
+      "cotriggered": [],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_8e",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_2b"
+      ],
+      "unexpected_false_alarms": []
+    },
+    {
+      "profile": "shortfall_day",
+      "fault": "rule_11",
+      "intended_caught": true,
+      "cotriggered": [
+        "rule_3"
+      ],
+      "unexpected_false_alarms": []
+    }
+  ],
+  "prompt_audit": {
+    "checked": 16,
+    "findings": []
+  },
+  "determinism": {
+    "same_seed_identical_scenario": true,
+    "same_proposal_identical_verdict": true
+  }
+}

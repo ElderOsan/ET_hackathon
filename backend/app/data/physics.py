@@ -134,6 +134,23 @@ def reserve_margin_headroom_mw(scenario: EnvironmentState, decision: Decision, f
     return unused_discharge + unused_import_headroom
 
 
+def sellable_surplus_mw(scenario: EnvironmentState) -> float:
+    """The most surplus that could actually be sold this tick: generation above demand,
+    capped by transmission headroom. Single definition shared by rule_5, reference_dispatch,
+    and orchestrator_facts (Patch 3 addendum) — nothing recomputes this independently."""
+    surplus = max(0.0, total_generation_mw(scenario) - scenario.total_demand_mw)
+    return min(surplus, scenario.transmission_headroom_mw)
+
+
+def max_import_mw(scenario: EnvironmentState) -> float:
+    """The hard ceiling on a purchase this tick. Net flow = sale - purchase, bounded in
+    absolute value by transmission_headroom_mw (see module docstring) — a planned sale would
+    RAISE the purchase ceiling, not lower it, and buying and selling in the same tick is
+    never a sensible decision anyway, so this is simply the full headroom (Patch 3
+    addendum — corrects an earlier wrong "headroom minus planned sale" proposal)."""
+    return scenario.transmission_headroom_mw
+
+
 def max_achievable_headroom_mw(scenario: EnvironmentState, floor_pct: float) -> float:
     """The best reserve-margin headroom any decision could achieve this tick: available
     battery discharge above floor_pct (rate- and SoC-limited) plus import headroom, with
@@ -215,5 +232,7 @@ def orchestrator_facts(scenario: EnvironmentState, floor_pct: float) -> dict:
         "forecast_total_generation_mw": round(forecast_generation, 1),
         "forecast_net_position_mw": round(forecast_net_position, 1),
         "forecast_position": position_label(forecast_net_position),
+        "sellable_surplus_mw": round(sellable_surplus_mw(scenario), 1),
+        "max_import_mw": round(max_import_mw(scenario), 1),
         **battery_headroom_facts(scenario, floor_pct),
     }

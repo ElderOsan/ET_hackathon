@@ -150,7 +150,7 @@ def rule_5_no_charge_at_price_peak(scenario: EnvironmentState, decision: Decisio
 
     generation = physics.total_generation_mw(scenario)
     surplus_mw = max(0.0, generation - scenario.total_demand_mw)
-    sellable_surplus_mw = min(surplus_mw, scenario.transmission_headroom_mw)
+    sellable_surplus_mw = physics.sellable_surplus_mw(scenario)
     unsellable_surplus_mw = max(0.0, surplus_mw - sellable_surplus_mw)
     charge = sum(a.amount_mw for a in decision.battery_actions if a.action == "charge")
     avoidable_charge_mw = max(0.0, charge - unsellable_surplus_mw)

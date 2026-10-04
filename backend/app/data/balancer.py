@@ -204,7 +204,7 @@ def reference_dispatch(scenario: EnvironmentState) -> dict:
     worst_grid_import_mw = round(shortfall, 1)  # no battery help at all, still feasible
 
     renewable_surplus_mw = max(0.0, generation - total_demand)
-    max_sellable_mw = round(min(renewable_surplus_mw, scenario.transmission_headroom_mw), 1)
+    max_sellable_mw = round(physics.sellable_surplus_mw(scenario), 1)  # same definition as rule_5 and orchestrator_facts
     worst_sellable_mw = 0.0  # sell nothing (curtail or waste the surplus instead), still feasible
 
     reference_cost = round(min_grid_import_mw * scenario.buy_price_per_mwh, 1)

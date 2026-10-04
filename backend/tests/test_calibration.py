@@ -253,6 +253,23 @@ def test_9na_06_real_surplus_renewable_has_freedom_not_na():
 # ---- consistency over a REAL stored batch (not synthetic fixtures) ----------------------
 
 
+def test_facts_sellable_surplus_and_max_import_shared_definition():
+    # Patch 3 addendum: sellable_surplus_mw / max_import_mw must be the SAME function rule_5
+    # and reference_dispatch use, exposed in orchestrator_facts for the model to see directly.
+    scenario = _tick88_scenario(total_demand_mw=90.0, total_demand_forecast_mw=90.0, transmission_headroom_mw=5.0)
+    # generation 101.7 - demand 90 = 11.7MW surplus; headroom 5.0MW caps what's sellable.
+    assert physics.sellable_surplus_mw(scenario) == 5.0
+    assert physics.max_import_mw(scenario) == 5.0  # == transmission_headroom_mw, no "minus planned sale"
+
+    facts = physics.orchestrator_facts(scenario, scenario.previous_floor_pct)
+    assert facts["sellable_surplus_mw"] == 5.0
+    assert facts["max_import_mw"] == 5.0
+
+    from app.data.balancer import reference_dispatch
+    ref = reference_dispatch(scenario.model_copy(update={"objective": Objective.MAX_PROFIT}))
+    assert ref["max_sellable_mw"] == 5.0  # same value as the shared function
+
+
 def test_consistency_over_real_72_row_benchmark():
     """Brief 2 Patch 2 Step 1 evidence requirement: check the invariant (empty repair log ->
     identical raw/applied verdict) over every row of an actual stored batch, not just

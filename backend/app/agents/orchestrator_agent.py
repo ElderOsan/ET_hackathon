@@ -94,9 +94,12 @@ signal is a mistake. Always give a one-line floor_justification naming the speci
 your number (price volatility, forecast change, storm alert, asset outage, forecast confidence).
 
 The environment state is followed by a separate "Physics facts" block — total_generation_mw, \
-net_position_mw (positive = surplus, negative = shortfall), a position label, the same for the forecast, and \
-each battery's discharge_available_mw / charge_headroom_mw. These are computed for you; do not recompute them \
-yourself, and do not let them disagree with your own arithmetic — use them directly.
+net_position_mw (positive = surplus, negative = shortfall), a position label, the same for the forecast, \
+sellable_surplus_mw, max_import_mw, and each battery's discharge_available_mw / charge_headroom_mw. These are \
+computed for you; do not recompute them yourself, and do not let them disagree with your own arithmetic — use \
+them directly. sellable_surplus_mw is the most you could sell this tick (surplus capped by transmission \
+headroom) — curtailment should be unnecessary whenever it covers the full surplus. max_import_mw is the hard \
+ceiling on any purchase this tick — never propose buying more than this.
 
 In the reasoning field (written FIRST, before you decide any action): state the position (surplus/shortfall/ \
 balanced) from the physics facts, the dispatch-ladder step you are following because of it, which golden \

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from app.agents import pipeline
+from app.agents import orchestrator_agent, pipeline
 from app.agents.evaluator import evaluate
 from app.agents.orchestrator_agent import SUBMIT_DECISION_SCHEMA
 from app.agents.scenario_agent import generate_scenario, normalize_scenario
@@ -201,7 +201,7 @@ def test_10_rule3_infeasible_scenario_not_failed():
 def test_11_scoreboard_fields_present():
     scenario = _tick88_scenario()
     stub_proposal = _original_tick88_proposal()
-    with patch.object(pipeline, "decide", return_value=stub_proposal):
+    with patch.object(orchestrator_agent, "decide", return_value=stub_proposal):
         result = pipeline.run_decision_pipeline(scenario)
     assert {s.name for s in result.stages} == {"raw", "applied"}
     raw = next(s for s in result.stages if s.name == "raw")
@@ -213,7 +213,7 @@ def test_11_scoreboard_fields_present():
 def test_12_raw_fails_3_and_4_applied_fails_3_only():
     scenario = _tick88_scenario()
     stub_proposal = _original_tick88_proposal()
-    with patch.object(pipeline, "decide", return_value=stub_proposal):
+    with patch.object(orchestrator_agent, "decide", return_value=stub_proposal):
         result = pipeline.run_decision_pipeline(scenario)
     raw = next(s for s in result.stages if s.name == "raw")
     applied = next(s for s in result.stages if s.name == "applied")
@@ -406,7 +406,7 @@ def test_22_repaired_flag_true_even_below_repair_tolerance():
         transmission_headroom_mw=10.0,
     )
     proposal = _decision(market_action="buy", market_amount_mw=10.2)  # slightly over-buys
-    with patch.object(pipeline, "decide", return_value=proposal):
+    with patch.object(orchestrator_agent, "decide", return_value=proposal):
         result = pipeline.run_decision_pipeline(scenario)
 
     total_repair = sum(abs(r.delta_mw) for r in result.repairs)
@@ -447,7 +447,7 @@ def test_23_empty_repair_log_implies_identical_raw_and_applied_verdict():
 
     checked_empty_repair_case = False
     for s, decision in cases:
-        with patch.object(pipeline_module, "decide", return_value=decision):
+        with patch.object(orchestrator_agent, "decide", return_value=decision):
             result = pipeline_module.run_decision_pipeline(s)
         raw = next(st for st in result.stages if st.name == "raw")
         applied = next(st for st in result.stages if st.name == "applied")

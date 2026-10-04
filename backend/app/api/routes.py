@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import random
+import time
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException
 from google.genai import errors as genai_errors
@@ -8,8 +10,10 @@ from pydantic import BaseModel
 
 from app.agents.pipeline import run_decision_pipeline
 from app.agents.scenario_agent import generate_scenario, normalize_scenario
-from app.data import physics
+from app.core.llm_client import MODEL
+from app.data import physics, recording
 from app.data.benchmark_seeds import DEV_SEED_SET, HELD_OUT_SEED_SET
+from app.data.recording import LiveRecorder, Recorder, RecordingRecorder, ReplayRecorder
 from app.data.tuning import BENCHMARK_ALLOW_HELD_OUT, RULE_CATEGORY_MAP
 from app.models.schemas import (
     BatchRunSummary,
@@ -25,10 +29,25 @@ from app.models.schemas import (
 
 router = APIRouter()
 
+RunMode = Literal["live", "record", "replay"]
 
-def _run_or_503(scenario: EnvironmentState) -> ScenarioRunResult:
+
+def _make_recorder(mode: RunMode, run_id: str | None, base_seed: int, seed_set_name: str | None) -> tuple[Recorder, str | None]:
+    """Returns (recorder, run_id actually used — None for live)."""
+    if mode == "live":
+        return LiveRecorder(), None
+    if mode == "replay":
+        if not run_id:
+            raise HTTPException(status_code=400, detail="replay mode requires run_id")
+        return ReplayRecorder(run_id=run_id), run_id
+    # record
+    resolved_run_id = run_id or f"{seed_set_name or 'adhoc'}_{base_seed}_{int(time.time())}"
+    return RecordingRecorder(run_id=resolved_run_id), resolved_run_id
+
+
+def _run_or_503(scenario: EnvironmentState, recorder: Recorder | None = None) -> ScenarioRunResult:
     try:
-        return run_decision_pipeline(scenario)
+        return run_decision_pipeline(scenario, recorder=recorder)
     except genai_errors.APIError as e:
         raise HTTPException(
             status_code=503,
@@ -180,15 +199,26 @@ def _summarize(results: list[ScenarioRunResult], base_seed: int, seed_set_name: 
     )
 
 
-def _run_matrix(base_seed: int, n_per_cell: int, objectives: list, seed_set_name: str | None = None) -> BatchRunSummary:
+def _run_matrix(
+    base_seed: int, n_per_cell: int, objectives: list, seed_set_name: str | None = None,
+    mode: RunMode = "record", run_id: str | None = None,
+) -> BatchRunSummary:
+    recorder, resolved_run_id = _make_recorder(mode, run_id, base_seed, seed_set_name)
     results: list[ScenarioRunResult] = []
     for d_idx, difficulty in enumerate(Difficulty):
         for o_idx, objective in enumerate(objectives):
             for rep in range(n_per_cell):
                 cell_seed = base_seed + d_idx * 10_000 + o_idx * 100 + rep
                 scenario = generate_scenario(difficulty, objective, seed=cell_seed)
-                results.append(_run_or_503(scenario))
-    return _summarize(results, base_seed, seed_set_name, objectives)
+                results.append(_run_or_503(scenario, recorder=recorder))
+    summary = _summarize(results, base_seed, seed_set_name, objectives)
+    if mode == "record" and resolved_run_id:
+        recording.write_run_meta(
+            resolved_run_id, model=MODEL, seed=base_seed, seed_set=seed_set_name,
+            created_at=time.time(), scenario_count=len(results),
+        )
+        recording.write_manifest(resolved_run_id)
+    return summary
 
 
 class BatchRunRequest(BaseModel):
@@ -197,6 +227,8 @@ class BatchRunRequest(BaseModel):
     full_matrix: bool = True
     objectives: list[Objective] | None = None
     strip_objective: bool = False
+    mode: RunMode = "record"
+    run_id: str | None = None
 
 
 @router.post("/run/batch", response_model=BatchRunSummary)
@@ -212,7 +244,18 @@ def run_batch(req: BatchRunRequest):
     else:
         objectives = list(Objective)
 
-    return _run_matrix(base_seed, req.n_per_cell, objectives)
+    return _run_matrix(base_seed, req.n_per_cell, objectives, mode=req.mode, run_id=req.run_id)
+
+
+@router.get("/recordings")
+def list_recordings():
+    return recording.list_runs()
+
+
+@router.post("/recordings/{run_id}/verify")
+def verify_recording(run_id: str):
+    ok, problems = recording.verify(run_id)
+    return {"run_id": run_id, "ok": ok, "problems": problems}
 
 
 class BenchmarkEstimateResponse(BaseModel):
@@ -228,6 +271,8 @@ def benchmark_estimate():
 
 class BenchmarkRunRequest(BaseModel):
     use_held_out: bool = False
+    mode: RunMode = "record"
+    run_id: str | None = None
 
 
 @router.post("/benchmark/run", response_model=BatchRunSummary)
@@ -238,4 +283,4 @@ def benchmark_run(req: BenchmarkRunRequest):
         seed_set = HELD_OUT_SEED_SET
     else:
         seed_set = DEV_SEED_SET
-    return _run_matrix(seed_set["base_seed"], 1, list(Objective), seed_set_name=seed_set["name"])
+    return _run_matrix(seed_set["base_seed"], 1, list(Objective), seed_set_name=seed_set["name"], mode=req.mode, run_id=req.run_id)

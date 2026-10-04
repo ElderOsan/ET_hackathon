@@ -9,8 +9,9 @@ from __future__ import annotations
 import logging
 
 from app.agents.evaluator import evaluate
-from app.agents.orchestrator_agent import CallFailure, decide
+from app.agents.orchestrator_agent import CallFailure
 from app.data import physics
+from app.data.recording import LiveRecorder, Recorder
 from app.data.balancer import balance
 from app.data.tuning import BALANCE_TOLERANCE_MW, RESERVE_MARGIN_PCT
 from app.models.schemas import (
@@ -59,9 +60,13 @@ def _call_failure_result(scenario: EnvironmentState, failure: CallFailure) -> Sc
     )
 
 
-def run_decision_pipeline(scenario: EnvironmentState) -> ScenarioRunResult:
+def run_decision_pipeline(scenario: EnvironmentState, recorder: Recorder | None = None) -> ScenarioRunResult:
+    """recorder selects live / record / replay (Patch 3, Step 2) — defaults to a live call
+    with nothing recorded, identical to every behavior before this step. Whichever recorder
+    is used, everything below this line (balancer, Evaluator, physics) always runs live."""
+    recorder = recorder or LiveRecorder()
     try:
-        proposal = decide(scenario)
+        proposal = recorder.get_decision(scenario)
     except CallFailure as e:
         return _call_failure_result(scenario, e)
     raw_evaluation = evaluate(scenario, proposal, repairs=None, include_repair_rule=False)

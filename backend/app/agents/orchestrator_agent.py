@@ -8,6 +8,7 @@ is a structural default, not a special-cased fallback.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 
 from google.genai import errors as genai_errors
@@ -193,27 +194,62 @@ def _apply_floor_clamp_and_ramp(proposed_floor_pct: float, previous_floor_pct: f
     return min(max(floor_after_ramp, FLOOR_MIN), FLOOR_MAX)
 
 
-def decide(scenario: EnvironmentState) -> Decision:
-    client = get_client()
+# ---- Patch 3, Step 2: request/response boundary, factored out so a Recorder can intercept
+# it cleanly — record/replay touch only this boundary, never physics/balancer/Evaluator. ----
 
+
+def prompt_version() -> str:
+    """Changes automatically whenever SYSTEM_PROMPT or the schema text changes — a stale
+    recording from a different prompt version should never silently look reusable."""
+    h = hashlib.sha256()
+    h.update(SYSTEM_PROMPT.encode())
+    h.update(json.dumps(SUBMIT_DECISION_SCHEMA, sort_keys=True).encode())
+    return h.hexdigest()[:16]
+
+
+def scenario_hash(scenario: EnvironmentState) -> str:
+    """Hash of exactly what gets sent to the model (objective + the non-hidden scenario
+    fields + the derived physics facts), excluding `tick` — tick is a process-global counter
+    that never affects content (see test_13), so two calls with identical content but
+    different tick numbers must hash identically."""
+    objective = scenario.objective.value if scenario.objective else None
+    user_payload = scenario.model_dump(mode="json", exclude=_HIDDEN_FIELDS | {"tick"})
+    facts = physics.orchestrator_facts(scenario, scenario.previous_floor_pct)
+    payload = json.dumps({"objective": objective, "scenario": user_payload, "facts": facts}, sort_keys=True)
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
+
+
+def build_request(scenario: EnvironmentState) -> dict:
+    """Everything needed to make (or record, or replay) one call — JSON-serializable, so it
+    can be written straight into a recording."""
     objective = scenario.objective.value if scenario.objective else None
     user_payload = scenario.model_dump(mode="json", exclude=_HIDDEN_FIELDS)
-    # Facts derived from state only — no hidden-tag content, objective expectation, or
-    # Evaluator output, so the Evaluator's independence from the Orchestrator's input holds.
     facts = physics.orchestrator_facts(scenario, scenario.previous_floor_pct)
+    contents = (
+        f"Declared objective for this tick: {objective or 'NONE — cost_efficiency applies under the golden rules'}\n\n"
+        f"Environment state:\n{json.dumps(user_payload, indent=2)}\n\n"
+        f"Physics facts (computed — use directly, do not recompute):\n{json.dumps(facts, indent=2)}"
+    )
+    return {
+        "model": MODEL,
+        "temperature": GEMINI_TEMPERATURE,
+        "prompt_version": prompt_version(),
+        "scenario_hash": scenario_hash(scenario),
+        "contents": contents,
+        "system_instruction": SYSTEM_PROMPT,
+    }
 
+
+def _call_gemini_live(request: dict):
+    client = get_client()
     try:
-        response = _call_gemini(
+        return _call_gemini(
             client,
-            model=MODEL,
-            contents=(
-                f"Declared objective for this tick: {objective or 'NONE — cost_efficiency applies under the golden rules'}\n\n"
-                f"Environment state:\n{json.dumps(user_payload, indent=2)}\n\n"
-                f"Physics facts (computed — use directly, do not recompute):\n{json.dumps(facts, indent=2)}"
-            ),
+            model=request["model"],
+            contents=request["contents"],
             config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=GEMINI_TEMPERATURE,
+                system_instruction=request["system_instruction"],
+                temperature=request["temperature"],
                 tools=[_SUBMIT_DECISION_TOOL],
                 tool_config=types.ToolConfig(
                     function_calling_config=types.FunctionCallingConfig(
@@ -228,13 +264,21 @@ def decide(scenario: EnvironmentState) -> Decision:
     except (TimeoutError, ConnectionError) as e:
         raise CallFailure("infrastructure", f"{type(e).__name__}: {e}") from e
 
+
+def args_from_response(response) -> dict:
+    """Raises CallFailure('parse', ...) for anything that isn't a usable tool call. Used by
+    both the live path and, for a non-live source (a replayed recording), the same parsing —
+    a recorded response is re-validated exactly like a fresh one."""
+    if not getattr(response, "function_calls", None):
+        raise CallFailure("parse", "no function call in the response")
+    return dict(response.function_calls[0].args)
+
+
+def decision_from_args(scenario: EnvironmentState, args: dict) -> Decision:
+    objective = scenario.objective.value if scenario.objective else None
     try:
-        if not response.function_calls:
-            raise CallFailure("parse", "no function call in the response")
-        args = response.function_calls[0].args
         proposed_floor = float(args["reserve_floor_pct"])
         applied_floor = _apply_floor_clamp_and_ramp(proposed_floor, scenario.previous_floor_pct)
-
         return Decision(
             tick=scenario.tick,
             objective_used=objective or "cost_efficiency",
@@ -250,7 +294,12 @@ def decide(scenario: EnvironmentState) -> Decision:
             reasoning=args["reasoning"],
             mode="agent",
         )
-    except CallFailure:
-        raise
     except (KeyError, IndexError, TypeError, ValueError, ValidationError) as e:
         raise CallFailure("parse", f"{type(e).__name__}: {e}") from e
+
+
+def decide(scenario: EnvironmentState) -> Decision:
+    request = build_request(scenario)
+    response = _call_gemini_live(request)
+    args = args_from_response(response)
+    return decision_from_args(scenario, args)

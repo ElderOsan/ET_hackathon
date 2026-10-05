@@ -520,16 +520,16 @@
       "seed": 101,
       "difficulty": "file_input",
       "objective": null,
-      "solar_output_mw": 5.0,
-      "solar_forecast_mw": 10.0,
-      "wind_output_mw": 40.0,
-      "wind_forecast_mw": 42.0,
+      "solar_output_mw": 0.0,
+      "solar_forecast_mw": 0.0,
+      "wind_output_mw": 38.0,
+      "wind_forecast_mw": 40.0,
       "solar_farms": [],
       "wind_farms": [],
       "base_demand_mw": 70.0,
       "base_demand_forecast_mw": 72.0,
-      "total_demand_mw": 105.0,
-      "total_demand_forecast_mw": 107.0,
+      "total_demand_mw": 103.0,
+      "total_demand_forecast_mw": 105.0,
       "grid_frequency_hz": 50.0,
       "transmission_constraint_mw": 180.0,
       "transmission_headroom_mw": 180.0,
@@ -554,7 +554,7 @@
           "max_discharge_rate_mw": 6.0,
           "charging_efficiency_pct": 90.0,
           "degradation_pct": 2.0,
-          "available": true
+          "available": false
         }
       ],
       "previous_floor_pct": 25.0,
@@ -564,14 +564,16 @@
       "carbon_price_per_ton": 28.0,
       "grid_carbon_intensity_t_per_mwh": 0.55,
       "demand_response_incentive_per_mwh": 18.0,
-      "weather_forecast": "pre-dawn",
+      "weather_forecast": "pre-dawn, battery_2 under maintenance",
       "storm_alert": false,
-      "maintenance_scheduled": false,
-      "industrial_demand_mw": 35.0,
-      "events": [],
+      "maintenance_scheduled": true,
+      "industrial_demand_mw": 33.0,
+      "events": [
+        "battery_2_offline"
+      ],
       "expected_behavior": "n/a (file input)",
-      "expected_floor_min_pct": 20.0,
-      "expected_floor_max_pct": 30.0,
+      "expected_floor_min_pct": 30.0,
+      "expected_floor_max_pct": 45.0,
       "expected_ladder_step": "renewables -> battery discharge above floor -> grid import -> reserve floor only if the Evaluator's own emergency check agrees",
       "expected_emergency": false
     },
@@ -586,28 +588,23 @@
               "battery_id": "battery_1",
               "action": "discharge",
               "amount_mw": 10.0
-            },
-            {
-              "battery_id": "battery_2",
-              "action": "discharge",
-              "amount_mw": 6.0
             }
           ],
           "market_action": "buy",
-          "market_amount_mw": 44.0,
+          "market_amount_mw": 55.0,
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm pre-dawn weather, no storms, stable pricing; maintaining baseline 25% floor.",
-          "reasoning": "Position: shortfall. Shortfall ladder step: renewables (45 MW), battery discharge above floor (16 MW total), then grid purchase (44 MW). Golden Rules 1 & 2 binding (Reliability & Transmission Headroom). Cascade: cost_efficiency (purchasing required 44 MW at 42 $/MWh to cover remaining shortfall).",
+          "floor_justification": "Calm pre-dawn conditions with standard battery maintenance; setting reserve floor at 25% within normal 20-30% stable band.",
+          "reasoning": "Position: shortfall (net position -65.0 MW). Following shortfall ladder: renewables (38 MW), battery discharge above floor (10 MW from battery_1), grid purchase (55 MW to cover remainder). Rules: reliability and battery protection binding. Objective: cost_efficiency (purchasing required shortfall at lowest cost).",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
           "tick": 2,
-          "status": "pass",
+          "status": "flagged",
           "rules": [
             {
               "rule_id": "rule_1",
@@ -648,7 +645,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Total demand (105.0MW) fully served (unserved=0.0MW).",
+              "detail": "Total demand (103.0MW) fully served (unserved=0.0MW).",
               "value_label": "unserved vs. achievable minimum",
               "value_actual": 0.0,
               "value_reference": 0.0
@@ -659,9 +656,9 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 136.0MW meets the 5.2MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 125.0MW meets the 5.2MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 136.0,
+              "value_actual": 125.0,
               "value_reference": 5.2
             },
             {
@@ -723,9 +720,9 @@
               "rule_id": "rule_8b",
               "description": "Proposed floor matches the expected band for this scenario's volatility",
               "severity": "flagged",
-              "passed": true,
+              "passed": false,
               "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
+              "detail": "Proposed floor 25.0% is outside the expected 30.0-45.0% band for this scenario's volatility.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -769,10 +766,522 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Net import cost $462 vs reference $462.",
+              "detail": "Net import cost $578 vs reference $578.",
               "value_label": "net cost vs. reference ($)",
-              "value_actual": 462.0,
-              "value_reference": 462.0
+              "value_actual": 577.5,
+              "value_reference": 577.5
+            },
+            {
+              "rule_id": "rule_11",
+              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
+              "value_label": "proposed charge vs. renewable surplus (MW)",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            }
+          ],
+          "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+        }
+      },
+      {
+        "name": "applied",
+        "decision": {
+          "tick": 2,
+          "objective_used": "cost_efficiency",
+          "battery_actions": [
+            {
+              "battery_id": "battery_1",
+              "action": "discharge",
+              "amount_mw": 10.0
+            }
+          ],
+          "market_action": "buy",
+          "market_amount_mw": 55.0,
+          "curtail_solar_mw": 0.0,
+          "curtail_wind_mw": 0.0,
+          "demand_response_triggered": false,
+          "proposed_floor_pct": 25.0,
+          "applied_floor_pct": 25.0,
+          "floor_justification": "Calm pre-dawn conditions with standard battery maintenance; setting reserve floor at 25% within normal 20-30% stable band.",
+          "reasoning": "Position: shortfall (net position -65.0 MW). Following shortfall ladder: renewables (38 MW), battery discharge above floor (10 MW from battery_1), grid purchase (55 MW to cover remainder). Rules: reliability and battery protection binding. Objective: cost_efficiency (purchasing required shortfall at lowest cost).",
+          "mode": "agent",
+          "failure_detail": null
+        },
+        "evaluation": {
+          "tick": 2,
+          "status": "flagged",
+          "rules": [
+            {
+              "rule_id": "rule_1",
+              "description": "No curtailment beyond the minimum required while buying from the grid",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No simultaneous curtailment + grid purchase.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2a",
+              "description": "Battery must not discharge below its absolute minimum safe charge",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below its absolute minimum safe charge.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2b",
+              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below the Orchestrator's own applied floor.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_3",
+              "description": "Unserved load must not exceed the physically achievable minimum",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Total demand (103.0MW) fully served (unserved=0.0MW).",
+              "value_label": "unserved vs. achievable minimum",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            },
+            {
+              "rule_id": "rule_3b",
+              "description": "Reserve-margin headroom meets the achievable target",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Reserve-margin headroom 125.0MW meets the 5.2MW requirement (5% of total demand).",
+              "value_label": "headroom vs. target",
+              "value_actual": 125.0,
+              "value_reference": 5.2
+            },
+            {
+              "rule_id": "rule_4",
+              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No sale while demand is unserved.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_5",
+              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No avoidable charging during a price peak.",
+              "value_label": "avoidable charge vs. tolerance (MW)",
+              "value_actual": 0.0,
+              "value_reference": 0.1
+            },
+            {
+              "rule_id": "rule_6",
+              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
+              "value_label": "curtailed vs. minimum required",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            },
+            {
+              "rule_id": "rule_7",
+              "description": "Transmission headroom and grid frequency band respected",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Net transmission flow and grid frequency both within limits.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8a",
+              "description": "Applied reserve floor stays within hard bounds (backstop)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8b",
+              "description": "Proposed floor matches the expected band for this scenario's volatility",
+              "severity": "flagged",
+              "passed": false,
+              "applicable": true,
+              "detail": "Proposed floor 25.0% is outside the expected 30.0-45.0% band for this scenario's volatility.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8c",
+              "description": "A floor raised above the calm band needs a volatility signal",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8d",
+              "description": "Decision states a justification for the proposed floor",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor justification provided.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8e",
+              "description": "Proposed floor required no clamp or ramp-down adjustment",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_9",
+              "description": "Decision matches the declared cascade (top priority: cost)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Net import cost $578 vs reference $578.",
+              "value_label": "net cost vs. reference ($)",
+              "value_actual": 577.5,
+              "value_reference": 577.5
+            },
+            {
+              "rule_id": "rule_11",
+              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
+              "value_label": "proposed charge vs. renewable surplus (MW)",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            },
+            {
+              "rule_id": "rule_10",
+              "description": "Proposal needed no more than minor balancer repair",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Proposal needed no repair.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            }
+          ],
+          "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+        }
+      }
+    ],
+    "repairs": [],
+    "repaired": false,
+    "infeasible": false,
+    "margin_infeasible": false,
+    "ledger": {
+      "purchase_cost": 577.5,
+      "sales_revenue": 0.0,
+      "stored_energy_value_change": -95.0,
+      "profit": -672.5,
+      "emissions_tonnes": 7.563,
+      "carbon_cost": 211.8,
+      "renewable_utilisation_pct": 100.0,
+      "renewable_share_of_delivered_pct": 36.9
+    }
+  },
+  {
+    "scenario": {
+      "tick": 3,
+      "seed": 102,
+      "difficulty": "file_input",
+      "objective": null,
+      "solar_output_mw": 0.0,
+      "solar_forecast_mw": 0.0,
+      "wind_output_mw": 20.0,
+      "wind_forecast_mw": 15.0,
+      "solar_farms": [],
+      "wind_farms": [],
+      "base_demand_mw": 80.0,
+      "base_demand_forecast_mw": 85.0,
+      "total_demand_mw": 116.0,
+      "total_demand_forecast_mw": 121.0,
+      "grid_frequency_hz": 49.95,
+      "transmission_constraint_mw": 180.0,
+      "transmission_headroom_mw": 150.0,
+      "batteries": [
+        {
+          "id": "battery_1",
+          "capacity_mwh": 40.0,
+          "state_of_charge_pct": 55.0,
+          "min_safe_soc_pct": 10.0,
+          "max_charge_rate_mw": 10.0,
+          "max_discharge_rate_mw": 10.0,
+          "charging_efficiency_pct": 92.0,
+          "degradation_pct": 2.0,
+          "available": true
+        },
+        {
+          "id": "battery_2",
+          "capacity_mwh": 25.0,
+          "state_of_charge_pct": 55.0,
+          "min_safe_soc_pct": 10.0,
+          "max_charge_rate_mw": 6.0,
+          "max_discharge_rate_mw": 6.0,
+          "charging_efficiency_pct": 90.0,
+          "degradation_pct": 2.0,
+          "available": true
+        }
+      ],
+      "previous_floor_pct": 25.0,
+      "electricity_price_per_mwh": 55.0,
+      "buy_price_per_mwh": 57.75,
+      "sell_price_per_mwh": 52.25,
+      "carbon_price_per_ton": 29.0,
+      "grid_carbon_intensity_t_per_mwh": 0.5,
+      "demand_response_incentive_per_mwh": 19.0,
+      "weather_forecast": "storm approaching, turbines throttled",
+      "storm_alert": true,
+      "maintenance_scheduled": false,
+      "industrial_demand_mw": 36.0,
+      "events": [
+        "storm_alert"
+      ],
+      "expected_behavior": "n/a (file input)",
+      "expected_floor_min_pct": 30.0,
+      "expected_floor_max_pct": 45.0,
+      "expected_ladder_step": "renewables -> battery discharge above floor -> grid import -> reserve floor only if the Evaluator's own emergency check agrees",
+      "expected_emergency": false
+    },
+    "stages": [
+      {
+        "name": "raw",
+        "decision": {
+          "tick": 3,
+          "objective_used": "cost_efficiency",
+          "battery_actions": [
+            {
+              "battery_id": "battery_1",
+              "action": "discharge",
+              "amount_mw": 10.0
+            },
+            {
+              "battery_id": "battery_2",
+              "action": "discharge",
+              "amount_mw": 6.0
+            }
+          ],
+          "market_action": "buy",
+          "market_amount_mw": 80.0,
+          "curtail_solar_mw": 0.0,
+          "curtail_wind_mw": 0.0,
+          "demand_response_triggered": false,
+          "proposed_floor_pct": 45.0,
+          "applied_floor_pct": 45.0,
+          "floor_justification": "Storm alert and price volatility signal active; raising floor to 45% ahead of forecasted volatility.",
+          "reasoning": "Position is shortfall (-96.0 MW). Following shortfall ladder: renewables (20 MW), battery discharge (16 MW total), then grid purchase (80 MW, well within max_import_mw 150). Golden Rules 1, 2, and 4 (reliability, grid stability, battery protection) are binding. Cost efficiency objective applies.",
+          "mode": "agent",
+          "failure_detail": null
+        },
+        "evaluation": {
+          "tick": 3,
+          "status": "pass",
+          "rules": [
+            {
+              "rule_id": "rule_1",
+              "description": "No curtailment beyond the minimum required while buying from the grid",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No simultaneous curtailment + grid purchase.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2a",
+              "description": "Battery must not discharge below its absolute minimum safe charge",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below its absolute minimum safe charge.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2b",
+              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below the Orchestrator's own applied floor.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_3",
+              "description": "Unserved load must not exceed the physically achievable minimum",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Total demand (116.0MW) fully served (unserved=0.0MW).",
+              "value_label": "unserved vs. achievable minimum",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            },
+            {
+              "rule_id": "rule_3b",
+              "description": "Reserve-margin headroom meets the achievable target",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Reserve-margin headroom 70.0MW meets the 5.8MW requirement (5% of total demand).",
+              "value_label": "headroom vs. target",
+              "value_actual": 70.0,
+              "value_reference": 5.8
+            },
+            {
+              "rule_id": "rule_4",
+              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No sale while demand is unserved.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_5",
+              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No avoidable charging during a price peak.",
+              "value_label": "avoidable charge vs. tolerance (MW)",
+              "value_actual": 0.0,
+              "value_reference": 0.1
+            },
+            {
+              "rule_id": "rule_6",
+              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
+              "value_label": "curtailed vs. minimum required",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            },
+            {
+              "rule_id": "rule_7",
+              "description": "Transmission headroom and grid frequency band respected",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Net transmission flow and grid frequency both within limits.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8a",
+              "description": "Applied reserve floor stays within hard bounds (backstop)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor 45.0% is within [20.0, 60.0]%.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8b",
+              "description": "Proposed floor matches the expected band for this scenario's volatility",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Proposed floor 45.0% is within the expected 30.0-45.0% band.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8c",
+              "description": "A floor raised above the calm band needs a volatility signal",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor at 45.0% is either within the calm band or justified by a volatility signal.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8d",
+              "description": "Decision states a justification for the proposed floor",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor justification provided.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8e",
+              "description": "Proposed floor required no clamp or ramp-down adjustment",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_9",
+              "description": "Decision matches the declared cascade (top priority: cost)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Net import cost $1155 vs reference $1155.",
+              "value_label": "net cost vs. reference ($)",
+              "value_actual": 1155.0,
+              "value_reference": 1155.0
             },
             {
               "rule_id": "rule_11",
@@ -792,7 +1301,7 @@
       {
         "name": "applied",
         "decision": {
-          "tick": 2,
+          "tick": 3,
           "objective_used": "cost_efficiency",
           "battery_actions": [
             {
@@ -807,19 +1316,19 @@
             }
           ],
           "market_action": "buy",
-          "market_amount_mw": 44.0,
+          "market_amount_mw": 80.0,
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
-          "proposed_floor_pct": 25.0,
-          "applied_floor_pct": 25.0,
-          "floor_justification": "Calm pre-dawn weather, no storms, stable pricing; maintaining baseline 25% floor.",
-          "reasoning": "Position: shortfall. Shortfall ladder step: renewables (45 MW), battery discharge above floor (16 MW total), then grid purchase (44 MW). Golden Rules 1 & 2 binding (Reliability & Transmission Headroom). Cascade: cost_efficiency (purchasing required 44 MW at 42 $/MWh to cover remaining shortfall).",
+          "proposed_floor_pct": 45.0,
+          "applied_floor_pct": 45.0,
+          "floor_justification": "Storm alert and price volatility signal active; raising floor to 45% ahead of forecasted volatility.",
+          "reasoning": "Position is shortfall (-96.0 MW). Following shortfall ladder: renewables (20 MW), battery discharge (16 MW total), then grid purchase (80 MW, well within max_import_mw 150). Golden Rules 1, 2, and 4 (reliability, grid stability, battery protection) are binding. Cost efficiency objective applies.",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
-          "tick": 2,
+          "tick": 3,
           "status": "pass",
           "rules": [
             {
@@ -861,7 +1370,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Total demand (105.0MW) fully served (unserved=0.0MW).",
+              "detail": "Total demand (116.0MW) fully served (unserved=0.0MW).",
               "value_label": "unserved vs. achievable minimum",
               "value_actual": 0.0,
               "value_reference": 0.0
@@ -872,10 +1381,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 136.0MW meets the 5.2MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 70.0MW meets the 5.8MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 136.0,
-              "value_reference": 5.2
+              "value_actual": 70.0,
+              "value_reference": 5.8
             },
             {
               "rule_id": "rule_4",
@@ -927,7 +1436,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
+              "detail": "Applied floor 45.0% is within [20.0, 60.0]%.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -938,7 +1447,7 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
+              "detail": "Proposed floor 45.0% is within the expected 30.0-45.0% band.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -949,7 +1458,7 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
+              "detail": "Floor at 45.0% is either within the calm band or justified by a volatility signal.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -982,10 +1491,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Net import cost $462 vs reference $462.",
+              "detail": "Net import cost $1155 vs reference $1155.",
               "value_label": "net cost vs. reference ($)",
-              "value_actual": 462.0,
-              "value_reference": 462.0
+              "value_actual": 1155.0,
+              "value_reference": 1155.0
             },
             {
               "rule_id": "rule_11",
@@ -1019,32 +1528,32 @@
     "infeasible": false,
     "margin_infeasible": false,
     "ledger": {
-      "purchase_cost": 462.0,
+      "purchase_cost": 1155.0,
       "sales_revenue": 0.0,
-      "stored_energy_value_change": -152.0,
-      "profit": -614.0,
-      "emissions_tonnes": 6.05,
-      "carbon_cost": 169.4,
+      "stored_energy_value_change": -209.0,
+      "profit": -1364.0,
+      "emissions_tonnes": 10.0,
+      "carbon_cost": 290.0,
       "renewable_utilisation_pct": 100.0,
-      "renewable_share_of_delivered_pct": 42.9
+      "renewable_share_of_delivered_pct": 17.2
     }
   },
   {
     "scenario": {
-      "tick": 3,
-      "seed": 102,
+      "tick": 4,
+      "seed": 103,
       "difficulty": "file_input",
-      "objective": null,
-      "solar_output_mw": 35.0,
-      "solar_forecast_mw": 38.0,
-      "wind_output_mw": 30.0,
-      "wind_forecast_mw": 32.0,
+      "objective": "min_carbon",
+      "solar_output_mw": 20.0,
+      "solar_forecast_mw": 22.0,
+      "wind_output_mw": 28.0,
+      "wind_forecast_mw": 29.0,
       "solar_farms": [],
       "wind_farms": [],
-      "base_demand_mw": 90.0,
-      "base_demand_forecast_mw": 92.0,
-      "total_demand_mw": 128.0,
-      "total_demand_forecast_mw": 130.0,
+      "base_demand_mw": 85.0,
+      "base_demand_forecast_mw": 88.0,
+      "total_demand_mw": 123.0,
+      "total_demand_forecast_mw": 126.0,
       "grid_frequency_hz": 50.0,
       "transmission_constraint_mw": 180.0,
       "transmission_headroom_mw": 180.0,
@@ -1052,7 +1561,7 @@
         {
           "id": "battery_1",
           "capacity_mwh": 40.0,
-          "state_of_charge_pct": 40.0,
+          "state_of_charge_pct": 50.0,
           "min_safe_soc_pct": 10.0,
           "max_charge_rate_mw": 10.0,
           "max_discharge_rate_mw": 10.0,
@@ -1063,7 +1572,7 @@
         {
           "id": "battery_2",
           "capacity_mwh": 25.0,
-          "state_of_charge_pct": 45.0,
+          "state_of_charge_pct": 52.0,
           "min_safe_soc_pct": 10.0,
           "max_charge_rate_mw": 6.0,
           "max_discharge_rate_mw": 6.0,
@@ -1073,13 +1582,13 @@
         }
       ],
       "previous_floor_pct": 25.0,
-      "electricity_price_per_mwh": 48.0,
-      "buy_price_per_mwh": 50.4,
-      "sell_price_per_mwh": 45.6,
+      "electricity_price_per_mwh": 28.0,
+      "buy_price_per_mwh": 29.4,
+      "sell_price_per_mwh": 26.6,
       "carbon_price_per_ton": 29.0,
-      "grid_carbon_intensity_t_per_mwh": 0.5,
+      "grid_carbon_intensity_t_per_mwh": 0.85,
       "demand_response_incentive_per_mwh": 18.0,
-      "weather_forecast": "morning sun",
+      "weather_forecast": "morning ramp, cheap but dirty grid",
       "storm_alert": false,
       "maintenance_scheduled": false,
       "industrial_demand_mw": 38.0,
@@ -1094,8 +1603,8 @@
       {
         "name": "raw",
         "decision": {
-          "tick": 3,
-          "objective_used": "cost_efficiency",
+          "tick": 4,
+          "objective_used": "min_carbon",
           "battery_actions": [
             {
               "battery_id": "battery_1",
@@ -1109,19 +1618,19 @@
             }
           ],
           "market_action": "buy",
-          "market_amount_mw": 47.0,
+          "market_amount_mw": 59.0,
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm morning sun weather forecast with no volatility signals, maintaining stable 25% floor.",
-          "reasoning": "Position: shortfall. Shortfall ladder: renewables (65 MW), battery discharge above floor (16 MW total from battery_1 and battery_2), then grid purchase for remaining 47 MW. Golden Rules 1 & 2 binding. Cost efficiency cascade priority.",
+          "floor_justification": "Calm morning ramp with no extreme volatility signals; holding reserve floor at 25.0% as planned.",
+          "reasoning": "Position: shortfall. Dispatch step: renewables (48 MW), battery discharge (16 MW total), grid purchase (59 MW). Golden rules: 1 (reliability served via total_demand_mw=123), 2 (headroom=180), 3 (no curtailment), 4 (batteries discharged within safe limits above reserve floor). Cascade: min_carbon priority (purchased MWh minimized via full battery discharge; remaining shortfall met by grid import with carbon intensity 0.85 t/MWh).",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
-          "tick": 3,
+          "tick": 4,
           "status": "pass",
           "rules": [
             {
@@ -1163,7 +1672,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Total demand (128.0MW) fully served (unserved=0.0MW).",
+              "detail": "Total demand (123.0MW) fully served (unserved=0.0MW).",
               "value_label": "unserved vs. achievable minimum",
               "value_actual": 0.0,
               "value_reference": 0.0
@@ -1174,10 +1683,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 133.0MW meets the 6.4MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 121.0MW meets the 6.2MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 133.0,
-              "value_reference": 6.4
+              "value_actual": 121.0,
+              "value_reference": 6.2
             },
             {
               "rule_id": "rule_4",
@@ -1195,11 +1704,11 @@
               "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
               "severity": "flagged",
               "passed": true,
-              "applicable": true,
-              "detail": "No avoidable charging during a price peak.",
-              "value_label": "avoidable charge vs. tolerance (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.1
+              "applicable": false,
+              "detail": "N/A \u2014 this objective (min_carbon) doesn't trade cost against a price-peak charging decision.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
             },
             {
               "rule_id": "rule_6",
@@ -1280,14 +1789,14 @@
             },
             {
               "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: cost)",
+              "description": "Decision matches the declared cascade (top priority: carbon)",
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Net import cost $592 vs reference $592.",
-              "value_label": "net cost vs. reference ($)",
-              "value_actual": 592.2,
-              "value_reference": 592.2
+              "detail": "Emissions 12.54t vs reference minimum 12.54t.",
+              "value_label": "emissions vs. reference minimum (t)",
+              "value_actual": 12.5,
+              "value_reference": 12.5
             },
             {
               "rule_id": "rule_11",
@@ -1307,8 +1816,8 @@
       {
         "name": "applied",
         "decision": {
-          "tick": 3,
-          "objective_used": "cost_efficiency",
+          "tick": 4,
+          "objective_used": "min_carbon",
           "battery_actions": [
             {
               "battery_id": "battery_1",
@@ -1322,19 +1831,19 @@
             }
           ],
           "market_action": "buy",
-          "market_amount_mw": 47.0,
+          "market_amount_mw": 59.0,
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm morning sun weather forecast with no volatility signals, maintaining stable 25% floor.",
-          "reasoning": "Position: shortfall. Shortfall ladder: renewables (65 MW), battery discharge above floor (16 MW total from battery_1 and battery_2), then grid purchase for remaining 47 MW. Golden Rules 1 & 2 binding. Cost efficiency cascade priority.",
+          "floor_justification": "Calm morning ramp with no extreme volatility signals; holding reserve floor at 25.0% as planned.",
+          "reasoning": "Position: shortfall. Dispatch step: renewables (48 MW), battery discharge (16 MW total), grid purchase (59 MW). Golden rules: 1 (reliability served via total_demand_mw=123), 2 (headroom=180), 3 (no curtailment), 4 (batteries discharged within safe limits above reserve floor). Cascade: min_carbon priority (purchased MWh minimized via full battery discharge; remaining shortfall met by grid import with carbon intensity 0.85 t/MWh).",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
-          "tick": 3,
+          "tick": 4,
           "status": "pass",
           "rules": [
             {
@@ -1376,7 +1885,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Total demand (128.0MW) fully served (unserved=0.0MW).",
+              "detail": "Total demand (123.0MW) fully served (unserved=0.0MW).",
               "value_label": "unserved vs. achievable minimum",
               "value_actual": 0.0,
               "value_reference": 0.0
@@ -1387,10 +1896,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 133.0MW meets the 6.4MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 121.0MW meets the 6.2MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 133.0,
-              "value_reference": 6.4
+              "value_actual": 121.0,
+              "value_reference": 6.2
             },
             {
               "rule_id": "rule_4",
@@ -1408,11 +1917,11 @@
               "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
               "severity": "flagged",
               "passed": true,
-              "applicable": true,
-              "detail": "No avoidable charging during a price peak.",
-              "value_label": "avoidable charge vs. tolerance (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.1
+              "applicable": false,
+              "detail": "N/A \u2014 this objective (min_carbon) doesn't trade cost against a price-peak charging decision.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
             },
             {
               "rule_id": "rule_6",
@@ -1493,14 +2002,14 @@
             },
             {
               "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: cost)",
+              "description": "Decision matches the declared cascade (top priority: carbon)",
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Net import cost $592 vs reference $592.",
-              "value_label": "net cost vs. reference ($)",
-              "value_actual": 592.2,
-              "value_reference": 592.2
+              "detail": "Emissions 12.54t vs reference minimum 12.54t.",
+              "value_label": "emissions vs. reference minimum (t)",
+              "value_actual": 12.5,
+              "value_reference": 12.5
             },
             {
               "rule_id": "rule_11",
@@ -1534,529 +2043,14 @@
     "infeasible": false,
     "margin_infeasible": false,
     "ledger": {
-      "purchase_cost": 592.2,
+      "purchase_cost": 433.6,
       "sales_revenue": 0.0,
-      "stored_energy_value_change": -182.4,
-      "profit": -774.6,
-      "emissions_tonnes": 5.875,
-      "carbon_cost": 170.4,
+      "stored_energy_value_change": -106.4,
+      "profit": -540.0,
+      "emissions_tonnes": 12.537,
+      "carbon_cost": 363.6,
       "renewable_utilisation_pct": 100.0,
-      "renewable_share_of_delivered_pct": 50.8
-    }
-  },
-  {
-    "scenario": {
-      "tick": 4,
-      "seed": 103,
-      "difficulty": "file_input",
-      "objective": null,
-      "solar_output_mw": 70.0,
-      "solar_forecast_mw": 72.0,
-      "wind_output_mw": 25.0,
-      "wind_forecast_mw": 26.0,
-      "solar_farms": [],
-      "wind_farms": [],
-      "base_demand_mw": 95.0,
-      "base_demand_forecast_mw": 96.0,
-      "total_demand_mw": 135.0,
-      "total_demand_forecast_mw": 136.0,
-      "grid_frequency_hz": 50.0,
-      "transmission_constraint_mw": 180.0,
-      "transmission_headroom_mw": 180.0,
-      "batteries": [
-        {
-          "id": "battery_1",
-          "capacity_mwh": 40.0,
-          "state_of_charge_pct": 55.0,
-          "min_safe_soc_pct": 10.0,
-          "max_charge_rate_mw": 10.0,
-          "max_discharge_rate_mw": 10.0,
-          "charging_efficiency_pct": 92.0,
-          "degradation_pct": 2.0,
-          "available": true
-        },
-        {
-          "id": "battery_2",
-          "capacity_mwh": 25.0,
-          "state_of_charge_pct": 55.0,
-          "min_safe_soc_pct": 10.0,
-          "max_charge_rate_mw": 6.0,
-          "max_discharge_rate_mw": 6.0,
-          "charging_efficiency_pct": 90.0,
-          "degradation_pct": 2.0,
-          "available": true
-        }
-      ],
-      "previous_floor_pct": 25.0,
-      "electricity_price_per_mwh": 50.0,
-      "buy_price_per_mwh": 52.5,
-      "sell_price_per_mwh": 47.5,
-      "carbon_price_per_ton": 29.0,
-      "grid_carbon_intensity_t_per_mwh": 0.5,
-      "demand_response_incentive_per_mwh": 18.0,
-      "weather_forecast": "clear",
-      "storm_alert": false,
-      "maintenance_scheduled": false,
-      "industrial_demand_mw": 40.0,
-      "events": [],
-      "expected_behavior": "n/a (file input)",
-      "expected_floor_min_pct": 20.0,
-      "expected_floor_max_pct": 30.0,
-      "expected_ladder_step": "renewables -> battery discharge above floor -> grid import -> reserve floor only if the Evaluator's own emergency check agrees",
-      "expected_emergency": false
-    },
-    "stages": [
-      {
-        "name": "raw",
-        "decision": {
-          "tick": 4,
-          "objective_used": "cost_efficiency",
-          "battery_actions": [
-            {
-              "battery_id": "battery_1",
-              "action": "discharge",
-              "amount_mw": 10.0
-            },
-            {
-              "battery_id": "battery_2",
-              "action": "discharge",
-              "amount_mw": 6.0
-            }
-          ],
-          "market_action": "buy",
-          "market_amount_mw": 24.0,
-          "curtail_solar_mw": 0.0,
-          "curtail_wind_mw": 0.0,
-          "demand_response_triggered": false,
-          "proposed_floor_pct": 25.0,
-          "applied_floor_pct": 25.0,
-          "floor_justification": "Calm clear weather, stable forecast, baseline reserve floor maintained at 25%.",
-          "reasoning": "Position: shortfall (-40 MW). Following shortfall ladder: use renewables (95 MW), discharge batteries to their limits (battery_1: 10 MW, battery_2: 6 MW), leaving a remaining 24 MW shortfall to be purchased from the grid. Binding Golden Rules: Reliability (critical load served) and Grid Stability (transmission headroom respected). Objective cascade: cost_efficiency (purchasing minimum required 24 MW at lowest buy price).",
-          "mode": "agent",
-          "failure_detail": null
-        },
-        "evaluation": {
-          "tick": 4,
-          "status": "pass",
-          "rules": [
-            {
-              "rule_id": "rule_1",
-              "description": "No curtailment beyond the minimum required while buying from the grid",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No simultaneous curtailment + grid purchase.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2a",
-              "description": "Battery must not discharge below its absolute minimum safe charge",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below its absolute minimum safe charge.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2b",
-              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below the Orchestrator's own applied floor.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_3",
-              "description": "Unserved load must not exceed the physically achievable minimum",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Total demand (135.0MW) fully served (unserved=0.0MW).",
-              "value_label": "unserved vs. achievable minimum",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_3b",
-              "description": "Reserve-margin headroom meets the achievable target",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Reserve-margin headroom 156.0MW meets the 6.8MW requirement (5% of total demand).",
-              "value_label": "headroom vs. target",
-              "value_actual": 156.0,
-              "value_reference": 6.8
-            },
-            {
-              "rule_id": "rule_4",
-              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No sale while demand is unserved.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_5",
-              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No avoidable charging during a price peak.",
-              "value_label": "avoidable charge vs. tolerance (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.1
-            },
-            {
-              "rule_id": "rule_6",
-              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
-              "value_label": "curtailed vs. minimum required",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_7",
-              "description": "Transmission headroom and grid frequency band respected",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net transmission flow and grid frequency both within limits.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8a",
-              "description": "Applied reserve floor stays within hard bounds (backstop)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8b",
-              "description": "Proposed floor matches the expected band for this scenario's volatility",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8c",
-              "description": "A floor raised above the calm band needs a volatility signal",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8d",
-              "description": "Decision states a justification for the proposed floor",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor justification provided.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8e",
-              "description": "Proposed floor required no clamp or ramp-down adjustment",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: cost)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net import cost $315 vs reference $315.",
-              "value_label": "net cost vs. reference ($)",
-              "value_actual": 315.0,
-              "value_reference": 315.0
-            },
-            {
-              "rule_id": "rule_11",
-              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
-              "value_label": "proposed charge vs. renewable surplus (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            }
-          ],
-          "notes": "All checks passed."
-        }
-      },
-      {
-        "name": "applied",
-        "decision": {
-          "tick": 4,
-          "objective_used": "cost_efficiency",
-          "battery_actions": [
-            {
-              "battery_id": "battery_1",
-              "action": "discharge",
-              "amount_mw": 10.0
-            },
-            {
-              "battery_id": "battery_2",
-              "action": "discharge",
-              "amount_mw": 6.0
-            }
-          ],
-          "market_action": "buy",
-          "market_amount_mw": 24.0,
-          "curtail_solar_mw": 0.0,
-          "curtail_wind_mw": 0.0,
-          "demand_response_triggered": false,
-          "proposed_floor_pct": 25.0,
-          "applied_floor_pct": 25.0,
-          "floor_justification": "Calm clear weather, stable forecast, baseline reserve floor maintained at 25%.",
-          "reasoning": "Position: shortfall (-40 MW). Following shortfall ladder: use renewables (95 MW), discharge batteries to their limits (battery_1: 10 MW, battery_2: 6 MW), leaving a remaining 24 MW shortfall to be purchased from the grid. Binding Golden Rules: Reliability (critical load served) and Grid Stability (transmission headroom respected). Objective cascade: cost_efficiency (purchasing minimum required 24 MW at lowest buy price).",
-          "mode": "agent",
-          "failure_detail": null
-        },
-        "evaluation": {
-          "tick": 4,
-          "status": "pass",
-          "rules": [
-            {
-              "rule_id": "rule_1",
-              "description": "No curtailment beyond the minimum required while buying from the grid",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No simultaneous curtailment + grid purchase.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2a",
-              "description": "Battery must not discharge below its absolute minimum safe charge",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below its absolute minimum safe charge.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2b",
-              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below the Orchestrator's own applied floor.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_3",
-              "description": "Unserved load must not exceed the physically achievable minimum",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Total demand (135.0MW) fully served (unserved=0.0MW).",
-              "value_label": "unserved vs. achievable minimum",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_3b",
-              "description": "Reserve-margin headroom meets the achievable target",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Reserve-margin headroom 156.0MW meets the 6.8MW requirement (5% of total demand).",
-              "value_label": "headroom vs. target",
-              "value_actual": 156.0,
-              "value_reference": 6.8
-            },
-            {
-              "rule_id": "rule_4",
-              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No sale while demand is unserved.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_5",
-              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No avoidable charging during a price peak.",
-              "value_label": "avoidable charge vs. tolerance (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.1
-            },
-            {
-              "rule_id": "rule_6",
-              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
-              "value_label": "curtailed vs. minimum required",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_7",
-              "description": "Transmission headroom and grid frequency band respected",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net transmission flow and grid frequency both within limits.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8a",
-              "description": "Applied reserve floor stays within hard bounds (backstop)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8b",
-              "description": "Proposed floor matches the expected band for this scenario's volatility",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8c",
-              "description": "A floor raised above the calm band needs a volatility signal",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8d",
-              "description": "Decision states a justification for the proposed floor",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor justification provided.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8e",
-              "description": "Proposed floor required no clamp or ramp-down adjustment",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: cost)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net import cost $315 vs reference $315.",
-              "value_label": "net cost vs. reference ($)",
-              "value_actual": 315.0,
-              "value_reference": 315.0
-            },
-            {
-              "rule_id": "rule_11",
-              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
-              "value_label": "proposed charge vs. renewable surplus (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_10",
-              "description": "Proposal needed no more than minor balancer repair",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Proposal needed no repair.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            }
-          ],
-          "notes": "All checks passed."
-        }
-      }
-    ],
-    "repairs": [],
-    "repaired": false,
-    "infeasible": false,
-    "margin_infeasible": false,
-    "ledger": {
-      "purchase_cost": 315.0,
-      "sales_revenue": 0.0,
-      "stored_energy_value_change": -190.0,
-      "profit": -505.0,
-      "emissions_tonnes": 3.0,
-      "carbon_cost": 87.0,
-      "renewable_utilisation_pct": 100.0,
-      "renewable_share_of_delivered_pct": 70.4
+      "renewable_share_of_delivered_pct": 39.0
     }
   },
   {
@@ -2064,25 +2058,25 @@
       "tick": 5,
       "seed": 104,
       "difficulty": "file_input",
-      "objective": null,
-      "solar_output_mw": 95.0,
-      "solar_forecast_mw": 96.0,
-      "wind_output_mw": 20.0,
-      "wind_forecast_mw": 22.0,
+      "objective": "max_profit",
+      "solar_output_mw": 85.0,
+      "solar_forecast_mw": 86.0,
+      "wind_output_mw": 30.0,
+      "wind_forecast_mw": 31.0,
       "solar_farms": [],
       "wind_farms": [],
-      "base_demand_mw": 90.0,
-      "base_demand_forecast_mw": 90.0,
-      "total_demand_mw": 130.0,
-      "total_demand_forecast_mw": 130.0,
+      "base_demand_mw": 55.0,
+      "base_demand_forecast_mw": 57.0,
+      "total_demand_mw": 80.0,
+      "total_demand_forecast_mw": 82.0,
       "grid_frequency_hz": 50.0,
       "transmission_constraint_mw": 180.0,
-      "transmission_headroom_mw": 180.0,
+      "transmission_headroom_mw": 12.0,
       "batteries": [
         {
           "id": "battery_1",
           "capacity_mwh": 40.0,
-          "state_of_charge_pct": 70.0,
+          "state_of_charge_pct": 50.0,
           "min_safe_soc_pct": 10.0,
           "max_charge_rate_mw": 10.0,
           "max_discharge_rate_mw": 10.0,
@@ -2093,7 +2087,7 @@
         {
           "id": "battery_2",
           "capacity_mwh": 25.0,
-          "state_of_charge_pct": 65.0,
+          "state_of_charge_pct": 50.0,
           "min_safe_soc_pct": 10.0,
           "max_charge_rate_mw": 6.0,
           "max_discharge_rate_mw": 6.0,
@@ -2107,17 +2101,17 @@
       "buy_price_per_mwh": 47.25,
       "sell_price_per_mwh": 42.75,
       "carbon_price_per_ton": 29.0,
-      "grid_carbon_intensity_t_per_mwh": 0.48,
+      "grid_carbon_intensity_t_per_mwh": 0.5,
       "demand_response_incentive_per_mwh": 18.0,
-      "weather_forecast": "midday sun",
+      "weather_forecast": "midday surplus, line constrained",
       "storm_alert": false,
       "maintenance_scheduled": false,
-      "industrial_demand_mw": 40.0,
+      "industrial_demand_mw": 25.0,
       "events": [],
       "expected_behavior": "n/a (file input)",
       "expected_floor_min_pct": 20.0,
       "expected_floor_max_pct": 30.0,
-      "expected_ladder_step": "renewables -> battery discharge above floor -> grid import -> reserve floor only if the Evaluator's own emergency check agrees",
+      "expected_ladder_step": "serve load -> charge battery -> sell to grid -> curtail (last resort)",
       "expected_emergency": false
     },
     "stages": [
@@ -2125,28 +2119,28 @@
         "name": "raw",
         "decision": {
           "tick": 5,
-          "objective_used": "cost_efficiency",
+          "objective_used": "max_profit",
           "battery_actions": [
             {
               "battery_id": "battery_1",
-              "action": "discharge",
+              "action": "charge",
               "amount_mw": 10.0
             },
             {
               "battery_id": "battery_2",
-              "action": "discharge",
-              "amount_mw": 5.0
+              "action": "charge",
+              "amount_mw": 6.0
             }
           ],
-          "market_action": "buy",
-          "market_amount_mw": 0.0,
-          "curtail_solar_mw": 0.0,
+          "market_action": "sell",
+          "market_amount_mw": 12.0,
+          "curtail_solar_mw": 7.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm midday sun, stable forecast, baseline volatility band maintained at 25%",
-          "reasoning": "Position: shortfall (-15.0 MW). Following shortfall ladder: renewables (115 MW), battery discharge above floor (10 MW + 5 MW = 15 MW), covering total demand (130 MW). Golden rules: Reliability (critical load met), Battery protection (discharge within safe limits above floor). Cascade: cost_efficiency (zero net grid purchase needed after batteries cover shortfall).",
+          "floor_justification": "Stable conditions, calm forecast, maintaining baseline 25% floor.",
+          "reasoning": "Position: surplus (35 MW surplus). Dispatch ladder: serve load, charge battery (16 MW total), sell to grid (12 MW, capped by transmission headroom), curtail remaining 7 MW solar. Golden Rules 1, 2, 3, 4 respected. Objective: max_profit (charging adds value at sell price, selling maximizes profit under transmission constraint).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -2193,7 +2187,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Total demand (130.0MW) fully served (unserved=0.0MW).",
+              "detail": "Total demand (80.0MW) fully served (unserved=0.0MW).",
               "value_label": "unserved vs. achievable minimum",
               "value_actual": 0.0,
               "value_reference": 0.0
@@ -2204,10 +2198,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 181.0MW meets the 6.5MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 28.0MW meets the 4.0MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 181.0,
-              "value_reference": 6.5
+              "value_actual": 28.0,
+              "value_reference": 4.0
             },
             {
               "rule_id": "rule_4",
@@ -2237,10 +2231,10 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
+              "detail": "Curtailed 7.0MW vs 7.0MW minimum required (within 0.5MW tolerance).",
               "value_label": "curtailed vs. minimum required",
-              "value_actual": 0.0,
-              "value_reference": 0.0
+              "value_actual": 7.0,
+              "value_reference": 7.0
             },
             {
               "rule_id": "rule_7",
@@ -2310,14 +2304,14 @@
             },
             {
               "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: cost)",
+              "description": "Decision matches the declared cascade (top priority: profit)",
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Net import cost $0 vs reference $0.",
-              "value_label": "net cost vs. reference ($)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
+              "detail": "Revenue $128 (sell 12.0MW @ $43/MWh) - cost $0 (buy 0.0MW @ $47/MWh) = net profit $284 vs reference $284.",
+              "value_label": "net profit vs. reference ($)",
+              "value_actual": 284.2,
+              "value_reference": 284.2
             },
             {
               "rule_id": "rule_11",
@@ -2325,10 +2319,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
+              "detail": "Charging 16.0MW is within the 35.0MW renewable surplus.",
               "value_label": "proposed charge vs. renewable surplus (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
+              "value_actual": 16.0,
+              "value_reference": 35.0
             }
           ],
           "notes": "All checks passed."
@@ -2338,28 +2332,28 @@
         "name": "applied",
         "decision": {
           "tick": 5,
-          "objective_used": "cost_efficiency",
+          "objective_used": "max_profit",
           "battery_actions": [
             {
               "battery_id": "battery_1",
-              "action": "discharge",
+              "action": "charge",
               "amount_mw": 10.0
             },
             {
               "battery_id": "battery_2",
-              "action": "discharge",
-              "amount_mw": 5.0
+              "action": "charge",
+              "amount_mw": 6.0
             }
           ],
-          "market_action": "hold",
-          "market_amount_mw": 0.0,
-          "curtail_solar_mw": 0.0,
+          "market_action": "sell",
+          "market_amount_mw": 12.0,
+          "curtail_solar_mw": 7.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm midday sun, stable forecast, baseline volatility band maintained at 25%",
-          "reasoning": "Position: shortfall (-15.0 MW). Following shortfall ladder: renewables (115 MW), battery discharge above floor (10 MW + 5 MW = 15 MW), covering total demand (130 MW). Golden rules: Reliability (critical load met), Battery protection (discharge within safe limits above floor). Cascade: cost_efficiency (zero net grid purchase needed after batteries cover shortfall).",
+          "floor_justification": "Stable conditions, calm forecast, maintaining baseline 25% floor.",
+          "reasoning": "Position: surplus (35 MW surplus). Dispatch ladder: serve load, charge battery (16 MW total), sell to grid (12 MW, capped by transmission headroom), curtail remaining 7 MW solar. Golden Rules 1, 2, 3, 4 respected. Objective: max_profit (charging adds value at sell price, selling maximizes profit under transmission constraint).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -2406,7 +2400,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Total demand (130.0MW) fully served (unserved=0.0MW).",
+              "detail": "Total demand (80.0MW) fully served (unserved=0.0MW).",
               "value_label": "unserved vs. achievable minimum",
               "value_actual": 0.0,
               "value_reference": 0.0
@@ -2417,10 +2411,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 181.0MW meets the 6.5MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 28.0MW meets the 4.0MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 181.0,
-              "value_reference": 6.5
+              "value_actual": 28.0,
+              "value_reference": 4.0
             },
             {
               "rule_id": "rule_4",
@@ -2450,10 +2444,10 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
+              "detail": "Curtailed 7.0MW vs 7.0MW minimum required (within 0.5MW tolerance).",
               "value_label": "curtailed vs. minimum required",
-              "value_actual": 0.0,
-              "value_reference": 0.0
+              "value_actual": 7.0,
+              "value_reference": 7.0
             },
             {
               "rule_id": "rule_7",
@@ -2523,14 +2517,14 @@
             },
             {
               "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: cost)",
+              "description": "Decision matches the declared cascade (top priority: profit)",
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Net import cost $0 vs reference $0.",
-              "value_label": "net cost vs. reference ($)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
+              "detail": "Revenue $128 (sell 12.0MW @ $43/MWh) - cost $0 (buy 0.0MW @ $47/MWh) = net profit $284 vs reference $284.",
+              "value_label": "net profit vs. reference ($)",
+              "value_actual": 284.2,
+              "value_reference": 284.2
             },
             {
               "rule_id": "rule_11",
@@ -2538,10 +2532,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
+              "detail": "Charging 16.0MW is within the 35.0MW renewable surplus.",
               "value_label": "proposed charge vs. renewable surplus (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
+              "value_actual": 16.0,
+              "value_reference": 35.0
             },
             {
               "rule_id": "rule_10",
@@ -2565,13 +2559,13 @@
     "margin_infeasible": false,
     "ledger": {
       "purchase_cost": 0.0,
-      "sales_revenue": 0.0,
-      "stored_energy_value_change": -160.3,
-      "profit": -160.3,
+      "sales_revenue": 128.2,
+      "stored_energy_value_change": 156.0,
+      "profit": 284.2,
       "emissions_tonnes": 0.0,
       "carbon_cost": 0.0,
-      "renewable_utilisation_pct": 100.0,
-      "renewable_share_of_delivered_pct": 88.5
+      "renewable_utilisation_pct": 93.9,
+      "renewable_share_of_delivered_pct": 100.0
     }
   },
   {
@@ -2579,17 +2573,1047 @@
       "tick": 6,
       "seed": 105,
       "difficulty": "file_input",
-      "objective": "max_profit",
+      "objective": null,
       "solar_output_mw": 100.0,
       "solar_forecast_mw": 98.0,
-      "wind_output_mw": 18.0,
-      "wind_forecast_mw": 20.0,
+      "wind_output_mw": 28.0,
+      "wind_forecast_mw": 27.0,
       "solar_farms": [],
       "wind_farms": [],
-      "base_demand_mw": 85.0,
-      "base_demand_forecast_mw": 85.0,
-      "total_demand_mw": 123.0,
-      "total_demand_forecast_mw": 123.0,
+      "base_demand_mw": 58.0,
+      "base_demand_forecast_mw": 59.0,
+      "total_demand_mw": 84.0,
+      "total_demand_forecast_mw": 85.0,
+      "grid_frequency_hz": 50.0,
+      "transmission_constraint_mw": 180.0,
+      "transmission_headroom_mw": 12.0,
+      "batteries": [
+        {
+          "id": "battery_1",
+          "capacity_mwh": 40.0,
+          "state_of_charge_pct": 50.0,
+          "min_safe_soc_pct": 10.0,
+          "max_charge_rate_mw": 10.0,
+          "max_discharge_rate_mw": 10.0,
+          "charging_efficiency_pct": 92.0,
+          "degradation_pct": 2.0,
+          "available": true
+        },
+        {
+          "id": "battery_2",
+          "capacity_mwh": 25.0,
+          "state_of_charge_pct": 50.0,
+          "min_safe_soc_pct": 10.0,
+          "max_charge_rate_mw": 6.0,
+          "max_discharge_rate_mw": 6.0,
+          "charging_efficiency_pct": 90.0,
+          "degradation_pct": 2.0,
+          "available": true
+        }
+      ],
+      "previous_floor_pct": 25.0,
+      "electricity_price_per_mwh": 38.0,
+      "buy_price_per_mwh": 39.9,
+      "sell_price_per_mwh": 36.1,
+      "carbon_price_per_ton": 29.0,
+      "grid_carbon_intensity_t_per_mwh": 0.5,
+      "demand_response_incentive_per_mwh": 18.0,
+      "weather_forecast": "bright midday, biggest surplus of the day",
+      "storm_alert": false,
+      "maintenance_scheduled": false,
+      "industrial_demand_mw": 26.0,
+      "events": [],
+      "expected_behavior": "n/a (file input)",
+      "expected_floor_min_pct": 20.0,
+      "expected_floor_max_pct": 30.0,
+      "expected_ladder_step": "serve load -> charge battery -> sell to grid -> curtail (last resort)",
+      "expected_emergency": false
+    },
+    "stages": [
+      {
+        "name": "raw",
+        "decision": {
+          "tick": 6,
+          "objective_used": "cost_efficiency",
+          "battery_actions": [
+            {
+              "battery_id": "battery_1",
+              "action": "charge",
+              "amount_mw": 10.0
+            },
+            {
+              "battery_id": "battery_2",
+              "action": "charge",
+              "amount_mw": 6.0
+            }
+          ],
+          "market_action": "sell",
+          "market_amount_mw": 12.0,
+          "curtail_solar_mw": 16.0,
+          "curtail_wind_mw": 0.0,
+          "demand_response_triggered": false,
+          "proposed_floor_pct": 25.0,
+          "applied_floor_pct": 25.0,
+          "floor_justification": "Stable day, bright midday surplus, calm forecast, no volatility signals, keeping reserve floor at 25%.",
+          "reasoning": "Position: surplus (44.0 MW surplus). Ladder step: serve load, charge batteries, sell to grid within headroom, curtail remaining. Golden rules: 1 (reliability), 2 (transmission headroom 12 MW respected), 3 (minimal curtailment, only after charging and selling up to headroom). Cascade: cost_efficiency (sell at 36.1, charge batteries from renewable surplus).",
+          "mode": "agent",
+          "failure_detail": null
+        },
+        "evaluation": {
+          "tick": 6,
+          "status": "pass",
+          "rules": [
+            {
+              "rule_id": "rule_1",
+              "description": "No curtailment beyond the minimum required while buying from the grid",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No simultaneous curtailment + grid purchase.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2a",
+              "description": "Battery must not discharge below its absolute minimum safe charge",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below its absolute minimum safe charge.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2b",
+              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below the Orchestrator's own applied floor.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_3",
+              "description": "Unserved load must not exceed the physically achievable minimum",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Total demand (84.0MW) fully served (unserved=0.0MW).",
+              "value_label": "unserved vs. achievable minimum",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            },
+            {
+              "rule_id": "rule_3b",
+              "description": "Reserve-margin headroom meets the achievable target",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Reserve-margin headroom 28.0MW meets the 4.2MW requirement (5% of total demand).",
+              "value_label": "headroom vs. target",
+              "value_actual": 28.0,
+              "value_reference": 4.2
+            },
+            {
+              "rule_id": "rule_4",
+              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No sale while demand is unserved.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_5",
+              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No avoidable charging during a price peak.",
+              "value_label": "avoidable charge vs. tolerance (MW)",
+              "value_actual": 0.0,
+              "value_reference": 0.1
+            },
+            {
+              "rule_id": "rule_6",
+              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Curtailed 16.0MW vs 16.0MW minimum required (within 0.5MW tolerance).",
+              "value_label": "curtailed vs. minimum required",
+              "value_actual": 16.0,
+              "value_reference": 16.0
+            },
+            {
+              "rule_id": "rule_7",
+              "description": "Transmission headroom and grid frequency band respected",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Net transmission flow and grid frequency both within limits.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8a",
+              "description": "Applied reserve floor stays within hard bounds (backstop)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8b",
+              "description": "Proposed floor matches the expected band for this scenario's volatility",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8c",
+              "description": "A floor raised above the calm band needs a volatility signal",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8d",
+              "description": "Decision states a justification for the proposed floor",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor justification provided.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8e",
+              "description": "Proposed floor required no clamp or ramp-down adjustment",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_9",
+              "description": "Decision matches the declared cascade (top priority: cost)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": false,
+              "detail": "N/A \u2014 no decision could change net import cost here (best and worst feasible outcomes both ~$0).",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_11",
+              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Charging 16.0MW is within the 44.0MW renewable surplus.",
+              "value_label": "proposed charge vs. renewable surplus (MW)",
+              "value_actual": 16.0,
+              "value_reference": 44.0
+            }
+          ],
+          "notes": "All checks passed."
+        }
+      },
+      {
+        "name": "applied",
+        "decision": {
+          "tick": 6,
+          "objective_used": "cost_efficiency",
+          "battery_actions": [
+            {
+              "battery_id": "battery_1",
+              "action": "charge",
+              "amount_mw": 10.0
+            },
+            {
+              "battery_id": "battery_2",
+              "action": "charge",
+              "amount_mw": 6.0
+            }
+          ],
+          "market_action": "sell",
+          "market_amount_mw": 12.0,
+          "curtail_solar_mw": 16.0,
+          "curtail_wind_mw": 0.0,
+          "demand_response_triggered": false,
+          "proposed_floor_pct": 25.0,
+          "applied_floor_pct": 25.0,
+          "floor_justification": "Stable day, bright midday surplus, calm forecast, no volatility signals, keeping reserve floor at 25%.",
+          "reasoning": "Position: surplus (44.0 MW surplus). Ladder step: serve load, charge batteries, sell to grid within headroom, curtail remaining. Golden rules: 1 (reliability), 2 (transmission headroom 12 MW respected), 3 (minimal curtailment, only after charging and selling up to headroom). Cascade: cost_efficiency (sell at 36.1, charge batteries from renewable surplus).",
+          "mode": "agent",
+          "failure_detail": null
+        },
+        "evaluation": {
+          "tick": 6,
+          "status": "pass",
+          "rules": [
+            {
+              "rule_id": "rule_1",
+              "description": "No curtailment beyond the minimum required while buying from the grid",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No simultaneous curtailment + grid purchase.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2a",
+              "description": "Battery must not discharge below its absolute minimum safe charge",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below its absolute minimum safe charge.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2b",
+              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below the Orchestrator's own applied floor.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_3",
+              "description": "Unserved load must not exceed the physically achievable minimum",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Total demand (84.0MW) fully served (unserved=0.0MW).",
+              "value_label": "unserved vs. achievable minimum",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            },
+            {
+              "rule_id": "rule_3b",
+              "description": "Reserve-margin headroom meets the achievable target",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Reserve-margin headroom 28.0MW meets the 4.2MW requirement (5% of total demand).",
+              "value_label": "headroom vs. target",
+              "value_actual": 28.0,
+              "value_reference": 4.2
+            },
+            {
+              "rule_id": "rule_4",
+              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No sale while demand is unserved.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_5",
+              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No avoidable charging during a price peak.",
+              "value_label": "avoidable charge vs. tolerance (MW)",
+              "value_actual": 0.0,
+              "value_reference": 0.1
+            },
+            {
+              "rule_id": "rule_6",
+              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Curtailed 16.0MW vs 16.0MW minimum required (within 0.5MW tolerance).",
+              "value_label": "curtailed vs. minimum required",
+              "value_actual": 16.0,
+              "value_reference": 16.0
+            },
+            {
+              "rule_id": "rule_7",
+              "description": "Transmission headroom and grid frequency band respected",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Net transmission flow and grid frequency both within limits.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8a",
+              "description": "Applied reserve floor stays within hard bounds (backstop)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8b",
+              "description": "Proposed floor matches the expected band for this scenario's volatility",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8c",
+              "description": "A floor raised above the calm band needs a volatility signal",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8d",
+              "description": "Decision states a justification for the proposed floor",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor justification provided.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8e",
+              "description": "Proposed floor required no clamp or ramp-down adjustment",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_9",
+              "description": "Decision matches the declared cascade (top priority: cost)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": false,
+              "detail": "N/A \u2014 no decision could change net import cost here (best and worst feasible outcomes both ~$0).",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_11",
+              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Charging 16.0MW is within the 44.0MW renewable surplus.",
+              "value_label": "proposed charge vs. renewable surplus (MW)",
+              "value_actual": 16.0,
+              "value_reference": 44.0
+            },
+            {
+              "rule_id": "rule_10",
+              "description": "Proposal needed no more than minor balancer repair",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Proposal needed no repair.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            }
+          ],
+          "notes": "All checks passed."
+        }
+      }
+    ],
+    "repairs": [],
+    "repaired": false,
+    "infeasible": false,
+    "margin_infeasible": false,
+    "ledger": {
+      "purchase_cost": 0.0,
+      "sales_revenue": 108.3,
+      "stored_energy_value_change": 131.8,
+      "profit": 240.1,
+      "emissions_tonnes": 0.0,
+      "carbon_cost": 0.0,
+      "renewable_utilisation_pct": 87.5,
+      "renewable_share_of_delivered_pct": 100.0
+    }
+  },
+  {
+    "scenario": {
+      "tick": 7,
+      "seed": 106,
+      "difficulty": "file_input",
+      "objective": "max_renewable_utilisation",
+      "solar_output_mw": 105.0,
+      "solar_forecast_mw": 103.0,
+      "wind_output_mw": 22.0,
+      "wind_forecast_mw": 21.0,
+      "solar_farms": [],
+      "wind_farms": [],
+      "base_demand_mw": 60.0,
+      "base_demand_forecast_mw": 61.0,
+      "total_demand_mw": 87.0,
+      "total_demand_forecast_mw": 88.0,
+      "grid_frequency_hz": 50.0,
+      "transmission_constraint_mw": 180.0,
+      "transmission_headroom_mw": 12.0,
+      "batteries": [
+        {
+          "id": "battery_1",
+          "capacity_mwh": 40.0,
+          "state_of_charge_pct": 50.0,
+          "min_safe_soc_pct": 10.0,
+          "max_charge_rate_mw": 10.0,
+          "max_discharge_rate_mw": 10.0,
+          "charging_efficiency_pct": 92.0,
+          "degradation_pct": 2.0,
+          "available": true
+        },
+        {
+          "id": "battery_2",
+          "capacity_mwh": 25.0,
+          "state_of_charge_pct": 50.0,
+          "min_safe_soc_pct": 10.0,
+          "max_charge_rate_mw": 6.0,
+          "max_discharge_rate_mw": 6.0,
+          "charging_efficiency_pct": 90.0,
+          "degradation_pct": 2.0,
+          "available": true
+        }
+      ],
+      "previous_floor_pct": 25.0,
+      "electricity_price_per_mwh": 36.0,
+      "buy_price_per_mwh": 37.8,
+      "sell_price_per_mwh": 34.2,
+      "carbon_price_per_ton": 29.0,
+      "grid_carbon_intensity_t_per_mwh": 0.48,
+      "demand_response_incentive_per_mwh": 18.0,
+      "weather_forecast": "early afternoon surplus, line still constrained",
+      "storm_alert": false,
+      "maintenance_scheduled": false,
+      "industrial_demand_mw": 27.0,
+      "events": [],
+      "expected_behavior": "n/a (file input)",
+      "expected_floor_min_pct": 20.0,
+      "expected_floor_max_pct": 30.0,
+      "expected_ladder_step": "serve load -> charge battery -> sell to grid -> curtail (last resort)",
+      "expected_emergency": false
+    },
+    "stages": [
+      {
+        "name": "raw",
+        "decision": {
+          "tick": 7,
+          "objective_used": "max_renewable_utilisation",
+          "battery_actions": [
+            {
+              "battery_id": "battery_1",
+              "action": "charge",
+              "amount_mw": 10.0
+            },
+            {
+              "battery_id": "battery_2",
+              "action": "charge",
+              "amount_mw": 6.0
+            }
+          ],
+          "market_action": "sell",
+          "market_amount_mw": 12.0,
+          "curtail_solar_mw": 12.0,
+          "curtail_wind_mw": 0.0,
+          "demand_response_triggered": false,
+          "proposed_floor_pct": 25.0,
+          "applied_floor_pct": 25.0,
+          "floor_justification": "Stable day, calm forecast; maintaining baseline reserve floor at 25.0%.",
+          "reasoning": "Position is surplus (net +40.0 MW). Following surplus dispatch ladder: serve load, charge batteries up to 16 MW total headroom, sell 12 MW (max transmission headroom), and curtail remaining 12 MW surplus. Golden rules 1, 2, 3, 4 respected. Objective is max_renewable_utilisation, prioritizing renewable utilisation (charging and selling renewables while curtailing only excess beyond capacity).",
+          "mode": "agent",
+          "failure_detail": null
+        },
+        "evaluation": {
+          "tick": 7,
+          "status": "pass",
+          "rules": [
+            {
+              "rule_id": "rule_1",
+              "description": "No curtailment beyond the minimum required while buying from the grid",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No simultaneous curtailment + grid purchase.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2a",
+              "description": "Battery must not discharge below its absolute minimum safe charge",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below its absolute minimum safe charge.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2b",
+              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below the Orchestrator's own applied floor.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_3",
+              "description": "Unserved load must not exceed the physically achievable minimum",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Total demand (87.0MW) fully served (unserved=0.0MW).",
+              "value_label": "unserved vs. achievable minimum",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            },
+            {
+              "rule_id": "rule_3b",
+              "description": "Reserve-margin headroom meets the achievable target",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Reserve-margin headroom 28.0MW meets the 4.4MW requirement (5% of total demand).",
+              "value_label": "headroom vs. target",
+              "value_actual": 28.0,
+              "value_reference": 4.4
+            },
+            {
+              "rule_id": "rule_4",
+              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No sale while demand is unserved.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_5",
+              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": false,
+              "detail": "N/A \u2014 this objective (max_renewable_utilisation) doesn't trade cost against a price-peak charging decision.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_6",
+              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Curtailed 12.0MW vs 12.0MW minimum required (within 0.5MW tolerance).",
+              "value_label": "curtailed vs. minimum required",
+              "value_actual": 12.0,
+              "value_reference": 12.0
+            },
+            {
+              "rule_id": "rule_7",
+              "description": "Transmission headroom and grid frequency band respected",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Net transmission flow and grid frequency both within limits.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8a",
+              "description": "Applied reserve floor stays within hard bounds (backstop)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8b",
+              "description": "Proposed floor matches the expected band for this scenario's volatility",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8c",
+              "description": "A floor raised above the calm band needs a volatility signal",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8d",
+              "description": "Decision states a justification for the proposed floor",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor justification provided.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8e",
+              "description": "Proposed floor required no clamp or ramp-down adjustment",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_9",
+              "description": "Decision matches the declared cascade (top priority: renewable_utilisation)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Utilisation 90.6% vs reference best 90.6%.",
+              "value_label": "utilisation vs. reference best (%)",
+              "value_actual": 90.6,
+              "value_reference": 90.6
+            },
+            {
+              "rule_id": "rule_11",
+              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Charging 16.0MW is within the 40.0MW renewable surplus.",
+              "value_label": "proposed charge vs. renewable surplus (MW)",
+              "value_actual": 16.0,
+              "value_reference": 40.0
+            }
+          ],
+          "notes": "All checks passed."
+        }
+      },
+      {
+        "name": "applied",
+        "decision": {
+          "tick": 7,
+          "objective_used": "max_renewable_utilisation",
+          "battery_actions": [
+            {
+              "battery_id": "battery_1",
+              "action": "charge",
+              "amount_mw": 10.0
+            },
+            {
+              "battery_id": "battery_2",
+              "action": "charge",
+              "amount_mw": 6.0
+            }
+          ],
+          "market_action": "sell",
+          "market_amount_mw": 12.0,
+          "curtail_solar_mw": 12.0,
+          "curtail_wind_mw": 0.0,
+          "demand_response_triggered": false,
+          "proposed_floor_pct": 25.0,
+          "applied_floor_pct": 25.0,
+          "floor_justification": "Stable day, calm forecast; maintaining baseline reserve floor at 25.0%.",
+          "reasoning": "Position is surplus (net +40.0 MW). Following surplus dispatch ladder: serve load, charge batteries up to 16 MW total headroom, sell 12 MW (max transmission headroom), and curtail remaining 12 MW surplus. Golden rules 1, 2, 3, 4 respected. Objective is max_renewable_utilisation, prioritizing renewable utilisation (charging and selling renewables while curtailing only excess beyond capacity).",
+          "mode": "agent",
+          "failure_detail": null
+        },
+        "evaluation": {
+          "tick": 7,
+          "status": "pass",
+          "rules": [
+            {
+              "rule_id": "rule_1",
+              "description": "No curtailment beyond the minimum required while buying from the grid",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No simultaneous curtailment + grid purchase.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2a",
+              "description": "Battery must not discharge below its absolute minimum safe charge",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below its absolute minimum safe charge.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_2b",
+              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "No battery discharged below the Orchestrator's own applied floor.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_3",
+              "description": "Unserved load must not exceed the physically achievable minimum",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Total demand (87.0MW) fully served (unserved=0.0MW).",
+              "value_label": "unserved vs. achievable minimum",
+              "value_actual": 0.0,
+              "value_reference": 0.0
+            },
+            {
+              "rule_id": "rule_3b",
+              "description": "Reserve-margin headroom meets the achievable target",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Reserve-margin headroom 28.0MW meets the 4.4MW requirement (5% of total demand).",
+              "value_label": "headroom vs. target",
+              "value_actual": 28.0,
+              "value_reference": 4.4
+            },
+            {
+              "rule_id": "rule_4",
+              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "No sale while demand is unserved.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_5",
+              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": false,
+              "detail": "N/A \u2014 this objective (max_renewable_utilisation) doesn't trade cost against a price-peak charging decision.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_6",
+              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Curtailed 12.0MW vs 12.0MW minimum required (within 0.5MW tolerance).",
+              "value_label": "curtailed vs. minimum required",
+              "value_actual": 12.0,
+              "value_reference": 12.0
+            },
+            {
+              "rule_id": "rule_7",
+              "description": "Transmission headroom and grid frequency band respected",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Net transmission flow and grid frequency both within limits.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8a",
+              "description": "Applied reserve floor stays within hard bounds (backstop)",
+              "severity": "fail",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8b",
+              "description": "Proposed floor matches the expected band for this scenario's volatility",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8c",
+              "description": "A floor raised above the calm band needs a volatility signal",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8d",
+              "description": "Decision states a justification for the proposed floor",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Floor justification provided.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_8e",
+              "description": "Proposed floor required no clamp or ramp-down adjustment",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            },
+            {
+              "rule_id": "rule_9",
+              "description": "Decision matches the declared cascade (top priority: renewable_utilisation)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Utilisation 90.6% vs reference best 90.6%.",
+              "value_label": "utilisation vs. reference best (%)",
+              "value_actual": 90.6,
+              "value_reference": 90.6
+            },
+            {
+              "rule_id": "rule_11",
+              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Charging 16.0MW is within the 40.0MW renewable surplus.",
+              "value_label": "proposed charge vs. renewable surplus (MW)",
+              "value_actual": 16.0,
+              "value_reference": 40.0
+            },
+            {
+              "rule_id": "rule_10",
+              "description": "Proposal needed no more than minor balancer repair",
+              "severity": "flagged",
+              "passed": true,
+              "applicable": true,
+              "detail": "Proposal needed no repair.",
+              "value_label": null,
+              "value_actual": null,
+              "value_reference": null
+            }
+          ],
+          "notes": "All checks passed."
+        }
+      }
+    ],
+    "repairs": [],
+    "repaired": false,
+    "infeasible": false,
+    "margin_infeasible": false,
+    "ledger": {
+      "purchase_cost": 0.0,
+      "sales_revenue": 102.6,
+      "stored_energy_value_change": 124.8,
+      "profit": 227.4,
+      "emissions_tonnes": 0.0,
+      "carbon_cost": 0.0,
+      "renewable_utilisation_pct": 90.6,
+      "renewable_share_of_delivered_pct": 100.0
+    }
+  },
+  {
+    "scenario": {
+      "tick": 8,
+      "seed": 107,
+      "difficulty": "file_input",
+      "objective": "max_profit",
+      "solar_output_mw": 90.0,
+      "solar_forecast_mw": 88.0,
+      "wind_output_mw": 18.0,
+      "wind_forecast_mw": 18.0,
+      "solar_farms": [],
+      "wind_farms": [],
+      "base_demand_mw": 100.0,
+      "base_demand_forecast_mw": 102.0,
+      "total_demand_mw": 140.0,
+      "total_demand_forecast_mw": 142.0,
       "grid_frequency_hz": 50.0,
       "transmission_constraint_mw": 180.0,
       "transmission_headroom_mw": 180.0,
@@ -2609,521 +3633,6 @@
           "id": "battery_2",
           "capacity_mwh": 25.0,
           "state_of_charge_pct": 80.0,
-          "min_safe_soc_pct": 10.0,
-          "max_charge_rate_mw": 6.0,
-          "max_discharge_rate_mw": 6.0,
-          "charging_efficiency_pct": 90.0,
-          "degradation_pct": 2.0,
-          "available": true
-        }
-      ],
-      "previous_floor_pct": 25.0,
-      "electricity_price_per_mwh": 55.0,
-      "buy_price_per_mwh": 57.75,
-      "sell_price_per_mwh": 52.25,
-      "carbon_price_per_ton": 29.0,
-      "grid_carbon_intensity_t_per_mwh": 0.45,
-      "demand_response_incentive_per_mwh": 18.0,
-      "weather_forecast": "bright midday, surplus",
-      "storm_alert": false,
-      "maintenance_scheduled": false,
-      "industrial_demand_mw": 38.0,
-      "events": [],
-      "expected_behavior": "n/a (file input)",
-      "expected_floor_min_pct": 20.0,
-      "expected_floor_max_pct": 30.0,
-      "expected_ladder_step": "renewables -> battery discharge above floor -> grid import -> reserve floor only if the Evaluator's own emergency check agrees",
-      "expected_emergency": false
-    },
-    "stages": [
-      {
-        "name": "raw",
-        "decision": {
-          "tick": 6,
-          "objective_used": "max_profit",
-          "battery_actions": [
-            {
-              "battery_id": "battery_1",
-              "action": "discharge",
-              "amount_mw": 5.0
-            },
-            {
-              "battery_id": "battery_2",
-              "action": "hold",
-              "amount_mw": 0.0
-            }
-          ],
-          "market_action": "hold",
-          "market_amount_mw": 0.0,
-          "curtail_solar_mw": 0.0,
-          "curtail_wind_mw": 0.0,
-          "demand_response_triggered": false,
-          "proposed_floor_pct": 25.0,
-          "applied_floor_pct": 25.0,
-          "floor_justification": "Calm forecast, bright midday, no volatility or storm signals; keeping reserve floor at 25%.",
-          "reasoning": "Position: shortfall (-5.0 MW net). Step: discharging battery above floor to cover shortfall. Rules: Reliability, battery protection, grid stability. Cascade: max_profit (profit, then cost, then carbon) - discharging battery at 5.0 MW avoids buying at 57.75 or selling at 52.25 equivalent loss, cleanly covering the 5.0 MW shortfall without grid purchases.",
-          "mode": "agent",
-          "failure_detail": null
-        },
-        "evaluation": {
-          "tick": 6,
-          "status": "pass",
-          "rules": [
-            {
-              "rule_id": "rule_1",
-              "description": "No curtailment beyond the minimum required while buying from the grid",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No simultaneous curtailment + grid purchase.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2a",
-              "description": "Battery must not discharge below its absolute minimum safe charge",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below its absolute minimum safe charge.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2b",
-              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below the Orchestrator's own applied floor.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_3",
-              "description": "Unserved load must not exceed the physically achievable minimum",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Total demand (123.0MW) fully served (unserved=0.0MW).",
-              "value_label": "unserved vs. achievable minimum",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_3b",
-              "description": "Reserve-margin headroom meets the achievable target",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Reserve-margin headroom 191.0MW meets the 6.2MW requirement (5% of total demand).",
-              "value_label": "headroom vs. target",
-              "value_actual": 191.0,
-              "value_reference": 6.2
-            },
-            {
-              "rule_id": "rule_4",
-              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No sale while demand is unserved.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_5",
-              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No avoidable charging during a price peak.",
-              "value_label": "avoidable charge vs. tolerance (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.1
-            },
-            {
-              "rule_id": "rule_6",
-              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
-              "value_label": "curtailed vs. minimum required",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_7",
-              "description": "Transmission headroom and grid frequency band respected",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net transmission flow and grid frequency both within limits.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8a",
-              "description": "Applied reserve floor stays within hard bounds (backstop)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8b",
-              "description": "Proposed floor matches the expected band for this scenario's volatility",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8c",
-              "description": "A floor raised above the calm band needs a volatility signal",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8d",
-              "description": "Decision states a justification for the proposed floor",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor justification provided.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8e",
-              "description": "Proposed floor required no clamp or ramp-down adjustment",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: profit)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Revenue $0 (sell 0.0MW @ $52/MWh) - cost $0 (buy 0.0MW @ $58/MWh) = net profit $-65 vs reference $-65.",
-              "value_label": "net profit vs. reference ($)",
-              "value_actual": -65.3,
-              "value_reference": -65.3
-            },
-            {
-              "rule_id": "rule_11",
-              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
-              "value_label": "proposed charge vs. renewable surplus (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            }
-          ],
-          "notes": "All checks passed."
-        }
-      },
-      {
-        "name": "applied",
-        "decision": {
-          "tick": 6,
-          "objective_used": "max_profit",
-          "battery_actions": [
-            {
-              "battery_id": "battery_1",
-              "action": "discharge",
-              "amount_mw": 5.0
-            },
-            {
-              "battery_id": "battery_2",
-              "action": "hold",
-              "amount_mw": 0.0
-            }
-          ],
-          "market_action": "hold",
-          "market_amount_mw": 0.0,
-          "curtail_solar_mw": 0.0,
-          "curtail_wind_mw": 0.0,
-          "demand_response_triggered": false,
-          "proposed_floor_pct": 25.0,
-          "applied_floor_pct": 25.0,
-          "floor_justification": "Calm forecast, bright midday, no volatility or storm signals; keeping reserve floor at 25%.",
-          "reasoning": "Position: shortfall (-5.0 MW net). Step: discharging battery above floor to cover shortfall. Rules: Reliability, battery protection, grid stability. Cascade: max_profit (profit, then cost, then carbon) - discharging battery at 5.0 MW avoids buying at 57.75 or selling at 52.25 equivalent loss, cleanly covering the 5.0 MW shortfall without grid purchases.",
-          "mode": "agent",
-          "failure_detail": null
-        },
-        "evaluation": {
-          "tick": 6,
-          "status": "pass",
-          "rules": [
-            {
-              "rule_id": "rule_1",
-              "description": "No curtailment beyond the minimum required while buying from the grid",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No simultaneous curtailment + grid purchase.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2a",
-              "description": "Battery must not discharge below its absolute minimum safe charge",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below its absolute minimum safe charge.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2b",
-              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below the Orchestrator's own applied floor.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_3",
-              "description": "Unserved load must not exceed the physically achievable minimum",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Total demand (123.0MW) fully served (unserved=0.0MW).",
-              "value_label": "unserved vs. achievable minimum",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_3b",
-              "description": "Reserve-margin headroom meets the achievable target",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Reserve-margin headroom 191.0MW meets the 6.2MW requirement (5% of total demand).",
-              "value_label": "headroom vs. target",
-              "value_actual": 191.0,
-              "value_reference": 6.2
-            },
-            {
-              "rule_id": "rule_4",
-              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No sale while demand is unserved.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_5",
-              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No avoidable charging during a price peak.",
-              "value_label": "avoidable charge vs. tolerance (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.1
-            },
-            {
-              "rule_id": "rule_6",
-              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
-              "value_label": "curtailed vs. minimum required",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_7",
-              "description": "Transmission headroom and grid frequency band respected",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net transmission flow and grid frequency both within limits.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8a",
-              "description": "Applied reserve floor stays within hard bounds (backstop)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8b",
-              "description": "Proposed floor matches the expected band for this scenario's volatility",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8c",
-              "description": "A floor raised above the calm band needs a volatility signal",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8d",
-              "description": "Decision states a justification for the proposed floor",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor justification provided.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8e",
-              "description": "Proposed floor required no clamp or ramp-down adjustment",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: profit)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Revenue $0 (sell 0.0MW @ $52/MWh) - cost $0 (buy 0.0MW @ $58/MWh) = net profit $-65 vs reference $-65.",
-              "value_label": "net profit vs. reference ($)",
-              "value_actual": -65.3,
-              "value_reference": -65.3
-            },
-            {
-              "rule_id": "rule_11",
-              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
-              "value_label": "proposed charge vs. renewable surplus (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_10",
-              "description": "Proposal needed no more than minor balancer repair",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Proposal needed no repair.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            }
-          ],
-          "notes": "All checks passed."
-        }
-      }
-    ],
-    "repairs": [],
-    "repaired": false,
-    "infeasible": false,
-    "margin_infeasible": false,
-    "ledger": {
-      "purchase_cost": 0.0,
-      "sales_revenue": 0.0,
-      "stored_energy_value_change": -65.3,
-      "profit": -65.3,
-      "emissions_tonnes": 0.0,
-      "carbon_cost": 0.0,
-      "renewable_utilisation_pct": 100.0,
-      "renewable_share_of_delivered_pct": 95.9
-    }
-  },
-  {
-    "scenario": {
-      "tick": 7,
-      "seed": 106,
-      "difficulty": "file_input",
-      "objective": "max_profit",
-      "solar_output_mw": 90.0,
-      "solar_forecast_mw": 88.0,
-      "wind_output_mw": 16.0,
-      "wind_forecast_mw": 18.0,
-      "solar_farms": [],
-      "wind_farms": [],
-      "base_demand_mw": 100.0,
-      "base_demand_forecast_mw": 102.0,
-      "total_demand_mw": 140.0,
-      "total_demand_forecast_mw": 142.0,
-      "grid_frequency_hz": 50.0,
-      "transmission_constraint_mw": 180.0,
-      "transmission_headroom_mw": 180.0,
-      "batteries": [
-        {
-          "id": "battery_1",
-          "capacity_mwh": 40.0,
-          "state_of_charge_pct": 90.0,
-          "min_safe_soc_pct": 10.0,
-          "max_charge_rate_mw": 10.0,
-          "max_discharge_rate_mw": 10.0,
-          "charging_efficiency_pct": 92.0,
-          "degradation_pct": 2.0,
-          "available": true
-        },
-        {
-          "id": "battery_2",
-          "capacity_mwh": 25.0,
-          "state_of_charge_pct": 85.0,
           "min_safe_soc_pct": 10.0,
           "max_charge_rate_mw": 6.0,
           "max_discharge_rate_mw": 6.0,
@@ -3156,7 +3665,7 @@
       {
         "name": "raw",
         "decision": {
-          "tick": 7,
+          "tick": 8,
           "objective_used": "max_profit",
           "battery_actions": [
             {
@@ -3171,19 +3680,19 @@
             }
           ],
           "market_action": "buy",
-          "market_amount_mw": 18.0,
+          "market_amount_mw": 16.0,
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
           "proposed_floor_pct": 35.0,
           "applied_floor_pct": 35.0,
-          "floor_justification": "Afternoon price spike and active price_spike event; raising reserve floor to 35% for volatility headroom.",
-          "reasoning": "Position: shortfall (net_position_mw: -34.0 MW). Ladder step: renewables (106 MW), then battery discharge above floor (16 MW total from battery_1 and battery_2), then grid purchase (18 MW, well within max_import_mw of 180.0 MW). Binding rules: reliability (critical load served), battery protection (respecting floors and rates). Cascade: max_profit (profit priority over cost/carbon).",
+          "floor_justification": "Afternoon price spike and volatile conditions drive raising the floor to 35% ahead of volatility.",
+          "reasoning": "Position is shortfall (-32.0 MW). Following shortfall ladder: use renewables (108 MW), discharge batteries to max capacity (battery_1: 10 MW, battery_2: 6 MW), then purchase remaining 16 MW from grid. Golden rules 1, 2, 3, 4 respected. Objective: max_profit, prioritising profit then cost then carbon, buying minimum required energy and maximizing discharge during high price spike.",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
-          "tick": 7,
+          "tick": 8,
           "status": "flagged",
           "rules": [
             {
@@ -3236,9 +3745,9 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 162.0MW meets the 7.0MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 164.0MW meets the 7.0MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 162.0,
+              "value_actual": 164.0,
               "value_reference": 7.0
             },
             {
@@ -3345,11 +3854,11 @@
               "description": "Decision matches the declared cascade (top priority: profit)",
               "severity": "flagged",
               "passed": true,
-              "applicable": false,
-              "detail": "N/A \u2014 no decision could change net profit here (best and worst feasible outcomes both ~$-1407).",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
+              "applicable": true,
+              "detail": "Revenue $0 (sell 0.0MW @ $157/MWh) - cost $693 (buy 16.0MW @ $173/MWh) = net profit $-1320 vs reference $-1320.",
+              "value_label": "net profit vs. reference ($)",
+              "value_actual": -1320.0,
+              "value_reference": -1320.0
             },
             {
               "rule_id": "rule_11",
@@ -3369,7 +3878,7 @@
       {
         "name": "applied",
         "decision": {
-          "tick": 7,
+          "tick": 8,
           "objective_used": "max_profit",
           "battery_actions": [
             {
@@ -3384,19 +3893,19 @@
             }
           ],
           "market_action": "buy",
-          "market_amount_mw": 18.0,
+          "market_amount_mw": 16.0,
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
           "proposed_floor_pct": 35.0,
           "applied_floor_pct": 35.0,
-          "floor_justification": "Afternoon price spike and active price_spike event; raising reserve floor to 35% for volatility headroom.",
-          "reasoning": "Position: shortfall (net_position_mw: -34.0 MW). Ladder step: renewables (106 MW), then battery discharge above floor (16 MW total from battery_1 and battery_2), then grid purchase (18 MW, well within max_import_mw of 180.0 MW). Binding rules: reliability (critical load served), battery protection (respecting floors and rates). Cascade: max_profit (profit priority over cost/carbon).",
+          "floor_justification": "Afternoon price spike and volatile conditions drive raising the floor to 35% ahead of volatility.",
+          "reasoning": "Position is shortfall (-32.0 MW). Following shortfall ladder: use renewables (108 MW), discharge batteries to max capacity (battery_1: 10 MW, battery_2: 6 MW), then purchase remaining 16 MW from grid. Golden rules 1, 2, 3, 4 respected. Objective: max_profit, prioritising profit then cost then carbon, buying minimum required energy and maximizing discharge during high price spike.",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
-          "tick": 7,
+          "tick": 8,
           "status": "flagged",
           "rules": [
             {
@@ -3449,9 +3958,9 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 162.0MW meets the 7.0MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 164.0MW meets the 7.0MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 162.0,
+              "value_actual": 164.0,
               "value_reference": 7.0
             },
             {
@@ -3558,11 +4067,11 @@
               "description": "Decision matches the declared cascade (top priority: profit)",
               "severity": "flagged",
               "passed": true,
-              "applicable": false,
-              "detail": "N/A \u2014 no decision could change net profit here (best and worst feasible outcomes both ~$-1407).",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
+              "applicable": true,
+              "detail": "Revenue $0 (sell 0.0MW @ $157/MWh) - cost $693 (buy 16.0MW @ $173/MWh) = net profit $-1320 vs reference $-1320.",
+              "value_label": "net profit vs. reference ($)",
+              "value_actual": -1320.0,
+              "value_reference": -1320.0
             },
             {
               "rule_id": "rule_11",
@@ -3596,529 +4105,14 @@
     "infeasible": false,
     "margin_infeasible": false,
     "ledger": {
-      "purchase_cost": 779.6,
+      "purchase_cost": 693.0,
       "sales_revenue": 0.0,
       "stored_energy_value_change": -627.0,
-      "profit": -1406.6,
-      "emissions_tonnes": 2.025,
-      "carbon_cost": 58.7,
+      "profit": -1320.0,
+      "emissions_tonnes": 1.8,
+      "carbon_cost": 52.2,
       "renewable_utilisation_pct": 100.0,
-      "renewable_share_of_delivered_pct": 75.7
-    }
-  },
-  {
-    "scenario": {
-      "tick": 8,
-      "seed": 107,
-      "difficulty": "file_input",
-      "objective": null,
-      "solar_output_mw": 55.0,
-      "solar_forecast_mw": 50.0,
-      "wind_output_mw": 22.0,
-      "wind_forecast_mw": 24.0,
-      "solar_farms": [],
-      "wind_farms": [],
-      "base_demand_mw": 110.0,
-      "base_demand_forecast_mw": 112.0,
-      "total_demand_mw": 152.0,
-      "total_demand_forecast_mw": 154.0,
-      "grid_frequency_hz": 50.0,
-      "transmission_constraint_mw": 180.0,
-      "transmission_headroom_mw": 180.0,
-      "batteries": [
-        {
-          "id": "battery_1",
-          "capacity_mwh": 40.0,
-          "state_of_charge_pct": 75.0,
-          "min_safe_soc_pct": 10.0,
-          "max_charge_rate_mw": 10.0,
-          "max_discharge_rate_mw": 10.0,
-          "charging_efficiency_pct": 92.0,
-          "degradation_pct": 2.0,
-          "available": true
-        },
-        {
-          "id": "battery_2",
-          "capacity_mwh": 25.0,
-          "state_of_charge_pct": 70.0,
-          "min_safe_soc_pct": 10.0,
-          "max_charge_rate_mw": 6.0,
-          "max_discharge_rate_mw": 6.0,
-          "charging_efficiency_pct": 90.0,
-          "degradation_pct": 2.0,
-          "available": true
-        }
-      ],
-      "previous_floor_pct": 25.0,
-      "electricity_price_per_mwh": 70.0,
-      "buy_price_per_mwh": 73.5,
-      "sell_price_per_mwh": 66.5,
-      "carbon_price_per_ton": 29.0,
-      "grid_carbon_intensity_t_per_mwh": 0.5,
-      "demand_response_incentive_per_mwh": 18.0,
-      "weather_forecast": "late afternoon",
-      "storm_alert": false,
-      "maintenance_scheduled": false,
-      "industrial_demand_mw": 42.0,
-      "events": [],
-      "expected_behavior": "n/a (file input)",
-      "expected_floor_min_pct": 20.0,
-      "expected_floor_max_pct": 30.0,
-      "expected_ladder_step": "renewables -> battery discharge above floor -> grid import -> reserve floor only if the Evaluator's own emergency check agrees",
-      "expected_emergency": false
-    },
-    "stages": [
-      {
-        "name": "raw",
-        "decision": {
-          "tick": 8,
-          "objective_used": "cost_efficiency",
-          "battery_actions": [
-            {
-              "battery_id": "battery_1",
-              "action": "discharge",
-              "amount_mw": 10.0
-            },
-            {
-              "battery_id": "battery_2",
-              "action": "discharge",
-              "amount_mw": 6.0
-            }
-          ],
-          "market_action": "buy",
-          "market_amount_mw": 59.0,
-          "curtail_solar_mw": 0.0,
-          "curtail_wind_mw": 0.0,
-          "demand_response_triggered": false,
-          "proposed_floor_pct": 25.0,
-          "applied_floor_pct": 25.0,
-          "floor_justification": "Calm forecast, stable day with no volatility signals; maintaining standard 25% floor.",
-          "reasoning": "Position: shortfall (-75.0 MW net). Dispatch ladder: renewables (77 MW), battery discharge above floor (16 MW total from battery_1 and battery_2), then grid purchase (59 MW). Golden rules 1, 2, and 4 applied (reliability, headroom, battery protection). Objective: cost_efficiency (purchasing the remaining deficit at minimal cost).",
-          "mode": "agent",
-          "failure_detail": null
-        },
-        "evaluation": {
-          "tick": 8,
-          "status": "pass",
-          "rules": [
-            {
-              "rule_id": "rule_1",
-              "description": "No curtailment beyond the minimum required while buying from the grid",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No simultaneous curtailment + grid purchase.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2a",
-              "description": "Battery must not discharge below its absolute minimum safe charge",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below its absolute minimum safe charge.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2b",
-              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below the Orchestrator's own applied floor.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_3",
-              "description": "Unserved load must not exceed the physically achievable minimum",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Total demand (152.0MW) fully served (unserved=0.0MW).",
-              "value_label": "unserved vs. achievable minimum",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_3b",
-              "description": "Reserve-margin headroom meets the achievable target",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Reserve-margin headroom 121.0MW meets the 7.6MW requirement (5% of total demand).",
-              "value_label": "headroom vs. target",
-              "value_actual": 121.0,
-              "value_reference": 7.6
-            },
-            {
-              "rule_id": "rule_4",
-              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No sale while demand is unserved.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_5",
-              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No avoidable charging during a price peak.",
-              "value_label": "avoidable charge vs. tolerance (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.1
-            },
-            {
-              "rule_id": "rule_6",
-              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
-              "value_label": "curtailed vs. minimum required",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_7",
-              "description": "Transmission headroom and grid frequency band respected",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net transmission flow and grid frequency both within limits.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8a",
-              "description": "Applied reserve floor stays within hard bounds (backstop)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8b",
-              "description": "Proposed floor matches the expected band for this scenario's volatility",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8c",
-              "description": "A floor raised above the calm band needs a volatility signal",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8d",
-              "description": "Decision states a justification for the proposed floor",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor justification provided.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8e",
-              "description": "Proposed floor required no clamp or ramp-down adjustment",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: cost)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net import cost $1084 vs reference $1084.",
-              "value_label": "net cost vs. reference ($)",
-              "value_actual": 1084.1,
-              "value_reference": 1084.1
-            },
-            {
-              "rule_id": "rule_11",
-              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
-              "value_label": "proposed charge vs. renewable surplus (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            }
-          ],
-          "notes": "All checks passed."
-        }
-      },
-      {
-        "name": "applied",
-        "decision": {
-          "tick": 8,
-          "objective_used": "cost_efficiency",
-          "battery_actions": [
-            {
-              "battery_id": "battery_1",
-              "action": "discharge",
-              "amount_mw": 10.0
-            },
-            {
-              "battery_id": "battery_2",
-              "action": "discharge",
-              "amount_mw": 6.0
-            }
-          ],
-          "market_action": "buy",
-          "market_amount_mw": 59.0,
-          "curtail_solar_mw": 0.0,
-          "curtail_wind_mw": 0.0,
-          "demand_response_triggered": false,
-          "proposed_floor_pct": 25.0,
-          "applied_floor_pct": 25.0,
-          "floor_justification": "Calm forecast, stable day with no volatility signals; maintaining standard 25% floor.",
-          "reasoning": "Position: shortfall (-75.0 MW net). Dispatch ladder: renewables (77 MW), battery discharge above floor (16 MW total from battery_1 and battery_2), then grid purchase (59 MW). Golden rules 1, 2, and 4 applied (reliability, headroom, battery protection). Objective: cost_efficiency (purchasing the remaining deficit at minimal cost).",
-          "mode": "agent",
-          "failure_detail": null
-        },
-        "evaluation": {
-          "tick": 8,
-          "status": "pass",
-          "rules": [
-            {
-              "rule_id": "rule_1",
-              "description": "No curtailment beyond the minimum required while buying from the grid",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No simultaneous curtailment + grid purchase.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2a",
-              "description": "Battery must not discharge below its absolute minimum safe charge",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below its absolute minimum safe charge.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_2b",
-              "description": "Battery should not discharge below the Orchestrator's own applied floor outside an emergency",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No battery discharged below the Orchestrator's own applied floor.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_3",
-              "description": "Unserved load must not exceed the physically achievable minimum",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Total demand (152.0MW) fully served (unserved=0.0MW).",
-              "value_label": "unserved vs. achievable minimum",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_3b",
-              "description": "Reserve-margin headroom meets the achievable target",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Reserve-margin headroom 121.0MW meets the 7.6MW requirement (5% of total demand).",
-              "value_label": "headroom vs. target",
-              "value_actual": 121.0,
-              "value_reference": 7.6
-            },
-            {
-              "rule_id": "rule_4",
-              "description": "No selling to the grid while demand is unserved (same unserved_mw as rule_3)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "No sale while demand is unserved.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_5",
-              "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "No avoidable charging during a price peak.",
-              "value_label": "avoidable charge vs. tolerance (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.1
-            },
-            {
-              "rule_id": "rule_6",
-              "description": "Curtailment must not exceed the minimum physically required (amount-based)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Curtailed 0.0MW vs 0.0MW minimum required (within 0.5MW tolerance).",
-              "value_label": "curtailed vs. minimum required",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_7",
-              "description": "Transmission headroom and grid frequency band respected",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net transmission flow and grid frequency both within limits.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8a",
-              "description": "Applied reserve floor stays within hard bounds (backstop)",
-              "severity": "fail",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor 25.0% is within [20.0, 60.0]%.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8b",
-              "description": "Proposed floor matches the expected band for this scenario's volatility",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8c",
-              "description": "A floor raised above the calm band needs a volatility signal",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor at 25.0% is either within the calm band or justified by a volatility signal.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8d",
-              "description": "Decision states a justification for the proposed floor",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Floor justification provided.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_8e",
-              "description": "Proposed floor required no clamp or ramp-down adjustment",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Applied floor matches the proposed floor \u2014 no clamp or ramp adjustment needed.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            },
-            {
-              "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: cost)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Net import cost $1084 vs reference $1084.",
-              "value_label": "net cost vs. reference ($)",
-              "value_actual": 1084.1,
-              "value_reference": 1084.1
-            },
-            {
-              "rule_id": "rule_11",
-              "description": "Battery charge should not exceed the renewable surplus (no buying to charge)",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Charging 0.0MW is within the 0.0MW renewable surplus.",
-              "value_label": "proposed charge vs. renewable surplus (MW)",
-              "value_actual": 0.0,
-              "value_reference": 0.0
-            },
-            {
-              "rule_id": "rule_10",
-              "description": "Proposal needed no more than minor balancer repair",
-              "severity": "flagged",
-              "passed": true,
-              "applicable": true,
-              "detail": "Proposal needed no repair.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
-            }
-          ],
-          "notes": "All checks passed."
-        }
-      }
-    ],
-    "repairs": [],
-    "repaired": false,
-    "infeasible": false,
-    "margin_infeasible": false,
-    "ledger": {
-      "purchase_cost": 1084.1,
-      "sales_revenue": 0.0,
-      "stored_energy_value_change": -266.0,
-      "profit": -1350.1,
-      "emissions_tonnes": 7.375,
-      "carbon_cost": 213.9,
-      "renewable_utilisation_pct": 100.0,
-      "renewable_share_of_delivered_pct": 50.7
+      "renewable_share_of_delivered_pct": 77.1
     }
   },
   {
@@ -4126,17 +4120,17 @@
       "tick": 9,
       "seed": 108,
       "difficulty": "file_input",
-      "objective": "min_carbon",
-      "solar_output_mw": 25.0,
-      "solar_forecast_mw": 20.0,
-      "wind_output_mw": 28.0,
-      "wind_forecast_mw": 30.0,
+      "objective": "cost_efficiency",
+      "solar_output_mw": 50.0,
+      "solar_forecast_mw": 48.0,
+      "wind_output_mw": 20.0,
+      "wind_forecast_mw": 19.0,
       "solar_farms": [],
       "wind_farms": [],
-      "base_demand_mw": 120.0,
-      "base_demand_forecast_mw": 125.0,
-      "total_demand_mw": 164.0,
-      "total_demand_forecast_mw": 169.0,
+      "base_demand_mw": 115.0,
+      "base_demand_forecast_mw": 118.0,
+      "total_demand_mw": 157.0,
+      "total_demand_forecast_mw": 160.0,
       "grid_frequency_hz": 50.0,
       "transmission_constraint_mw": 180.0,
       "transmission_headroom_mw": 180.0,
@@ -4165,20 +4159,20 @@
         }
       ],
       "previous_floor_pct": 25.0,
-      "electricity_price_per_mwh": 65.0,
-      "buy_price_per_mwh": 68.25,
-      "sell_price_per_mwh": 61.75,
+      "electricity_price_per_mwh": 190.0,
+      "buy_price_per_mwh": 199.5,
+      "sell_price_per_mwh": 180.5,
       "carbon_price_per_ton": 31.0,
-      "grid_carbon_intensity_t_per_mwh": 0.6,
+      "grid_carbon_intensity_t_per_mwh": 0.32,
       "demand_response_incentive_per_mwh": 19.0,
-      "weather_forecast": "sun setting",
+      "weather_forecast": "expensive but clean grid",
       "storm_alert": false,
       "maintenance_scheduled": false,
-      "industrial_demand_mw": 44.0,
+      "industrial_demand_mw": 42.0,
       "events": [],
       "expected_behavior": "n/a (file input)",
-      "expected_floor_min_pct": 20.0,
-      "expected_floor_max_pct": 30.0,
+      "expected_floor_min_pct": 30.0,
+      "expected_floor_max_pct": 45.0,
       "expected_ladder_step": "renewables -> battery discharge above floor -> grid import -> reserve floor only if the Evaluator's own emergency check agrees",
       "expected_emergency": false
     },
@@ -4187,7 +4181,7 @@
         "name": "raw",
         "decision": {
           "tick": 9,
-          "objective_used": "min_carbon",
+          "objective_used": "cost_efficiency",
           "battery_actions": [
             {
               "battery_id": "battery_1",
@@ -4201,20 +4195,20 @@
             }
           ],
           "market_action": "buy",
-          "market_amount_mw": 95.0,
+          "market_amount_mw": 71.0,
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable day, calm forecast; maintaining baseline 25% floor.",
-          "reasoning": "Position: shortfall. Dispatch step: renewables, then battery discharge, then grid purchase. Golden Rules: 1 (Reliability: serve total_demand_mw=164), 2 (Grid stability: headrooms respected). Objective: min_carbon (carbon, then cost, then renewables). Gen = 53 MW. Battery discharge = 16 MW. Remaining deficit = 164 - 53 - 16 = 95 MW purchased from grid (buying is necessary for reliability, and under min_carbon we purchase to cover the shortfall).",
+          "floor_justification": "Calm conditions with stable forecast; maintaining baseline 25% floor.",
+          "reasoning": "Position: shortfall. Following shortfall ladder: renewables (70 MW), then battery discharge above floor (16 MW total), then grid purchase (71 MW). Golden Rules: 1 (Reliability & total_demand_mw served) and 2 (Grid stability/headroom) binding. Objective: cost_efficiency (cost minimization via grid purchase after renewables & battery dispatch).",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
           "tick": 9,
-          "status": "pass",
+          "status": "flagged",
           "rules": [
             {
               "rule_id": "rule_1",
@@ -4255,7 +4249,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Total demand (164.0MW) fully served (unserved=0.0MW).",
+              "detail": "Total demand (157.0MW) fully served (unserved=0.0MW).",
               "value_label": "unserved vs. achievable minimum",
               "value_actual": 0.0,
               "value_reference": 0.0
@@ -4266,10 +4260,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 85.0MW meets the 8.2MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 109.0MW meets the 7.9MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 85.0,
-              "value_reference": 8.2
+              "value_actual": 109.0,
+              "value_reference": 7.9
             },
             {
               "rule_id": "rule_4",
@@ -4287,11 +4281,11 @@
               "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
               "severity": "flagged",
               "passed": true,
-              "applicable": false,
-              "detail": "N/A \u2014 this objective (min_carbon) doesn't trade cost against a price-peak charging decision.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
+              "applicable": true,
+              "detail": "No avoidable charging during a price peak.",
+              "value_label": "avoidable charge vs. tolerance (MW)",
+              "value_actual": 0.0,
+              "value_reference": 0.1
             },
             {
               "rule_id": "rule_6",
@@ -4330,9 +4324,9 @@
               "rule_id": "rule_8b",
               "description": "Proposed floor matches the expected band for this scenario's volatility",
               "severity": "flagged",
-              "passed": true,
+              "passed": false,
               "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
+              "detail": "Proposed floor 25.0% is outside the expected 30.0-45.0% band for this scenario's volatility.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -4372,14 +4366,14 @@
             },
             {
               "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: carbon)",
+              "description": "Decision matches the declared cascade (top priority: cost)",
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Emissions 14.25t vs reference minimum 14.25t.",
-              "value_label": "emissions vs. reference minimum (t)",
-              "value_actual": 14.2,
-              "value_reference": 14.2
+              "detail": "Net import cost $3541 vs reference $3541.",
+              "value_label": "net cost vs. reference ($)",
+              "value_actual": 3541.1,
+              "value_reference": 3541.1
             },
             {
               "rule_id": "rule_11",
@@ -4393,14 +4387,14 @@
               "value_reference": 0.0
             }
           ],
-          "notes": "All checks passed."
+          "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
         }
       },
       {
         "name": "applied",
         "decision": {
           "tick": 9,
-          "objective_used": "min_carbon",
+          "objective_used": "cost_efficiency",
           "battery_actions": [
             {
               "battery_id": "battery_1",
@@ -4414,20 +4408,20 @@
             }
           ],
           "market_action": "buy",
-          "market_amount_mw": 95.0,
+          "market_amount_mw": 71.0,
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable day, calm forecast; maintaining baseline 25% floor.",
-          "reasoning": "Position: shortfall. Dispatch step: renewables, then battery discharge, then grid purchase. Golden Rules: 1 (Reliability: serve total_demand_mw=164), 2 (Grid stability: headrooms respected). Objective: min_carbon (carbon, then cost, then renewables). Gen = 53 MW. Battery discharge = 16 MW. Remaining deficit = 164 - 53 - 16 = 95 MW purchased from grid (buying is necessary for reliability, and under min_carbon we purchase to cover the shortfall).",
+          "floor_justification": "Calm conditions with stable forecast; maintaining baseline 25% floor.",
+          "reasoning": "Position: shortfall. Following shortfall ladder: renewables (70 MW), then battery discharge above floor (16 MW total), then grid purchase (71 MW). Golden Rules: 1 (Reliability & total_demand_mw served) and 2 (Grid stability/headroom) binding. Objective: cost_efficiency (cost minimization via grid purchase after renewables & battery dispatch).",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
           "tick": 9,
-          "status": "pass",
+          "status": "flagged",
           "rules": [
             {
               "rule_id": "rule_1",
@@ -4468,7 +4462,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Total demand (164.0MW) fully served (unserved=0.0MW).",
+              "detail": "Total demand (157.0MW) fully served (unserved=0.0MW).",
               "value_label": "unserved vs. achievable minimum",
               "value_actual": 0.0,
               "value_reference": 0.0
@@ -4479,10 +4473,10 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Reserve-margin headroom 85.0MW meets the 8.2MW requirement (5% of total demand).",
+              "detail": "Reserve-margin headroom 109.0MW meets the 7.9MW requirement (5% of total demand).",
               "value_label": "headroom vs. target",
-              "value_actual": 85.0,
-              "value_reference": 8.2
+              "value_actual": 109.0,
+              "value_reference": 7.9
             },
             {
               "rule_id": "rule_4",
@@ -4500,11 +4494,11 @@
               "description": "Should not charge the battery at a daily price high outside an emergency, beyond what unsellable surplus justifies",
               "severity": "flagged",
               "passed": true,
-              "applicable": false,
-              "detail": "N/A \u2014 this objective (min_carbon) doesn't trade cost against a price-peak charging decision.",
-              "value_label": null,
-              "value_actual": null,
-              "value_reference": null
+              "applicable": true,
+              "detail": "No avoidable charging during a price peak.",
+              "value_label": "avoidable charge vs. tolerance (MW)",
+              "value_actual": 0.0,
+              "value_reference": 0.1
             },
             {
               "rule_id": "rule_6",
@@ -4543,9 +4537,9 @@
               "rule_id": "rule_8b",
               "description": "Proposed floor matches the expected band for this scenario's volatility",
               "severity": "flagged",
-              "passed": true,
+              "passed": false,
               "applicable": true,
-              "detail": "Proposed floor 25.0% is within the expected 20.0-30.0% band.",
+              "detail": "Proposed floor 25.0% is outside the expected 30.0-45.0% band for this scenario's volatility.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -4585,14 +4579,14 @@
             },
             {
               "rule_id": "rule_9",
-              "description": "Decision matches the declared cascade (top priority: carbon)",
+              "description": "Decision matches the declared cascade (top priority: cost)",
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Emissions 14.25t vs reference minimum 14.25t.",
-              "value_label": "emissions vs. reference minimum (t)",
-              "value_actual": 14.2,
-              "value_reference": 14.2
+              "detail": "Net import cost $3541 vs reference $3541.",
+              "value_label": "net cost vs. reference ($)",
+              "value_actual": 3541.1,
+              "value_reference": 3541.1
             },
             {
               "rule_id": "rule_11",
@@ -4617,7 +4611,7 @@
               "value_reference": null
             }
           ],
-          "notes": "All checks passed."
+          "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
         }
       }
     ],
@@ -4626,14 +4620,14 @@
     "infeasible": false,
     "margin_infeasible": false,
     "ledger": {
-      "purchase_cost": 1620.9,
+      "purchase_cost": 3541.1,
       "sales_revenue": 0.0,
-      "stored_energy_value_change": -247.0,
-      "profit": -1867.9,
-      "emissions_tonnes": 14.25,
-      "carbon_cost": 441.8,
+      "stored_energy_value_change": -722.0,
+      "profit": -4263.1,
+      "emissions_tonnes": 5.68,
+      "carbon_cost": 176.1,
       "renewable_utilisation_pct": 100.0,
-      "renewable_share_of_delivered_pct": 32.3
+      "renewable_share_of_delivered_pct": 44.6
     }
   },
   {

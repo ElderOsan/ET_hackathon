@@ -85,6 +85,10 @@ export default function FileInputPanel() {
           <p style={{ fontSize: 13, margin: "8px 0" }}>
             <strong>{preview.ok_count}</strong> valid, <strong>{preview.error_count}</strong> error{preview.error_count === 1 ? "" : "s"} — run_id <code>{preview.run_id}</code>
           </p>
+          <p style={{ fontSize: 13, margin: "0 0 8px", color: "#9aa4b2" }}>
+            Estimated: <strong>{preview.estimated_calls}</strong> model call{preview.estimated_calls === 1 ? "" : "s"} (one per valid row), ~<strong>{preview.estimated_seconds}s</strong>{" "}
+            <span style={{ fontSize: 11 }}>(measured mean latency per call, first-run / no-cache case — a resumed run with cached rows is much faster)</span>
+          </p>
           <table style={{ marginBottom: 12 }}>
             <thead>
               <tr><th>Row</th><th>Tick</th><th>Status</th><th>Volatility (derived)</th><th>Expected floor band</th><th>Errors</th></tr>

@@ -14,7 +14,7 @@ from app.agents.pipeline import run_decision_pipeline
 from app.data import file_input
 from app.data.recording import RecordingRecorder, SafeModeRecorder
 
-RUN_ID = "day_report_example"
+RUN_ID = sys.argv[1] if len(sys.argv) > 1 else "day_report_example"
 
 rows = file_input.EXAMPLE_DAY_ROWS
 results = file_input.validate_rows(rows)
@@ -28,6 +28,6 @@ for r in results:
     applied = next(s for s in run_result.stages if s.name == "applied")
     print(f"row={r.row_index} tick={r.tick} mode={applied.decision.mode} status={applied.evaluation.status.value}")
 
-out_path = Path(__file__).resolve().parents[2] / "evidence" / "day_report_example_agent_results.json"
+out_path = Path(__file__).resolve().parents[2] / "evidence" / f"{RUN_ID}_agent_results.json"
 out_path.write_text(json.dumps([r.model_dump(mode="json") for r in run_results], indent=2))
 print(f"wrote {out_path}")

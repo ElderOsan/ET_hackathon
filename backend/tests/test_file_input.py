@@ -23,8 +23,8 @@ def _example_csv_bytes() -> bytes:
 
 
 def test_01_good_row_round_trips_with_derived_floor_band():
-    row = dict(file_input.EXAMPLE_DAY_ROWS[6])  # the price-spike row
-    scenario = file_input.row_to_scenario(row, 6)
+    row = dict(file_input.EXAMPLE_DAY_ROWS[7])  # the price-spike row
+    scenario = file_input.row_to_scenario(row, 7)
     assert scenario.difficulty == Difficulty.FILE_INPUT
     assert scenario.electricity_price_per_mwh >= 100.0
     # price >= DISPATCHER_PRICE_SPIKE_THRESHOLD_USD -> some_volatility -> 30-45% band, not the

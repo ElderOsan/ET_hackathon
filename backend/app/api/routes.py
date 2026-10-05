@@ -156,6 +156,8 @@ class FileInputPreviewResponse(BaseModel):
     rows: list[FileInputRowPreview]
     ok_count: int
     error_count: int
+    estimated_calls: int
+    estimated_seconds: float
 
 
 @router.post("/file-input/preview", response_model=FileInputPreviewResponse)
@@ -178,7 +180,10 @@ async def file_input_preview(file: UploadFile = File(...)):
         for r in results
     ]
     ok_count = sum(1 for r in results if r.status == "ok")
-    return FileInputPreviewResponse(run_id=run_id, rows=rows, ok_count=ok_count, error_count=len(results) - ok_count)
+    return FileInputPreviewResponse(
+        run_id=run_id, rows=rows, ok_count=ok_count, error_count=len(results) - ok_count,
+        estimated_calls=ok_count, estimated_seconds=round(ok_count * file_input.ESTIMATED_SECONDS_PER_CALL, 1),
+    )
 
 
 class FileInputRunRowRequest(BaseModel):

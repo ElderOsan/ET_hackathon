@@ -1,0 +1,38 @@
+{
+  "cache_key": "44530b45c1a2857f8f89615a",
+  "scenario_hash": "2bfe3d88dc7ae979",
+  "prompt_version": "8088e95c1e20b0c7",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 1.0,
+  "sample_index": 6,
+  "tick": 7,
+  "seed": 106,
+  "recorded_at": 1791204949.7002938,
+  "request": {
+    "contents": "Declared objective for this tick: max_renewable_utilisation\n\nEnvironment state:\n{\n  \"tick\": 7,\n  \"seed\": 106,\n  \"difficulty\": \"file_input\",\n  \"objective\": \"max_renewable_utilisation\",\n  \"solar_output_mw\": 105.0,\n  \"solar_forecast_mw\": 103.0,\n  \"wind_output_mw\": 22.0,\n  \"wind_forecast_mw\": 21.0,\n  \"solar_farms\": [],\n  \"wind_farms\": [],\n  \"base_demand_mw\": 60.0,\n  \"base_demand_forecast_mw\": 61.0,\n  \"total_demand_mw\": 87.0,\n  \"total_demand_forecast_mw\": 88.0,\n  \"grid_frequency_hz\": 50.0,\n  \"transmission_constraint_mw\": 180.0,\n  \"transmission_headroom_mw\": 12.0,\n  \"batteries\": [\n    {\n      \"id\": \"battery_1\",\n      \"capacity_mwh\": 40.0,\n      \"state_of_charge_pct\": 50.0,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 10.0,\n      \"max_discharge_rate_mw\": 10.0,\n      \"charging_efficiency_pct\": 92.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    },\n    {\n      \"id\": \"battery_2\",\n      \"capacity_mwh\": 25.0,\n      \"state_of_charge_pct\": 50.0,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 6.0,\n      \"max_discharge_rate_mw\": 6.0,\n      \"charging_efficiency_pct\": 90.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    }\n  ],\n  \"previous_floor_pct\": 25.0,\n  \"electricity_price_per_mwh\": 36.0,\n  \"buy_price_per_mwh\": 37.8,\n  \"sell_price_per_mwh\": 34.2,\n  \"carbon_price_per_ton\": 29.0,\n  \"grid_carbon_intensity_t_per_mwh\": 0.48,\n  \"demand_response_incentive_per_mwh\": 18.0,\n  \"weather_forecast\": \"early afternoon surplus, line still constrained\",\n  \"storm_alert\": false,\n  \"maintenance_scheduled\": false,\n  \"industrial_demand_mw\": 27.0,\n  \"events\": []\n}\n\nPhysics facts (computed \u2014 use directly, do not recompute):\n{\n  \"total_generation_mw\": 127.0,\n  \"net_position_mw\": 40.0,\n  \"position\": \"surplus\",\n  \"forecast_total_generation_mw\": 124.0,\n  \"forecast_net_position_mw\": 36.0,\n  \"forecast_position\": \"surplus\",\n  \"sellable_surplus_mw\": 12.0,\n  \"max_import_mw\": 12.0,\n  \"per_battery\": [\n    {\n      \"battery_id\": \"battery_1\",\n      \"discharge_available_mw\": 10.0,\n      \"charge_headroom_mw\": 10.0\n    },\n    {\n      \"battery_id\": \"battery_2\",\n      \"discharge_available_mw\": 6.0,\n      \"charge_headroom_mw\": 6.0\n    }\n  ],\n  \"total_discharge_available_mw\": 16.0,\n  \"total_charge_headroom_mw\": 16.0\n}"
+  },
+  "status": "ok",
+  "response_args": {
+    "floor_justification": "Stable day, calm forecast; maintaining baseline reserve floor at 25.0%.",
+    "reasoning": "Position is surplus (net +40.0 MW). Following surplus dispatch ladder: serve load, charge batteries up to 16 MW total headroom, sell 12 MW (max transmission headroom), and curtail remaining 12 MW surplus. Golden rules 1, 2, 3, 4 respected. Objective is max_renewable_utilisation, prioritizing renewable utilisation (charging and selling renewables while curtailing only excess beyond capacity).",
+    "demand_response_triggered": false,
+    "reserve_floor_pct": 25,
+    "battery_actions": [
+      {
+        "amount_mw": 10,
+        "battery_id": "battery_1",
+        "action": "charge"
+      },
+      {
+        "amount_mw": 6,
+        "battery_id": "battery_2",
+        "action": "charge"
+      }
+    ],
+    "curtail_wind_mw": 0,
+    "curtail_solar_mw": 12,
+    "market_action": "sell",
+    "market_amount_mw": 12
+  },
+  "latency_ms": 1781.0
+}

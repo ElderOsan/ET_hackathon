@@ -63,9 +63,9 @@
       "seed": 101,
       "objective": "none",
       "inputs": {
-        "solar_output_mw": 5.0,
-        "wind_output_mw": 40.0,
-        "total_demand_mw": 105.0,
+        "solar_output_mw": 0.0,
+        "wind_output_mw": 38.0,
+        "total_demand_mw": 103.0,
         "electricity_price_per_mwh": 40.0,
         "battery_soc_pct": {
           "battery_1": 42.0,
@@ -74,17 +74,12 @@
       },
       "decision": {
         "market_action": "buy",
-        "market_amount_mw": 44.0,
+        "market_amount_mw": 55.0,
         "battery_actions": [
           {
             "battery_id": "battery_1",
             "action": "discharge",
             "amount_mw": 10.0
-          },
-          {
-            "battery_id": "battery_2",
-            "action": "discharge",
-            "amount_mw": 6.0
           }
         ],
         "curtail_solar_mw": 0.0,
@@ -94,24 +89,26 @@
       "applied_floor_pct": 25.0,
       "resulting_soc_pct": {
         "battery_1": 35.75,
-        "battery_2": 42.0
+        "battery_2": 48.0
       },
       "verdict": {
-        "raw": "pass",
-        "applied": "pass",
-        "failing_rules": []
+        "raw": "flagged",
+        "applied": "flagged",
+        "failing_rules": [
+          "rule_8b"
+        ]
       },
       "ledger": {
         "sold_mw": 0.0,
-        "bought_mw": 44.0,
+        "bought_mw": 55.0,
         "charged_mw": 0,
-        "discharged_mw": 16.0,
+        "discharged_mw": 10.0,
         "curtailed_mw": 0.0,
         "unserved_mw": 0.0,
-        "cost": 462.0,
+        "cost": 577.5,
         "revenue": 0.0,
-        "profit": -614.0,
-        "emissions_tonnes": 6.05,
+        "profit": -672.5,
+        "emissions_tonnes": 7.563,
         "renewable_utilisation_pct": 100.0
       }
     },
@@ -120,67 +117,10 @@
       "seed": 102,
       "objective": "none",
       "inputs": {
-        "solar_output_mw": 35.0,
-        "wind_output_mw": 30.0,
-        "total_demand_mw": 128.0,
-        "electricity_price_per_mwh": 48.0,
-        "battery_soc_pct": {
-          "battery_1": 40.0,
-          "battery_2": 45.0
-        }
-      },
-      "decision": {
-        "market_action": "buy",
-        "market_amount_mw": 47.0,
-        "battery_actions": [
-          {
-            "battery_id": "battery_1",
-            "action": "discharge",
-            "amount_mw": 10.0
-          },
-          {
-            "battery_id": "battery_2",
-            "action": "discharge",
-            "amount_mw": 6.0
-          }
-        ],
-        "curtail_solar_mw": 0.0,
-        "curtail_wind_mw": 0.0,
-        "mode": "agent"
-      },
-      "applied_floor_pct": 25.0,
-      "resulting_soc_pct": {
-        "battery_1": 33.75,
-        "battery_2": 39.0
-      },
-      "verdict": {
-        "raw": "pass",
-        "applied": "pass",
-        "failing_rules": []
-      },
-      "ledger": {
-        "sold_mw": 0.0,
-        "bought_mw": 47.0,
-        "charged_mw": 0,
-        "discharged_mw": 16.0,
-        "curtailed_mw": 0.0,
-        "unserved_mw": 0.0,
-        "cost": 592.2,
-        "revenue": 0.0,
-        "profit": -774.6,
-        "emissions_tonnes": 5.875,
-        "renewable_utilisation_pct": 100.0
-      }
-    },
-    {
-      "tick": 4,
-      "seed": 103,
-      "objective": "none",
-      "inputs": {
-        "solar_output_mw": 70.0,
-        "wind_output_mw": 25.0,
-        "total_demand_mw": 135.0,
-        "electricity_price_per_mwh": 50.0,
+        "solar_output_mw": 0.0,
+        "wind_output_mw": 20.0,
+        "total_demand_mw": 116.0,
+        "electricity_price_per_mwh": 55.0,
         "battery_soc_pct": {
           "battery_1": 55.0,
           "battery_2": 55.0
@@ -188,7 +128,7 @@
       },
       "decision": {
         "market_action": "buy",
-        "market_amount_mw": 24.0,
+        "market_amount_mw": 80.0,
         "battery_actions": [
           {
             "battery_id": "battery_1",
@@ -205,7 +145,7 @@
         "curtail_wind_mw": 0.0,
         "mode": "agent"
       },
-      "applied_floor_pct": 25.0,
+      "applied_floor_pct": 45.0,
       "resulting_soc_pct": {
         "battery_1": 48.75,
         "battery_2": 49.0
@@ -217,203 +157,30 @@
       },
       "ledger": {
         "sold_mw": 0.0,
-        "bought_mw": 24.0,
+        "bought_mw": 80.0,
         "charged_mw": 0,
         "discharged_mw": 16.0,
         "curtailed_mw": 0.0,
         "unserved_mw": 0.0,
-        "cost": 315.0,
+        "cost": 1155.0,
         "revenue": 0.0,
-        "profit": -505.0,
-        "emissions_tonnes": 3.0,
+        "profit": -1364.0,
+        "emissions_tonnes": 10.0,
         "renewable_utilisation_pct": 100.0
       }
     },
     {
-      "tick": 5,
-      "seed": 104,
-      "objective": "none",
+      "tick": 4,
+      "seed": 103,
+      "objective": "min_carbon",
       "inputs": {
-        "solar_output_mw": 95.0,
-        "wind_output_mw": 20.0,
-        "total_demand_mw": 130.0,
-        "electricity_price_per_mwh": 45.0,
-        "battery_soc_pct": {
-          "battery_1": 70.0,
-          "battery_2": 65.0
-        }
-      },
-      "decision": {
-        "market_action": "hold",
-        "market_amount_mw": 0.0,
-        "battery_actions": [
-          {
-            "battery_id": "battery_1",
-            "action": "discharge",
-            "amount_mw": 10.0
-          },
-          {
-            "battery_id": "battery_2",
-            "action": "discharge",
-            "amount_mw": 5.0
-          }
-        ],
-        "curtail_solar_mw": 0.0,
-        "curtail_wind_mw": 0.0,
-        "mode": "agent"
-      },
-      "applied_floor_pct": 25.0,
-      "resulting_soc_pct": {
-        "battery_1": 63.75,
-        "battery_2": 60.0
-      },
-      "verdict": {
-        "raw": "pass",
-        "applied": "pass",
-        "failing_rules": []
-      },
-      "ledger": {
-        "sold_mw": 0.0,
-        "bought_mw": 0.0,
-        "charged_mw": 0,
-        "discharged_mw": 15.0,
-        "curtailed_mw": 0.0,
-        "unserved_mw": 0.0,
-        "cost": 0.0,
-        "revenue": 0.0,
-        "profit": -160.3,
-        "emissions_tonnes": 0.0,
-        "renewable_utilisation_pct": 100.0
-      }
-    },
-    {
-      "tick": 6,
-      "seed": 105,
-      "objective": "max_profit",
-      "inputs": {
-        "solar_output_mw": 100.0,
-        "wind_output_mw": 18.0,
+        "solar_output_mw": 20.0,
+        "wind_output_mw": 28.0,
         "total_demand_mw": 123.0,
-        "electricity_price_per_mwh": 55.0,
+        "electricity_price_per_mwh": 28.0,
         "battery_soc_pct": {
-          "battery_1": 85.0,
-          "battery_2": 80.0
-        }
-      },
-      "decision": {
-        "market_action": "hold",
-        "market_amount_mw": 0.0,
-        "battery_actions": [
-          {
-            "battery_id": "battery_1",
-            "action": "discharge",
-            "amount_mw": 5.0
-          },
-          {
-            "battery_id": "battery_2",
-            "action": "hold",
-            "amount_mw": 0.0
-          }
-        ],
-        "curtail_solar_mw": 0.0,
-        "curtail_wind_mw": 0.0,
-        "mode": "agent"
-      },
-      "applied_floor_pct": 25.0,
-      "resulting_soc_pct": {
-        "battery_1": 81.875,
-        "battery_2": 80.0
-      },
-      "verdict": {
-        "raw": "pass",
-        "applied": "pass",
-        "failing_rules": []
-      },
-      "ledger": {
-        "sold_mw": 0.0,
-        "bought_mw": 0.0,
-        "charged_mw": 0,
-        "discharged_mw": 5.0,
-        "curtailed_mw": 0.0,
-        "unserved_mw": 0.0,
-        "cost": 0.0,
-        "revenue": 0.0,
-        "profit": -65.3,
-        "emissions_tonnes": 0.0,
-        "renewable_utilisation_pct": 100.0
-      }
-    },
-    {
-      "tick": 7,
-      "seed": 106,
-      "objective": "max_profit",
-      "inputs": {
-        "solar_output_mw": 90.0,
-        "wind_output_mw": 16.0,
-        "total_demand_mw": 140.0,
-        "electricity_price_per_mwh": 165.0,
-        "battery_soc_pct": {
-          "battery_1": 90.0,
-          "battery_2": 85.0
-        }
-      },
-      "decision": {
-        "market_action": "buy",
-        "market_amount_mw": 18.0,
-        "battery_actions": [
-          {
-            "battery_id": "battery_1",
-            "action": "discharge",
-            "amount_mw": 10.0
-          },
-          {
-            "battery_id": "battery_2",
-            "action": "discharge",
-            "amount_mw": 6.0
-          }
-        ],
-        "curtail_solar_mw": 0.0,
-        "curtail_wind_mw": 0.0,
-        "mode": "agent"
-      },
-      "applied_floor_pct": 35.0,
-      "resulting_soc_pct": {
-        "battery_1": 83.75,
-        "battery_2": 79.0
-      },
-      "verdict": {
-        "raw": "flagged",
-        "applied": "flagged",
-        "failing_rules": [
-          "rule_8c"
-        ]
-      },
-      "ledger": {
-        "sold_mw": 0.0,
-        "bought_mw": 18.0,
-        "charged_mw": 0,
-        "discharged_mw": 16.0,
-        "curtailed_mw": 0.0,
-        "unserved_mw": 0.0,
-        "cost": 779.6,
-        "revenue": 0.0,
-        "profit": -1406.6,
-        "emissions_tonnes": 2.025,
-        "renewable_utilisation_pct": 100.0
-      }
-    },
-    {
-      "tick": 8,
-      "seed": 107,
-      "objective": "none",
-      "inputs": {
-        "solar_output_mw": 55.0,
-        "wind_output_mw": 22.0,
-        "total_demand_mw": 152.0,
-        "electricity_price_per_mwh": 70.0,
-        "battery_soc_pct": {
-          "battery_1": 75.0,
-          "battery_2": 70.0
+          "battery_1": 50.0,
+          "battery_2": 52.0
         }
       },
       "decision": {
@@ -437,8 +204,8 @@
       },
       "applied_floor_pct": 25.0,
       "resulting_soc_pct": {
-        "battery_1": 68.75,
-        "battery_2": 64.0
+        "battery_1": 43.75,
+        "battery_2": 46.0
       },
       "verdict": {
         "raw": "pass",
@@ -452,22 +219,252 @@
         "discharged_mw": 16.0,
         "curtailed_mw": 0.0,
         "unserved_mw": 0.0,
-        "cost": 1084.1,
+        "cost": 433.6,
         "revenue": 0.0,
-        "profit": -1350.1,
-        "emissions_tonnes": 7.375,
+        "profit": -540.0,
+        "emissions_tonnes": 12.537,
+        "renewable_utilisation_pct": 100.0
+      }
+    },
+    {
+      "tick": 5,
+      "seed": 104,
+      "objective": "max_profit",
+      "inputs": {
+        "solar_output_mw": 85.0,
+        "wind_output_mw": 30.0,
+        "total_demand_mw": 80.0,
+        "electricity_price_per_mwh": 45.0,
+        "battery_soc_pct": {
+          "battery_1": 50.0,
+          "battery_2": 50.0
+        }
+      },
+      "decision": {
+        "market_action": "sell",
+        "market_amount_mw": 12.0,
+        "battery_actions": [
+          {
+            "battery_id": "battery_1",
+            "action": "charge",
+            "amount_mw": 10.0
+          },
+          {
+            "battery_id": "battery_2",
+            "action": "charge",
+            "amount_mw": 6.0
+          }
+        ],
+        "curtail_solar_mw": 7.0,
+        "curtail_wind_mw": 0.0,
+        "mode": "agent"
+      },
+      "applied_floor_pct": 25.0,
+      "resulting_soc_pct": {
+        "battery_1": 55.75,
+        "battery_2": 55.4
+      },
+      "verdict": {
+        "raw": "pass",
+        "applied": "pass",
+        "failing_rules": []
+      },
+      "ledger": {
+        "sold_mw": 12.0,
+        "bought_mw": 0.0,
+        "charged_mw": 16.0,
+        "discharged_mw": 0,
+        "curtailed_mw": 7.0,
+        "unserved_mw": 0.0,
+        "cost": 0.0,
+        "revenue": 128.2,
+        "profit": 284.2,
+        "emissions_tonnes": 0.0,
+        "renewable_utilisation_pct": 93.9
+      }
+    },
+    {
+      "tick": 6,
+      "seed": 105,
+      "objective": "none",
+      "inputs": {
+        "solar_output_mw": 100.0,
+        "wind_output_mw": 28.0,
+        "total_demand_mw": 84.0,
+        "electricity_price_per_mwh": 38.0,
+        "battery_soc_pct": {
+          "battery_1": 50.0,
+          "battery_2": 50.0
+        }
+      },
+      "decision": {
+        "market_action": "sell",
+        "market_amount_mw": 12.0,
+        "battery_actions": [
+          {
+            "battery_id": "battery_1",
+            "action": "charge",
+            "amount_mw": 10.0
+          },
+          {
+            "battery_id": "battery_2",
+            "action": "charge",
+            "amount_mw": 6.0
+          }
+        ],
+        "curtail_solar_mw": 16.0,
+        "curtail_wind_mw": 0.0,
+        "mode": "agent"
+      },
+      "applied_floor_pct": 25.0,
+      "resulting_soc_pct": {
+        "battery_1": 55.75,
+        "battery_2": 55.4
+      },
+      "verdict": {
+        "raw": "pass",
+        "applied": "pass",
+        "failing_rules": []
+      },
+      "ledger": {
+        "sold_mw": 12.0,
+        "bought_mw": 0.0,
+        "charged_mw": 16.0,
+        "discharged_mw": 0,
+        "curtailed_mw": 16.0,
+        "unserved_mw": 0.0,
+        "cost": 0.0,
+        "revenue": 108.3,
+        "profit": 240.1,
+        "emissions_tonnes": 0.0,
+        "renewable_utilisation_pct": 87.5
+      }
+    },
+    {
+      "tick": 7,
+      "seed": 106,
+      "objective": "max_renewable_utilisation",
+      "inputs": {
+        "solar_output_mw": 105.0,
+        "wind_output_mw": 22.0,
+        "total_demand_mw": 87.0,
+        "electricity_price_per_mwh": 36.0,
+        "battery_soc_pct": {
+          "battery_1": 50.0,
+          "battery_2": 50.0
+        }
+      },
+      "decision": {
+        "market_action": "sell",
+        "market_amount_mw": 12.0,
+        "battery_actions": [
+          {
+            "battery_id": "battery_1",
+            "action": "charge",
+            "amount_mw": 10.0
+          },
+          {
+            "battery_id": "battery_2",
+            "action": "charge",
+            "amount_mw": 6.0
+          }
+        ],
+        "curtail_solar_mw": 12.0,
+        "curtail_wind_mw": 0.0,
+        "mode": "agent"
+      },
+      "applied_floor_pct": 25.0,
+      "resulting_soc_pct": {
+        "battery_1": 55.75,
+        "battery_2": 55.4
+      },
+      "verdict": {
+        "raw": "pass",
+        "applied": "pass",
+        "failing_rules": []
+      },
+      "ledger": {
+        "sold_mw": 12.0,
+        "bought_mw": 0.0,
+        "charged_mw": 16.0,
+        "discharged_mw": 0,
+        "curtailed_mw": 12.0,
+        "unserved_mw": 0.0,
+        "cost": 0.0,
+        "revenue": 102.6,
+        "profit": 227.4,
+        "emissions_tonnes": 0.0,
+        "renewable_utilisation_pct": 90.6
+      }
+    },
+    {
+      "tick": 8,
+      "seed": 107,
+      "objective": "max_profit",
+      "inputs": {
+        "solar_output_mw": 90.0,
+        "wind_output_mw": 18.0,
+        "total_demand_mw": 140.0,
+        "electricity_price_per_mwh": 165.0,
+        "battery_soc_pct": {
+          "battery_1": 85.0,
+          "battery_2": 80.0
+        }
+      },
+      "decision": {
+        "market_action": "buy",
+        "market_amount_mw": 16.0,
+        "battery_actions": [
+          {
+            "battery_id": "battery_1",
+            "action": "discharge",
+            "amount_mw": 10.0
+          },
+          {
+            "battery_id": "battery_2",
+            "action": "discharge",
+            "amount_mw": 6.0
+          }
+        ],
+        "curtail_solar_mw": 0.0,
+        "curtail_wind_mw": 0.0,
+        "mode": "agent"
+      },
+      "applied_floor_pct": 35.0,
+      "resulting_soc_pct": {
+        "battery_1": 78.75,
+        "battery_2": 74.0
+      },
+      "verdict": {
+        "raw": "flagged",
+        "applied": "flagged",
+        "failing_rules": [
+          "rule_8c"
+        ]
+      },
+      "ledger": {
+        "sold_mw": 0.0,
+        "bought_mw": 16.0,
+        "charged_mw": 0,
+        "discharged_mw": 16.0,
+        "curtailed_mw": 0.0,
+        "unserved_mw": 0.0,
+        "cost": 693.0,
+        "revenue": 0.0,
+        "profit": -1320.0,
+        "emissions_tonnes": 1.8,
         "renewable_utilisation_pct": 100.0
       }
     },
     {
       "tick": 9,
       "seed": 108,
-      "objective": "min_carbon",
+      "objective": "cost_efficiency",
       "inputs": {
-        "solar_output_mw": 25.0,
-        "wind_output_mw": 28.0,
-        "total_demand_mw": 164.0,
-        "electricity_price_per_mwh": 65.0,
+        "solar_output_mw": 50.0,
+        "wind_output_mw": 20.0,
+        "total_demand_mw": 157.0,
+        "electricity_price_per_mwh": 190.0,
         "battery_soc_pct": {
           "battery_1": 65.0,
           "battery_2": 60.0
@@ -475,7 +472,7 @@
       },
       "decision": {
         "market_action": "buy",
-        "market_amount_mw": 95.0,
+        "market_amount_mw": 71.0,
         "battery_actions": [
           {
             "battery_id": "battery_1",
@@ -498,21 +495,23 @@
         "battery_2": 54.0
       },
       "verdict": {
-        "raw": "pass",
-        "applied": "pass",
-        "failing_rules": []
+        "raw": "flagged",
+        "applied": "flagged",
+        "failing_rules": [
+          "rule_8b"
+        ]
       },
       "ledger": {
         "sold_mw": 0.0,
-        "bought_mw": 95.0,
+        "bought_mw": 71.0,
         "charged_mw": 0,
         "discharged_mw": 16.0,
         "curtailed_mw": 0.0,
         "unserved_mw": 0.0,
-        "cost": 1620.9,
+        "cost": 3541.1,
         "revenue": 0.0,
-        "profit": -1867.9,
-        "emissions_tonnes": 14.25,
+        "profit": -4263.1,
+        "emissions_tonnes": 5.68,
         "renewable_utilisation_pct": 100.0
       }
     },
@@ -690,49 +689,49 @@
   ],
   "cumulative": {
     "agent": {
-      "cost": 11254.0,
-      "revenue": 0.0,
-      "profit": -13971.4,
-      "bought_mwh": 170.0,
-      "sold_mwh": 0.0,
-      "curtailed_mwh": 0.0,
+      "cost": 12800.4,
+      "revenue": 339.1,
+      "profit": -14635.5,
+      "bought_mwh": 168.5,
+      "sold_mwh": 9.0,
+      "curtailed_mwh": 8.75,
       "unserved_mwh": 0.0,
-      "emissions_tonnes": 96.43
+      "emissions_tonnes": 95.43
     },
     "baseline": {
-      "cost": 11254.0,
-      "revenue": 0.0,
-      "profit": -13971.4,
-      "bought_mwh": 170.0,
-      "sold_mwh": 0.0,
-      "curtailed_mwh": 0.0,
+      "cost": 12829.8,
+      "revenue": 339.1,
+      "profit": -14638.3,
+      "bought_mwh": 169.2,
+      "sold_mwh": 9.0,
+      "curtailed_mwh": 8.75,
       "unserved_mwh": 0.0,
-      "emissions_tonnes": 96.43
+      "emissions_tonnes": 95.82
     },
-    "mean_renewable_utilisation_pct": 100.0
+    "mean_renewable_utilisation_pct": 97.7
   },
   "comparison_agent_vs_baseline": {
     "cost": {
-      "agent": 11254.0,
-      "baseline": 11254.0,
-      "diff": 0.0,
-      "pct": 0.0
+      "agent": 12800.4,
+      "baseline": 12829.8,
+      "diff": -29.4,
+      "pct": -0.2
     },
     "profit": {
-      "agent": -13971.4,
-      "baseline": -13971.4,
-      "diff": 0.0,
+      "agent": -14635.5,
+      "baseline": -14638.3,
+      "diff": 2.8,
       "pct": 0.0
     },
     "emissions_tonnes": {
-      "agent": 96.43,
-      "baseline": 96.43,
-      "diff": 0.0,
-      "pct": 0.0
+      "agent": 95.43,
+      "baseline": 95.82,
+      "diff": -0.39,
+      "pct": -0.4
     },
     "curtailed_mwh": {
-      "agent": 0.0,
-      "baseline": 0.0,
+      "agent": 8.75,
+      "baseline": 8.75,
       "diff": 0.0,
       "pct": 0.0
     },
@@ -745,11 +744,12 @@
   },
   "verdict_summary": {
     "counts": {
-      "pass": 11,
-      "flagged": 1,
+      "pass": 9,
+      "flagged": 3,
       "fail": 0
     },
     "rule_fire_counts": {
+      "rule_8b": 2,
       "rule_8c": 1
     }
   }

@@ -111,7 +111,11 @@ def test_09_too_many_rows_is_rejected():
         assert "row" in str(e).lower()
 
 
-def test_10_run_id_is_deterministic_for_identical_file_bytes():
-    b1 = _example_csv_bytes()
-    b2 = _example_csv_bytes()
-    assert file_input.run_id_for(b1) == file_input.run_id_for(b2)
+def test_10_run_id_is_deterministic_for_identical_content():
+    # Content-based (not raw-file-bytes-based): .xlsx serialization isn't byte-stable across
+    # separate save calls even with identical data, so run_id must be computed from the
+    # validated scenario content, not the uploaded bytes -- confirmed here across CSV vs
+    # .xlsx of the exact same rows, which must agree.
+    results_csv = file_input.validate_rows(file_input.parse_rows(_example_csv_bytes(), "day.csv"))
+    results_xlsx = file_input.validate_rows(file_input.parse_rows(file_input.make_example_file(), "day.xlsx"))
+    assert file_input.run_id_for(results_csv) == file_input.run_id_for(results_xlsx)

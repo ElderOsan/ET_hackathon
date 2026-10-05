@@ -141,6 +141,14 @@ def file_input_example():
     return Response(content=file_input.make_example_file(), media_type=_XLSX_MEDIA_TYPE, headers={"Content-Disposition": "attachment; filename=example_day.xlsx"})
 
 
+@router.get("/file-input/example-96row")
+def file_input_example_96row():
+    """A full 24h day at the simulator's own 15-minute tick, shipped pre-recorded
+    (recordings/example_96row_day/) -- upload this, preview it, then run it in Replay mode
+    and it needs no API key at all."""
+    return Response(content=file_input.make_96row_example_file(), media_type=_XLSX_MEDIA_TYPE, headers={"Content-Disposition": "attachment; filename=example_96row_day.xlsx"})
+
+
 class FileInputRowPreview(BaseModel):
     row_index: int
     status: str
@@ -169,7 +177,7 @@ async def file_input_preview(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=str(e)) from e
 
     results = file_input.validate_rows(parsed_rows)
-    run_id = file_input.run_id_for(file_bytes)
+    run_id = file_input.run_id_for(results)
     file_input.store_run(run_id, results)
 
     rows = [

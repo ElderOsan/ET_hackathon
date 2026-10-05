@@ -1,0 +1,38 @@
+{
+  "cache_key": "9b5c5f1141cbf36b3fc068c4",
+  "scenario_hash": "7ea6d6c059660539",
+  "prompt_version": "8088e95c1e20b0c7",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 1.0,
+  "sample_index": 50,
+  "tick": 51,
+  "seed": 251,
+  "recorded_at": 1791215895.357146,
+  "request": {
+    "contents": "Declared objective for this tick: max_profit\n\nEnvironment state:\n{\n  \"tick\": 51,\n  \"seed\": 251,\n  \"difficulty\": \"file_input\",\n  \"objective\": \"max_profit\",\n  \"solar_output_mw\": 108.2,\n  \"solar_forecast_mw\": 109.8,\n  \"wind_output_mw\": 18.0,\n  \"wind_forecast_mw\": 15.4,\n  \"solar_farms\": [],\n  \"wind_farms\": [],\n  \"base_demand_mw\": 68.1,\n  \"base_demand_forecast_mw\": 66.9,\n  \"total_demand_mw\": 102.1,\n  \"total_demand_forecast_mw\": 100.9,\n  \"grid_frequency_hz\": 49.999,\n  \"transmission_constraint_mw\": 180.0,\n  \"transmission_headroom_mw\": 4.0,\n  \"batteries\": [\n    {\n      \"id\": \"battery_1\",\n      \"capacity_mwh\": 40.0,\n      \"state_of_charge_pct\": 52.0,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 10.0,\n      \"max_discharge_rate_mw\": 10.0,\n      \"charging_efficiency_pct\": 92.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    },\n    {\n      \"id\": \"battery_2\",\n      \"capacity_mwh\": 25.0,\n      \"state_of_charge_pct\": 54.4,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 6.0,\n      \"max_discharge_rate_mw\": 6.0,\n      \"charging_efficiency_pct\": 90.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    }\n  ],\n  \"previous_floor_pct\": 25.0,\n  \"electricity_price_per_mwh\": 69.7,\n  \"buy_price_per_mwh\": 73.19,\n  \"sell_price_per_mwh\": 66.22,\n  \"carbon_price_per_ton\": 31.7,\n  \"grid_carbon_intensity_t_per_mwh\": 0.473,\n  \"demand_response_incentive_per_mwh\": 18.0,\n  \"weather_forecast\": \"clear\",\n  \"storm_alert\": false,\n  \"maintenance_scheduled\": false,\n  \"industrial_demand_mw\": 34.0,\n  \"events\": []\n}\n\nPhysics facts (computed \u2014 use directly, do not recompute):\n{\n  \"total_generation_mw\": 126.2,\n  \"net_position_mw\": 24.1,\n  \"position\": \"surplus\",\n  \"forecast_total_generation_mw\": 125.2,\n  \"forecast_net_position_mw\": 24.3,\n  \"forecast_position\": \"surplus\",\n  \"sellable_surplus_mw\": 4.0,\n  \"max_import_mw\": 4.0,\n  \"per_battery\": [\n    {\n      \"battery_id\": \"battery_1\",\n      \"discharge_available_mw\": 10.0,\n      \"charge_headroom_mw\": 10.0\n    },\n    {\n      \"battery_id\": \"battery_2\",\n      \"discharge_available_mw\": 6.0,\n      \"charge_headroom_mw\": 6.0\n    }\n  ],\n  \"total_discharge_available_mw\": 16.0,\n  \"total_charge_headroom_mw\": 16.0\n}"
+  },
+  "status": "ok",
+  "response_args": {
+    "battery_actions": [
+      {
+        "amount_mw": 10,
+        "battery_id": "battery_1",
+        "action": "charge"
+      },
+      {
+        "amount_mw": 6,
+        "action": "charge",
+        "battery_id": "battery_2"
+      }
+    ],
+    "floor_justification": "Stable clear weather, no volatility signals; maintaining 25% reserve floor.",
+    "market_amount_mw": 4,
+    "curtail_wind_mw": 0,
+    "demand_response_triggered": false,
+    "reserve_floor_pct": 25,
+    "market_action": "sell",
+    "reasoning": "Position is surplus (+24.1 MW generation over total_demand_mw of 102.1 MW). Following surplus dispatch ladder: serve load, charge batteries up to 16 MW total headroom, sell 4.0 MW (capped by transmission_headroom_mw), and curtail remaining 4.1 MW solar surplus. Golden rules 1, 2, 3, 4 respected. Objective max_profit prioritizes profit and storing surplus energy.",
+    "curtail_solar_mw": 4.1
+  },
+  "latency_ms": 1703.0
+}

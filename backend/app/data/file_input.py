@@ -13,6 +13,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import json
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -280,8 +281,18 @@ def validate_rows(parsed_rows: list[dict[str, Any]]) -> list[RowResult]:
 _RUNS: dict[str, list[Optional[EnvironmentState]]] = {}
 
 
-def run_id_for(file_bytes: bytes) -> str:
-    return "fileinput_" + hashlib.sha256(file_bytes).hexdigest()[:12]
+def run_id_for(results: list[RowResult]) -> str:
+    """Content-based, not file-bytes-based: hashing raw file bytes broke for .xlsx, whose
+    serialization (openpyxl zip/timestamp internals) is NOT byte-stable across separate save
+    calls even with identical data -- two downloads of 'the same' file produced different
+    hashes, and so different (wrong) run_ids. Hashing the validated/normalized scenario
+    content instead is stable across re-saves AND across CSV vs .xlsx of the same data."""
+    canonical = [
+        r.scenario.model_dump(mode="json") if r.status == "ok" else {"row_index": r.row_index, "errors": r.errors}
+        for r in results
+    ]
+    payload = json.dumps(canonical, sort_keys=True, default=str)
+    return "fileinput_" + hashlib.sha256(payload.encode()).hexdigest()[:12]
 
 
 def store_run(run_id: str, results: list[RowResult]) -> None:
@@ -365,6 +376,106 @@ EXAMPLE_DAY_ROWS: list[dict[str, Any]] = [
 def make_example_file() -> bytes:
     wb = openpyxl.Workbook()
     _write_rows_sheet(wb, EXAMPLE_DAY_ROWS)
+    _write_dictionary_sheet(wb)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def _build_96row_day_rows() -> list[dict[str, Any]]:
+    """A full day at the simulator's own 15-minute tick (TICK_HOURS=0.25 x 96 = 24h), built
+    from a diurnal model plus a fixed seed's worth of noise -- genuinely 96 distinct rows,
+    not a mechanical repeat of the 12-row pattern. Deterministic (random.Random(42)), so this
+    file is identical every time the module loads; the committed recordings under
+    recordings/example_96row_day/ were made against exactly this output."""
+    import math
+    import random as _random
+
+    rng = _random.Random(42)
+    rows: list[dict[str, Any]] = []
+    objectives_cycle = ["", "cost_efficiency", "min_carbon", "max_renewable_utilisation", "max_profit", "", "cost_efficiency", ""]
+    # Fixed event ticks (1-indexed): a storm (3 consecutive ticks), a battery_2 outage (4
+    # consecutive ticks overnight), a price spike (2 ticks), and 2 cost-vs-carbon
+    # disagreement ticks, plus a 5-tick midday window where the line is constrained enough
+    # that curtailment is unavoidable alongside the day's biggest surplus.
+    storm_ticks = {57, 58, 59}  # ~14:00-14:45
+    battery_2_offline_ticks = {5, 6, 7, 8}  # ~01:00-02:00
+    price_spike_ticks = {65, 66}  # ~16:00-16:15
+    cheap_dirty_tick = 33  # ~08:00
+    expensive_clean_tick = 69  # ~17:00
+    constrained_ticks = set(range(49, 54))  # ~12:00-13:00, around solar peak
+
+    for i in range(1, 97):
+        hour = (i - 1) * 0.25
+        solar = max(0.0, 108.0 * math.sin(math.pi * (hour - 6.0) / 14.0)) if 6.0 <= hour <= 20.0 else 0.0
+        solar += rng.uniform(-3.0, 3.0)
+        solar = round(max(0.0, min(110.0, solar)), 1)
+        solar_forecast = round(max(0.0, min(110.0, solar + rng.uniform(-2.0, 2.0))), 1)
+
+        wind = 28.0 + 14.0 * math.sin(hour / 3.1 + 1.0) + rng.uniform(-5.0, 5.0)
+        wind = round(max(0.0, min(60.0, wind)), 1)
+        wind_forecast = round(max(0.0, min(60.0, wind + rng.uniform(-3.0, 3.0))), 1)
+
+        base_demand = (
+            68.0
+            + 28.0 * math.exp(-((hour - 8.0) ** 2) / 8.0)
+            + 38.0 * math.exp(-((hour - 19.0) ** 2) / 10.0)
+            + rng.uniform(-4.0, 4.0)
+        )
+        base_demand = round(max(30.0, base_demand), 1)
+        base_demand_forecast = round(max(30.0, base_demand + rng.uniform(-3.0, 3.0)), 1)
+        industrial = round(32.0 + rng.uniform(-4.0, 4.0), 1)
+
+        price = 45.0 + 0.35 * base_demand + rng.uniform(-6.0, 6.0)
+        intensity = round(0.3 + rng.random() * 0.6, 3)
+
+        events = []
+        storm = i in storm_ticks
+        if storm:
+            events.append("storm_alert")
+            wind *= 0.6  # turbines throttled for safety
+        battery_2_available = i not in battery_2_offline_ticks
+        if not battery_2_available:
+            events.append("battery_2_offline")
+        if i in price_spike_ticks:
+            price = max(price, 160.0) + rng.uniform(0, 20)
+            events.append("price_spike")
+        if i == cheap_dirty_tick:
+            price, intensity = 27.0, 0.86
+        if i == expensive_clean_tick:
+            price, intensity = 185.0, 0.31
+
+        transmission_headroom = 4.0 if i in constrained_ticks else 180.0
+
+        battery_1_soc = round(max(15.0, min(92.0, 45.0 + 18.0 * math.sin(hour / 5.0) + rng.uniform(-5.0, 5.0))), 1)
+        battery_2_soc = round(max(15.0, min(92.0, 48.0 + 16.0 * math.sin(hour / 5.3 + 0.5) + rng.uniform(-5.0, 5.0))), 1)
+
+        objective = objectives_cycle[(i // 12) % len(objectives_cycle)]
+
+        rows.append(dict(
+            tick=i, seed=200 + i, objective=objective,
+            solar_output_mw=round(solar, 1), solar_forecast_mw=solar_forecast,
+            wind_output_mw=round(wind, 1), wind_forecast_mw=wind_forecast,
+            base_demand_mw=base_demand, base_demand_forecast_mw=base_demand_forecast, industrial_demand_mw=industrial,
+            grid_frequency_hz=round(50.0 + (rng.uniform(-0.05, 0.02) if not storm else rng.uniform(-0.1, -0.02)), 3),
+            transmission_constraint_mw=180.0, transmission_headroom_mw=transmission_headroom,
+            battery_1_soc_pct=battery_1_soc, battery_1_available=True,
+            battery_2_soc_pct=battery_2_soc, battery_2_available=battery_2_available,
+            previous_floor_pct=25.0, electricity_price_per_mwh=round(max(15.0, price), 1),
+            carbon_price_per_ton=round(29.0 + rng.uniform(-3.0, 3.0), 1), grid_carbon_intensity_t_per_mwh=intensity,
+            demand_response_incentive_per_mwh=round(18.0 + rng.uniform(-2.0, 2.0), 1),
+            weather_forecast=("storm" if storm else "clear"), storm_alert=storm, maintenance_scheduled=(not battery_2_available),
+            events=",".join(events),
+        ))
+    return rows
+
+
+EXAMPLE_96ROW_DAY_ROWS: list[dict[str, Any]] = _build_96row_day_rows()
+
+
+def make_96row_example_file() -> bytes:
+    wb = openpyxl.Workbook()
+    _write_rows_sheet(wb, EXAMPLE_96ROW_DAY_ROWS)
     _write_dictionary_sheet(wb)
     buf = io.BytesIO()
     wb.save(buf)

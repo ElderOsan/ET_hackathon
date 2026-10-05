@@ -65,6 +65,9 @@ export default function FileInputPanel() {
       <div className="row">
         <button type="button" className="secondary" onClick={api.downloadFileInputTemplate}>Download template</button>
         <button type="button" className="secondary" onClick={api.downloadFileInputExample}>Download example (12-row day)</button>
+        <button type="button" className="secondary" onClick={api.downloadFileInputExample96Row} title="A full 24h day at the simulator's own 15-minute tick, pre-recorded -- upload it, preview it, then pick Replay mode and it runs with no API key at all">
+          Download example (96-row day, pre-recorded)
+        </button>
         <label>
           Mode:{" "}
           <select value={mode} onChange={(e) => setMode(e.target.value)}>

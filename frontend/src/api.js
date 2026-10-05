@@ -41,6 +41,7 @@ export const api = {
   // File input (bulk CSV/Excel upload, Patch 3 Step 5)
   downloadFileInputTemplate: () => downloadFile("/file-input/template", "scenario_template.xlsx"),
   downloadFileInputExample: () => downloadFile("/file-input/example", "example_day.xlsx"),
+  downloadFileInputExample96Row: () => downloadFile("/file-input/example-96row", "example_96row_day.xlsx"),
   previewFileInput: async (file) => {
     const form = new FormData();
     form.append("file", file);

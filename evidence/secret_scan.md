@@ -57,3 +57,20 @@ shapes:
   prove the shape pattern without using it) — never the real key itself.
 - `backend/.env`: re-confirmed never committed at any point in history (`git log --all
   --full-history -- "**/.env" "backend/.env"` returns nothing, same as the original scan).
+
+## Follow-up: after staging the audit-H recordings (2026-10-05)
+
+Re-run again (`evidence/secret_scan_post_audith.json`), now against 191 files with findings
+(1194 raw). A new finding *type* appears here for the first time: "Secret Keyword." Every
+single occurrence of it, and every new file beyond the ones already explained above, traces
+to one thing: `evidence/secret_scan_round0.json` -- a **prior scan's own JSON report** --
+being scanned as if it were source. detect-secrets' own report format writes
+`"hashed_secret": "<40-hex-char sha1>"` next to every finding; scanning that file a second
+time matches its own `"hashed_secret"` key name against a hex-shaped value and flags it as
+"a keyword next to a secret-shaped string" -- a self-referential false positive from the
+scanner re-scanning its own prior output, not a new secret. (The same will happen to
+`evidence/secret_scan_post_audith.json` itself on the next re-scan, and so on --
+self-propagating but never a real finding; excluding `evidence/secret_scan*.json` from
+future scans would remove the noise if it becomes distracting.) Confirmed by listing every
+finding location outside `recordings/`, `evidence/secret_scan*.json`, and the one
+already-documented `test_recording.py` fixture: there were none. **Still 0 real secrets.**

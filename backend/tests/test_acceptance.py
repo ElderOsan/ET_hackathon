@@ -15,7 +15,7 @@ from app.agents.scenario_agent import generate_scenario, normalize_scenario
 from app.data import fleet, physics
 from app.data.balancer import balance
 from app.data.tuning import PROFILE_RATIO_RANGES
-from app.models.schemas import Battery, BatteryAction, Decision, Difficulty, EnvironmentState, Objective
+from app.models.schemas import Battery, BatteryAction, Decision, Difficulty, EnvironmentState, GENERATED_DIFFICULTIES, Objective
 
 
 def _tick88_scenario(**overrides) -> EnvironmentState:
@@ -112,10 +112,10 @@ def test_2_fixed_fleet_identical_across_scenarios():
 
 
 def test_4_profile_ratios_in_range():
-    for difficulty in Difficulty:
+    for difficulty in GENERATED_DIFFICULTIES:
         lo, hi = PROFILE_RATIO_RANGES[difficulty.value]
         for seed in range(30):
-            s = generate_scenario(difficulty, None, seed=1000 * (list(Difficulty).index(difficulty) + 1) + seed)
+            s = generate_scenario(difficulty, None, seed=1000 * (list(GENERATED_DIFFICULTIES).index(difficulty) + 1) + seed)
             ratio = (s.solar_output_mw + s.wind_output_mw) / s.total_demand_mw
             assert lo - 0.01 <= ratio <= hi + 0.01, f"{difficulty.value} seed={seed}: ratio {ratio}"
             assert physics.min_achievable_unserved_mw(s) == 0.0

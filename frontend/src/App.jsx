@@ -5,6 +5,7 @@ import DecisionPanel from "./components/DecisionPanel";
 import EvaluatorPanel from "./components/EvaluatorPanel";
 import BatchRunPanel from "./components/BatchRunPanel";
 import ManualEntryForm from "./components/ManualEntryForm";
+import FileInputPanel from "./components/FileInputPanel";
 
 export default function App() {
   const [presets, setPresets] = useState({ difficulties: [], objectives: [] });
@@ -164,6 +165,7 @@ export default function App() {
       )}
 
       <BatchRunPanel />
+      <FileInputPanel />
     </div>
   );
 }

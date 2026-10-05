@@ -4,7 +4,8 @@ import random
 import time
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import Response
 from google.genai import errors as genai_errors
 from pydantic import BaseModel
 
@@ -13,7 +14,7 @@ from app.agents.pipeline import run_decision_pipeline
 from app.agents.scenario_agent import generate_scenario, normalize_scenario
 from app.core.config import GEMINI_API_KEY
 from app.core.llm_client import MODEL
-from app.data import physics, recording
+from app.data import file_input, physics, recording
 from app.data.benchmark_seeds import DEV_SEED_SET, HELD_OUT_SEED_SET
 from app.data.recording import BoundedLiveRecorder, LiveRecorder, Recorder, RecordingRecorder, ReplayRecorder, SafeModeRecorder
 from app.data.tuning import BENCHMARK_ALLOW_HELD_OUT, RULE_CATEGORY_MAP
@@ -23,6 +24,7 @@ from app.models.schemas import (
     Difficulty,
     EnvironmentState,
     FieldRepair,
+    GENERATED_DIFFICULTIES,
     ObjectiveBreakdown,
     Objective,
     ScenarioRunResult,
@@ -76,7 +78,7 @@ class GenerateScenarioRequest(BaseModel):
 @router.get("/scenario/presets")
 def list_presets():
     return {
-        "difficulties": [d.value for d in Difficulty],
+        "difficulties": [d.value for d in GENERATED_DIFFICULTIES],
         "objectives": [o.value for o in Objective],
     }
 
@@ -122,6 +124,89 @@ def run_from_scenario(req: FromScenarioRequest):
     normalized, _corrections = normalize_scenario(req.scenario)
     recorder, _ = _make_recorder(req.mode, None, normalized.seed, None)
     return _run_or_503(normalized, recorder=recorder)
+
+
+# ---- File input: bulk CSV/Excel upload, one row per independent tick (Patch 3 Step 5) ----
+
+_XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+@router.get("/file-input/template")
+def file_input_template():
+    return Response(content=file_input.make_template_file(), media_type=_XLSX_MEDIA_TYPE, headers={"Content-Disposition": "attachment; filename=scenario_template.xlsx"})
+
+
+@router.get("/file-input/example")
+def file_input_example():
+    return Response(content=file_input.make_example_file(), media_type=_XLSX_MEDIA_TYPE, headers={"Content-Disposition": "attachment; filename=example_day.xlsx"})
+
+
+class FileInputRowPreview(BaseModel):
+    row_index: int
+    status: str
+    tick: int | None = None
+    errors: list[str] = []
+    volatility_class: str | None = None
+    volatility_method: str | None = None
+    expected_floor_band: str | None = None
+
+
+class FileInputPreviewResponse(BaseModel):
+    run_id: str
+    rows: list[FileInputRowPreview]
+    ok_count: int
+    error_count: int
+
+
+@router.post("/file-input/preview", response_model=FileInputPreviewResponse)
+async def file_input_preview(file: UploadFile = File(...)):
+    file_bytes = await file.read()
+    try:
+        parsed_rows = file_input.parse_rows(file_bytes, file.filename or "")
+    except file_input.FileInputError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+
+    results = file_input.validate_rows(parsed_rows)
+    run_id = file_input.run_id_for(file_bytes)
+    file_input.store_run(run_id, results)
+
+    rows = [
+        FileInputRowPreview(
+            row_index=r.row_index, status=r.status, tick=r.tick, errors=r.errors,
+            volatility_class=r.volatility_class, volatility_method=r.volatility_method, expected_floor_band=r.expected_floor_band,
+        )
+        for r in results
+    ]
+    ok_count = sum(1 for r in results if r.status == "ok")
+    return FileInputPreviewResponse(run_id=run_id, rows=rows, ok_count=ok_count, error_count=len(results) - ok_count)
+
+
+class FileInputRunRowRequest(BaseModel):
+    run_id: str
+    row_index: int
+    mode: RunMode = "record"
+
+
+def _make_file_input_recorder(mode: RunMode, run_id: str, row_index: int) -> Recorder:
+    """Mirrors _make_recorder's mode dispatch exactly, scoped to a caller-supplied run_id and
+    row_index (used as sample_index) instead of an auto-generated run_id -- a stable, resumable
+    cache key per uploaded row (Patch 3 Step 5 addendum)."""
+    if mode == "safe":
+        return SafeModeRecorder(inner=None)
+    if mode == "live":
+        return SafeModeRecorder(inner=BoundedLiveRecorder())
+    if mode == "replay":
+        return ReplayRecorder(run_id=run_id, sample_index=row_index)
+    return SafeModeRecorder(inner=RecordingRecorder(run_id=run_id, sample_index=row_index))
+
+
+@router.post("/file-input/run-row", response_model=ScenarioRunResult)
+def file_input_run_row(req: FileInputRunRowRequest):
+    scenario = file_input.get_validated_scenario(req.run_id, req.row_index)
+    if scenario is None:
+        raise HTTPException(status_code=404, detail=f"No validated row {req.row_index} for run_id {req.run_id!r} -- preview the file again before running it.")
+    recorder = _make_file_input_recorder(req.mode, req.run_id, req.row_index)
+    return _run_or_503(scenario, recorder=recorder)
 
 
 def _categorize_rule(rule_id: str, repairs: list[FieldRepair]) -> str:
@@ -233,7 +318,7 @@ def _run_matrix(
 ) -> BatchRunSummary:
     recorder, resolved_run_id = _make_recorder(mode, run_id, base_seed, seed_set_name)
     results: list[ScenarioRunResult] = []
-    for d_idx, difficulty in enumerate(Difficulty):
+    for d_idx, difficulty in enumerate(GENERATED_DIFFICULTIES):
         for o_idx, objective in enumerate(objectives):
             for rep in range(n_per_cell):
                 cell_seed = base_seed + d_idx * 10_000 + o_idx * 100 + rep
@@ -314,7 +399,7 @@ class BenchmarkEstimateResponse(BaseModel):
 
 @router.get("/benchmark/estimate", response_model=BenchmarkEstimateResponse)
 def benchmark_estimate():
-    count = len(Difficulty) * len(Objective)  # n_per_cell=1 for the standard benchmark
+    count = len(GENERATED_DIFFICULTIES) * len(Objective)  # n_per_cell=1 for the standard benchmark
     return BenchmarkEstimateResponse(scenario_count=count, estimated_calls=round(count * 1.2, 1))
 
 

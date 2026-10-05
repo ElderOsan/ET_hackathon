@@ -14,6 +14,13 @@ class Difficulty(str, Enum):
     D3_MULTI_FAILURE_CASCADE = "multi_failure_cascade"
     D4_SURPLUS_DAY = "surplus_day"
     D5_SHORTFALL_DAY = "shortfall_day"
+    # File input (bulk upload): not a generated profile -- a real/uploaded scenario has no
+    # synthetic difficulty class. Deliberately excluded from GENERATED_DIFFICULTIES below so
+    # it never appears in the random generator's profile loop, presets list, or benchmark math.
+    FILE_INPUT = "file_input"
+
+
+GENERATED_DIFFICULTIES = [d for d in Difficulty if d != Difficulty.FILE_INPUT]
 
 
 class Objective(str, Enum):

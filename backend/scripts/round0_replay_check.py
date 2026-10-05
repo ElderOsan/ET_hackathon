@@ -14,11 +14,12 @@ from app.data.benchmark_seeds import DEV_SEED_SET
 from app.models.schemas import Objective
 
 ROOT = Path(__file__).resolve().parents[2]
-original = json.load(open(ROOT / "evidence" / "round0_benchmark.json"))["results"]
+run_id = sys.argv[1] if len(sys.argv) > 1 else "round0"
+original = json.load(open(ROOT / "evidence" / f"{run_id}_benchmark.json"))["results"]
 
 replayed = _run_matrix(
     DEV_SEED_SET["base_seed"], 3, list(Objective),
-    seed_set_name="dev_round0", mode="replay", run_id="round0",
+    seed_set_name="dev_round0", mode="replay", run_id=run_id,
 )
 
 mismatches = []

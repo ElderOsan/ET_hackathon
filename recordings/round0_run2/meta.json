@@ -1,0 +1,8 @@
+{
+  "run_id": "round0_run2",
+  "model": "gemini-3.5-flash-lite",
+  "seed": 20261004,
+  "seed_set": "dev_round0",
+  "created_at": 1791200858.3370252,
+  "scenario_count": 72
+}

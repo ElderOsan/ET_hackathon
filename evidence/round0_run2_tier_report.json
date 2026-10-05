@@ -1,0 +1,167 @@
+{
+  "source": "..\\evidence\\round0_run2_benchmark.json",
+  "agent_n": 72,
+  "safe_mode_n": 0,
+  "unresolved_n": 0,
+  "first_attempt_pass": {
+    "count": 62,
+    "of": 72
+  },
+  "stable_surplus_shortfall_pass": {
+    "count": 33,
+    "of": 36
+  },
+  "non_fail_rate": {
+    "count": 71,
+    "of": 72
+  },
+  "per_objective_18": {
+    "cost_efficiency": 16,
+    "min_carbon": 17,
+    "max_renewable_utilisation": 17,
+    "max_profit": 12
+  },
+  "per_objective_rule9_active": {
+    "max_renewable_utilisation": [
+      6,
+      7
+    ],
+    "max_profit": [
+      10,
+      16
+    ],
+    "cost_efficiency": [
+      9,
+      9
+    ],
+    "min_carbon": [
+      6,
+      6
+    ]
+  },
+  "avoidable_unserved": {
+    "count": 1,
+    "of": 72
+  },
+  "safe_mode": {
+    "count": 0,
+    "passed": 0
+  },
+  "verdict_inconsistencies": [],
+  "non_pass_rows": [
+    {
+      "tick": 10,
+      "seed": 20261304,
+      "profile": "stable_day",
+      "objective": "max_profit",
+      "status": "flagged",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_9"
+      ]
+    },
+    {
+      "tick": 11,
+      "seed": 20261305,
+      "profile": "stable_day",
+      "objective": "max_profit",
+      "status": "flagged",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_9"
+      ]
+    },
+    {
+      "tick": 12,
+      "seed": 20261306,
+      "profile": "stable_day",
+      "objective": "max_profit",
+      "status": "flagged",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_9"
+      ]
+    },
+    {
+      "tick": 27,
+      "seed": 20281006,
+      "profile": "price_spike",
+      "objective": "cost_efficiency",
+      "status": "flagged",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_5",
+        "rule_8b"
+      ]
+    },
+    {
+      "tick": 29,
+      "seed": 20281105,
+      "profile": "price_spike",
+      "objective": "min_carbon",
+      "status": "flagged",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_8b"
+      ]
+    },
+    {
+      "tick": 32,
+      "seed": 20281205,
+      "profile": "price_spike",
+      "objective": "max_renewable_utilisation",
+      "status": "flagged",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_8b"
+      ]
+    },
+    {
+      "tick": 34,
+      "seed": 20281304,
+      "profile": "price_spike",
+      "objective": "max_profit",
+      "status": "flagged",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_5",
+        "rule_9"
+      ]
+    },
+    {
+      "tick": 35,
+      "seed": 20281305,
+      "profile": "price_spike",
+      "objective": "max_profit",
+      "status": "flagged",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_5",
+        "rule_9"
+      ]
+    },
+    {
+      "tick": 36,
+      "seed": 20281306,
+      "profile": "price_spike",
+      "objective": "max_profit",
+      "status": "flagged",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_5",
+        "rule_9"
+      ]
+    },
+    {
+      "tick": 38,
+      "seed": 20291005,
+      "profile": "multi_failure_cascade",
+      "objective": "cost_efficiency",
+      "status": "fail",
+      "mode": "agent",
+      "failing_rules": [
+        "rule_3"
+      ]
+    }
+  ]
+}

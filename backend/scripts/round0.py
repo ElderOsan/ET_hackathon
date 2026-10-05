@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-"""Round 0: the fresh three-pass benchmark (dev seed 20261004, 6 difficulties x 4 objectives
-x 3 reps = 72 scenarios, every scenario in the denominator) run against the pre-registered
-tiers in evidence/exit_tiers.json. Live Gemini calls, recorded under recordings/round0/.
+"""The fresh three-pass benchmark (dev seed 20261004, 6 difficulties x 4 objectives x 3 reps
+= 72 scenarios, every scenario in the denominator) run against the pre-registered tiers in
+evidence/exit_tiers.json. Live Gemini calls, recorded under recordings/<run_id>/.
 
-Usage: python scripts/round0.py
+Usage: python scripts/round0.py [run_id]  (default: round0)
 """
 from __future__ import annotations
 
@@ -20,14 +20,14 @@ from app.models.schemas import Objective
 
 
 def main():
-    run_id = "round0"
+    run_id = sys.argv[1] if len(sys.argv) > 1 else "round0"
     t0 = time.time()
     summary = _run_matrix(
         DEV_SEED_SET["base_seed"], 3, list(Objective),
         seed_set_name="dev_round0", mode="record", run_id=run_id,
     )
     elapsed = time.time() - t0
-    out_path = Path(__file__).resolve().parents[2] / "evidence" / "round0_benchmark.json"
+    out_path = Path(__file__).resolve().parents[2] / "evidence" / f"{run_id}_benchmark.json"
     out_path.write_text(summary.model_dump_json(indent=2))
     print(f"total={summary.total} judged={summary.judged_count} infeasible={summary.infeasible_count} margin_infeasible={summary.margin_infeasible_count}")
     print(f"first_attempt_pass_rate={summary.first_attempt_pass_rate_pct}% ({summary.first_attempt_passed}/{summary.judged_count})")

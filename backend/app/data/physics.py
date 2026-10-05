@@ -12,6 +12,16 @@ zero by the transmission_at_capacity event). A decision's net flow is
 Battery MW throughout are bus-side (what flows to/from the grid bus); charging/discharge
 efficiency affects only the battery's own state-of-charge update, never the bus-side MW
 used in the power balance.
+
+Money convention (fixed here, 2026-10-05, after a Round 0 diagnostic found revenue/cost and
+stored_energy_value on two different scales): every dollar figure in this module values a
+rate of amount_mw for the PORTION OF AN HOUR THIS TICK ACTUALLY COVERS -- amount_mw *
+TICK_HOURS * price_per_mwh -- never amount_mw * price_per_mwh alone (which prices a sale or
+purchase as if it ran for a full hour, 4x too high at this project's 15-minute tick). This
+applies uniformly to revenue, cost, stored_energy_value, and the carbon cost line
+(emissions_tonnes already applies TICK_HOURS before being priced, so it needs no separate
+fix). A charge and a sale of the same MW now differ only by the battery's own round-trip
+charging efficiency -- see test_profit_tick_hours_consistency in test_calibration.py.
 """
 from __future__ import annotations
 
@@ -67,11 +77,12 @@ def decision_profit(scenario: EnvironmentState, decision: Decision) -> dict:
     sold) — replaces the single-tick, revenue-only metric that credited $0 for charging and
     so could not distinguish "stored for later" from "wasted." The single source of truth
     for this arithmetic; rule_9's profit branch, reference_dispatch, and the Decision panel
-    all use it."""
+    all use it. Fixed 2026-10-05: revenue/cost now apply TICK_HOURS like stored_energy_value
+    always has — see the module docstring's money convention."""
     sale_mw = decision.market_amount_mw if decision.market_action == "sell" else 0.0
     purchase_mw = decision.market_amount_mw if decision.market_action == "buy" else 0.0
-    revenue = round(sale_mw * scenario.sell_price_per_mwh, 1)
-    cost = round(purchase_mw * scenario.buy_price_per_mwh, 1)
+    revenue = round(sale_mw * TICK_HOURS * scenario.sell_price_per_mwh, 1)
+    cost = round(purchase_mw * TICK_HOURS * scenario.buy_price_per_mwh, 1)
     stored_mwh = net_stored_energy_change_mwh(scenario, decision)
     stored_value = round(stored_mwh * scenario.sell_price_per_mwh, 1)
     return {

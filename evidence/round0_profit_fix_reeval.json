@@ -1,0 +1,49 @@
+{
+  "note": "PROJECTION against stored Round 0 data under the fixed profit formula -- not a fresh benchmark, not new evidence.",
+  "total_rows": 72,
+  "changed_rows": 3,
+  "changes": [
+    {
+      "tick": 58,
+      "seed": 20301304,
+      "profile": "surplus_day",
+      "objective": "max_profit",
+      "raw_status": "flagged -> pass",
+      "applied_status": "flagged -> pass",
+      "rule_changes": {
+        "rule_9": [
+          false,
+          true
+        ]
+      }
+    },
+    {
+      "tick": 59,
+      "seed": 20301305,
+      "profile": "surplus_day",
+      "objective": "max_profit",
+      "raw_status": "flagged -> pass",
+      "applied_status": "flagged -> pass",
+      "rule_changes": {
+        "rule_9": [
+          false,
+          true
+        ]
+      }
+    },
+    {
+      "tick": 60,
+      "seed": 20301306,
+      "profile": "surplus_day",
+      "objective": "max_profit",
+      "raw_status": "flagged -> pass",
+      "applied_status": "flagged -> pass",
+      "rule_changes": {
+        "rule_9": [
+          false,
+          true
+        ]
+      }
+    }
+  ]
+}

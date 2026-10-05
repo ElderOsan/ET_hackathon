@@ -296,10 +296,12 @@ def test_17_rule3b_flags_when_achievable_exceeds_requirement_but_decision_falls_
 def test_18_profit_nets_purchase_cost_not_zero():
     # Brief 2 Patch 2, acceptance test 3: a decision that buys 1.8MW shows a negative
     # profit equal to the purchase cost, with components shown — never $0.
-    scenario = _tick88_scenario(objective=Objective.MAX_PROFIT)
+    # total_demand_mw=295 (not the fixture's 139): same reason as test_19 -- fixed 2026-10-05,
+    # the correctly-scaled profit terms make the default fixture's rule_9 profit branch N/A.
+    scenario = _tick88_scenario(objective=Objective.MAX_PROFIT, total_demand_mw=295.0, total_demand_forecast_mw=295.0)
     decision = _decision(market_action="buy", market_amount_mw=1.8)
     profit = physics.decision_profit(scenario, decision)
-    assert profit["cost"] == round(1.8 * scenario.buy_price_per_mwh, 1)
+    assert profit["cost"] == round(1.8 * physics.TICK_HOURS * scenario.buy_price_per_mwh, 1)
     assert profit["revenue"] == 0.0
     assert profit["net_profit"] == -profit["cost"]
     assert profit["net_profit"] != 0.0
@@ -334,7 +336,13 @@ def test_19_rule9_na_gives_verdict_from_other_rules_and_stays_in_denominator():
         stages=[DecisionStage(name="raw", decision=decision, evaluation=result), DecisionStage(name="applied", decision=decision, evaluation=evaluate(balanced, decision, repairs=[]))],
         repairs=[], repaired=False,
     )
-    normal_scenario = _tick88_scenario(objective=Objective.MAX_PROFIT)
+    # total_demand_mw=295 (not the fixture's 139): fixed 2026-10-05, after the profit
+    # TICK_HOURS fix correctly gave the stored-energy debit on the reference's own
+    # shortfall-driven discharge real weight against the (now also correctly scaled) import
+    # cost -- at demand=139 that debit shrinks best-vs-worst enough to register as vacuous.
+    # 295 keeps the scenario feasible (achievable unserved stays 0) while keeping the
+    # best-vs-worst profit gap clearly non-vacuous, preserving this test's intent.
+    normal_scenario = _tick88_scenario(objective=Objective.MAX_PROFIT, total_demand_mw=295.0, total_demand_forecast_mw=295.0)
     failing_decision = _decision()  # holds everything -> unserved -> fails rule_3, rule_9 judged normally
     normal_eval_raw = evaluate(normal_scenario, failing_decision, include_repair_rule=False)
     normal_eval_applied = evaluate(normal_scenario, failing_decision, repairs=[])

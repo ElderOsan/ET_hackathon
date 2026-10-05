@@ -91,13 +91,13 @@ def test_3b_08_zero_import_headroom():
 def test_profit_01_buy_only():
     scenario = _tick88_scenario()
     p = physics.decision_profit(scenario, _decision(market_action="buy", market_amount_mw=10.0))
-    assert p["revenue"] == 0.0 and p["cost"] == round(10.0 * scenario.buy_price_per_mwh, 1) and p["net_profit"] == -p["cost"]
+    assert p["revenue"] == 0.0 and p["cost"] == round(10.0 * physics.TICK_HOURS * scenario.buy_price_per_mwh, 1) and p["net_profit"] == -p["cost"]
 
 
 def test_profit_02_sell_only():
     scenario = _tick88_scenario()
     p = physics.decision_profit(scenario, _decision(market_action="sell", market_amount_mw=10.0))
-    assert p["cost"] == 0.0 and p["revenue"] == round(10.0 * scenario.sell_price_per_mwh, 1) and p["net_profit"] == p["revenue"]
+    assert p["cost"] == 0.0 and p["revenue"] == round(10.0 * physics.TICK_HOURS * scenario.sell_price_per_mwh, 1) and p["net_profit"] == p["revenue"]
 
 
 def test_profit_03_hold_is_both_zero():
@@ -114,9 +114,13 @@ def test_profit_04_spread_zero_buy_equals_sell_equals_electricity_price():
 
 
 def test_profit_05_large_purchase_scales_linearly():
+    # amount_mw=4.0 (not 1.0): TICK_HOURS=0.25 makes 1.0MW*TICK_HOURS*price land on an exact
+    # x.75 rounding boundary for this scenario's buy_price, which breaks a x100 linearity
+    # check through independent rounding, not through any real nonlinearity -- 4.0 keeps
+    # TICK_HOURS*amount an integer so neither side needs that boundary rounding.
     scenario = _tick88_scenario()
-    small = physics.decision_profit(scenario, _decision(market_action="buy", market_amount_mw=1.0))
-    large = physics.decision_profit(scenario, _decision(market_action="buy", market_amount_mw=100.0))
+    small = physics.decision_profit(scenario, _decision(market_action="buy", market_amount_mw=4.0))
+    large = physics.decision_profit(scenario, _decision(market_action="buy", market_amount_mw=400.0))
     assert large["cost"] == round(small["cost"] * 100, 1)
 
 
@@ -137,7 +141,25 @@ def test_profit_08_buy_1_8mw_never_shows_zero():
     scenario = _tick88_scenario()
     p = physics.decision_profit(scenario, _decision(market_action="buy", market_amount_mw=1.8))
     assert p["net_profit"] != 0.0
-    assert p["net_profit"] == -round(1.8 * scenario.buy_price_per_mwh, 1)
+    assert p["net_profit"] == -round(1.8 * physics.TICK_HOURS * scenario.buy_price_per_mwh, 1)
+
+
+def test_profit_09_charge_vs_sale_of_same_mw_differ_only_by_efficiency():
+    # Round 0 diagnostic, fixed 2026-10-05: before the TICK_HOURS fix, charging valued MWh
+    # (amount_mw * TICK_HOURS * efficiency) while selling valued raw MW with no TICK_HOURS --
+    # a ~4x mismatch unrelated to efficiency. On one convention, the only remaining gap
+    # between storing X MW and selling X MW of the same tick is the round-trip charging
+    # efficiency: storing is worth exactly `efficiency` times what an immediate sale is worth.
+    scenario = _tick88_scenario()
+    battery = next(b for b in scenario.batteries if b.id == "battery_1")
+    efficiency = battery.charging_efficiency_pct / 100.0
+
+    sold = physics.decision_profit(scenario, _decision(market_action="sell", market_amount_mw=10.0))
+    charged = physics.decision_profit(
+        scenario,
+        _decision(battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=10.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)]),
+    )
+    assert charged["stored_energy_value"] == round(sold["revenue"] * efficiency, 1)
 
 
 # ---- rule_5: 8 cases --------------------------------------------------------------------

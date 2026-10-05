@@ -300,7 +300,11 @@ def rule_9_cascade_deviation(scenario: EnvironmentState, decision: Decision) -> 
     ref = reference_dispatch(scenario, decision.applied_floor_pct)
 
     if top_priority == "cost":
-        actual_cost = (decision.market_amount_mw if decision.market_action == "buy" else 0.0) * scenario.buy_price_per_mwh
+        # Fixed 2026-10-05: was a separate ad-hoc MW x price calc with no TICK_HOURS, out of
+        # step with reference_cost (physics.decision_profit, which does apply it) by the same
+        # factor the Round 0 diagnostic found in the profit branch -- reuse the one shared
+        # function instead of a second, drifting implementation of the same arithmetic.
+        actual_cost = physics.decision_profit(scenario, decision)["cost"]
         best, worst = ref["reference_cost"], ref["worst_cost"]
         tolerance = max(abs(best), 1.0) * (OBJECTIVE_TOLERANCE_PCT / 100)
         if _rule9_na(best, worst, tolerance):

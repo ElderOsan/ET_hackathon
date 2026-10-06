@@ -153,5 +153,5 @@ cd frontend
 npm run build
 ```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design rationale and
-[NEXT_STEPS.md](NEXT_STEPS.md) for what's left to build.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full design rationale, and `reports/` /
+`evidence/` for this project's own written-up findings and raw data as the build progressed.

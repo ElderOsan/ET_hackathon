@@ -1,7 +1,7 @@
 """Named tuning constants for the priority model and reserve-floor logic.
 
 Every number here is a starting value from the design brief, not a measured fact —
-revisit after the Learning Guide research (see NEXT_STEPS.md) and tune in testing.
+revisit after the Learning Guide research and tune in testing.
 Kept separate from app/core/config.py, which holds only environment/secrets config.
 """
 from __future__ import annotations
@@ -40,7 +40,7 @@ FLOOR_BANDS = {
 # (storm_alert, an offline battery, a price spike), not mapped from the profile name the way
 # scenario_agent._VOLATILITY_CLASS is. A flat $/MWh threshold rather than the existing
 # _daily_high_threshold proxy (rules.py), which is structurally untriggerable for any
-# difficulty but price_spike (see NEXT_STEPS.md) — the dispatcher needs a signal that
+# difficulty but price_spike — the dispatcher needs a signal that
 # actually fires from state alone, independent of which profile generated the scenario.
 DISPATCHER_PRICE_SPIKE_THRESHOLD_USD = 100.0
 

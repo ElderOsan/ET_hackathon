@@ -348,7 +348,7 @@ def test_consistency_over_real_72_row_benchmark():
     """Brief 2 Patch 2 Step 1 evidence requirement: check the invariant (empty repair log ->
     identical raw/applied verdict) over every row of an actual stored batch, not just
     hand-built cases. Uses the committed Step 6 three-pass dev benchmark."""
-    path = os.path.join(os.path.dirname(__file__), "..", "..", "brief2_patch2_benchmark.json")
+    path = os.path.join(os.path.dirname(__file__), "..", "..", "evidence", "brief2_patch2_benchmark.json")
     path = os.path.abspath(path)
     if not os.path.exists(path):
         import pytest

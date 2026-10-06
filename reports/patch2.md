@@ -125,7 +125,7 @@ Category breakdown (raw-stage, all 72): arithmetic 1, strategy 24, outcome 1.
 
 - **JSONL** (one row per scenario, full nested stage/rule detail): [evidence/patch2_runs.jsonl](../evidence/patch2_runs.jsonl)
 - **summary.csv** (tick, seed, profile, objective, raw/applied verdict, rules fired, repaired, unserved_mw, applied_floor_pct, volatility_class, na_rule9, margin_infeasible): [evidence/patch2_summary.csv](../evidence/patch2_summary.csv)
-- **Full BatchRunSummary** (aggregate, same source as E/F above): [brief2_patch2_benchmark.json](../brief2_patch2_benchmark.json)
+- **Full BatchRunSummary** (aggregate, same source as E/F above): [evidence/brief2_patch2_benchmark.json](../evidence/brief2_patch2_benchmark.json)
 - **Gate file:** [evidence/gate.json](../evidence/gate.json)
 
 ## Code references

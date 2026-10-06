@@ -10,7 +10,7 @@
 
 ## B. What changed
 
-**Files:** `backend/app/api/routes.py`, `backend/app/agents/pipeline.py`, `backend/app/agents/orchestrator_agent.py`, `backend/app/data/tuning.py`, `backend/app/models/schemas.py`, `backend/tests/test_acceptance.py`, `backend/tests/test_resilience.py` (new), plus regenerated `brief2_patch2_benchmark.json` / `evidence/patch2_runs.jsonl` / `evidence/patch2_summary.csv`.
+**Files:** `backend/app/api/routes.py`, `backend/app/agents/pipeline.py`, `backend/app/agents/orchestrator_agent.py`, `backend/app/data/tuning.py`, `backend/app/models/schemas.py`, `backend/tests/test_acceptance.py`, `backend/tests/test_resilience.py` (new), plus regenerated `evidence/brief2_patch2_benchmark.json` / `evidence/patch2_runs.jsonl` / `evidence/patch2_summary.csv`.
 
 **Config added** (`tuning.py`): `GEMINI_RETRY_ATTEMPTS = 5`, `GEMINI_RETRY_MAX_WAIT_S = 20.0` (previously hardcoded in the `tenacity` decorator, now named CONFIG).
 
@@ -109,4 +109,4 @@ This points at the buy/sell price change as specified in your conditional. **Pro
 
 ## I. Raw data
 
-- [evidence/patch2_runs.jsonl](../evidence/patch2_runs.jsonl), [evidence/patch2_summary.csv](../evidence/patch2_summary.csv), [brief2_patch2_benchmark.json](../brief2_patch2_benchmark.json) — all regenerated this step, same 72 underlying scenario runs.
+- [evidence/patch2_runs.jsonl](../evidence/patch2_runs.jsonl), [evidence/patch2_summary.csv](../evidence/patch2_summary.csv), [evidence/brief2_patch2_benchmark.json](../evidence/brief2_patch2_benchmark.json) — all regenerated this step, same 72 underlying scenario runs.

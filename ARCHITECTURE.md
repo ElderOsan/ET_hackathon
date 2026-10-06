@@ -150,7 +150,7 @@ Evaluator's own signal-detection logic actually justified — see git log for th
 
 | | F1 (≥1 action cluster) | F2 (objective-aware optimal set + uncertainty) | F3 (time-series simulation) |
 |---|---|---|---|
-| **D1** (structured input, acceptable output) | Implemented: scenario → decision → balancer → evaluate | Implemented: objective changes the decision for the same state | Not yet — see NEXT_STEPS.md |
+| **D1** (structured input, acceptable output) | Implemented: scenario → decision → balancer → evaluate | Implemented, with a caveat — see README's Known Limitations (the declared objective does not reliably change the model's surplus decision in practice) | Not yet — see README's Known Limitations (file input has no state carry-over) |
 | **D2** (structured input, high reliability) | Implemented with real evidence: 0 failures across a 24-scenario, 6-profile matrix | Batch run with mixed objectives + first-attempt/applied pass rates | Not yet |
 | **D3** (multimodal input, high reliability) | `multi_failure_cascade` profile exists; multimodal input (e.g. weather imagery, PDF maintenance schedules) not yet implemented | Same | Not yet |
 

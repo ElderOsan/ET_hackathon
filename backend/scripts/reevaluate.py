@@ -8,7 +8,7 @@ the past; only the verdicts are recomputed.
 
 Usage:
     python scripts/reevaluate.py evidence/patch2_runs.jsonl --out evidence/patch2_reeval.json
-    python scripts/reevaluate.py evidence/patch2_runs.jsonl --before brief2_patch2_benchmark.json
+    python scripts/reevaluate.py evidence/patch2_runs.jsonl --before evidence/brief2_patch2_benchmark.json
 """
 from __future__ import annotations
 

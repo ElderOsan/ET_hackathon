@@ -1,7 +1,7 @@
 # Cross-Objective Audit (Addendum B)
 
 Report only, no code changes, no model calls — all from the stored 72-row benchmark
-(`brief2_patch2_benchmark.json`, current rule state including the floor/rule_2b/dispatcher
+(`evidence/brief2_patch2_benchmark.json`, current rule state including the floor/rule_2b/dispatcher
 fixes) and direct re-computation via `reference_dispatch`/`dispatch_at_floor`.
 
 ## A. Alignment table

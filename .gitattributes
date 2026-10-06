@@ -1,0 +1,4 @@
+# Shell scripts must stay LF-only regardless of a contributor's local git config --
+# a CRLF shebang line breaks bash on macOS/Linux ("bad interpreter").
+*.sh text eol=lf
+run.bat text eol=crlf

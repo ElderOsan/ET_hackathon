@@ -7,6 +7,8 @@ backend/.pytest_cache/
 *.pyc
 
 frontend/node_modules/
-frontend/dist/
+# frontend/dist/ is committed on purpose -- the backend serves it directly so a judge never
+# needs Node. Rebuild it (npm run build, from frontend/) after any frontend source change --
+# it is not regenerated automatically by anything in this repo.
 
 .DS_Store

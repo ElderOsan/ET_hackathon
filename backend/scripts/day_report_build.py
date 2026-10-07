@@ -29,9 +29,14 @@ print(f"rows: {report['row_count']}")
 print(f"verdict counts: {report['verdict_summary']['counts']}")
 print(f"rule fire counts: {report['verdict_summary']['rule_fire_counts']}")
 print(f"cumulative agent: {report['cumulative']['agent']}")
-print(f"cumulative baseline: {report['cumulative']['baseline']}")
+print(f"cumulative same_objective_baseline: {report['cumulative']['same_objective_baseline']}")
+print(f"cumulative fixed_cost_baseline: {report['cumulative']['fixed_cost_baseline']}")
 print(f"mean renewable utilisation: {report['cumulative']['mean_renewable_utilisation_pct']}%")
-print("comparison (agent vs baseline):")
-for k, v in report["comparison_agent_vs_baseline"].items():
-    print(f"  {k}: agent={v['agent']} baseline={v['baseline']} diff={v['diff']} pct={v['pct']}")
+print("comparison (agent vs same-objective dispatcher vs fixed-cost dispatcher):")
+for k, v in report["comparison"].items():
+    print(
+        f"  {k}: agent={v['agent']} same_objective={v['same_objective_baseline']} fixed_cost={v['fixed_cost_baseline']}"
+        f" | agent-vs-same_objective diff={v['diff_agent_vs_same_objective']} pct={v['pct_agent_vs_same_objective']}"
+        f" | same_objective-vs-fixed_cost diff={v['diff_same_objective_vs_fixed_cost']} pct={v['pct_same_objective_vs_fixed_cost']}"
+    )
 print(f"\nwrote evidence/{RUN_ID}.json and evidence/{RUN_ID}.csv")

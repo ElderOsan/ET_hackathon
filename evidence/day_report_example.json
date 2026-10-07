@@ -698,7 +698,17 @@
       "unserved_mwh": 0.0,
       "emissions_tonnes": 95.43
     },
-    "baseline": {
+    "same_objective_baseline": {
+      "cost": 12829.8,
+      "revenue": 339.1,
+      "profit": -14638.3,
+      "bought_mwh": 169.2,
+      "sold_mwh": 9.0,
+      "curtailed_mwh": 8.75,
+      "unserved_mwh": 0.0,
+      "emissions_tonnes": 95.82
+    },
+    "fixed_cost_baseline": {
       "cost": 12829.8,
       "revenue": 339.1,
       "profit": -14638.3,
@@ -710,36 +720,51 @@
     },
     "mean_renewable_utilisation_pct": 97.7
   },
-  "comparison_agent_vs_baseline": {
+  "comparison": {
     "cost": {
       "agent": 12800.4,
-      "baseline": 12829.8,
-      "diff": -29.4,
-      "pct": -0.2
+      "same_objective_baseline": 12829.8,
+      "fixed_cost_baseline": 12829.8,
+      "diff_agent_vs_same_objective": -29.4,
+      "pct_agent_vs_same_objective": -0.2,
+      "diff_same_objective_vs_fixed_cost": 0.0,
+      "pct_same_objective_vs_fixed_cost": 0.0
     },
     "profit": {
       "agent": -14635.5,
-      "baseline": -14638.3,
-      "diff": 2.8,
-      "pct": 0.0
+      "same_objective_baseline": -14638.3,
+      "fixed_cost_baseline": -14638.3,
+      "diff_agent_vs_same_objective": 2.8,
+      "pct_agent_vs_same_objective": 0.0,
+      "diff_same_objective_vs_fixed_cost": 0.0,
+      "pct_same_objective_vs_fixed_cost": 0.0
     },
     "emissions_tonnes": {
       "agent": 95.43,
-      "baseline": 95.82,
-      "diff": -0.39,
-      "pct": -0.4
+      "same_objective_baseline": 95.82,
+      "fixed_cost_baseline": 95.82,
+      "diff_agent_vs_same_objective": -0.39,
+      "pct_agent_vs_same_objective": -0.4,
+      "diff_same_objective_vs_fixed_cost": 0.0,
+      "pct_same_objective_vs_fixed_cost": 0.0
     },
     "curtailed_mwh": {
       "agent": 8.75,
-      "baseline": 8.75,
-      "diff": 0.0,
-      "pct": 0.0
+      "same_objective_baseline": 8.75,
+      "fixed_cost_baseline": 8.75,
+      "diff_agent_vs_same_objective": 0.0,
+      "pct_agent_vs_same_objective": 0.0,
+      "diff_same_objective_vs_fixed_cost": 0.0,
+      "pct_same_objective_vs_fixed_cost": 0.0
     },
     "unserved_mwh": {
       "agent": 0.0,
-      "baseline": 0.0,
-      "diff": 0.0,
-      "pct": 0.0
+      "same_objective_baseline": 0.0,
+      "fixed_cost_baseline": 0.0,
+      "diff_agent_vs_same_objective": 0.0,
+      "pct_agent_vs_same_objective": 0.0,
+      "diff_same_objective_vs_fixed_cost": 0.0,
+      "pct_same_objective_vs_fixed_cost": 0.0
     }
   },
   "verdict_summary": {

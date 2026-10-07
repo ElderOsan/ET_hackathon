@@ -18,7 +18,7 @@ from app.data import physics
 from app.data.balancer import balance
 from app.data.dispatcher import dispatch
 from app.data.tuning import TICK_HOURS
-from app.models.schemas import Battery, Decision, EnvironmentState, ScenarioRunResult
+from app.models.schemas import Battery, Decision, EnvironmentState, Objective, ScenarioRunResult
 
 
 def _battery_action_mw(decision: Decision, battery_id: str, action: str) -> float:
@@ -67,9 +67,14 @@ def _row_ledger_entry(scenario: EnvironmentState, decision: Decision) -> dict[st
 
 def build_day_report(scenarios: list[EnvironmentState], agent_results: list[ScenarioRunResult]) -> dict:
     """scenarios[i] must be the exact scenario agent_results[i] was run against (same row).
-    Computes the agent's own per-tick table, cumulative totals, a dispatcher-only baseline
-    for the same rows (zero model calls -- dispatch() is deterministic), the baseline's own
-    cumulative totals, the side-by-side comparison, and the verdict summary."""
+    Computes the agent's own per-tick table, cumulative totals, and TWO deterministic
+    dispatcher baselines for the same rows (zero model calls -- dispatch() is deterministic):
+    "same_objective" runs the dispatcher under each tick's own declared objective (answers:
+    does the agent match the deterministic fallback for the objective it was actually given);
+    "fixed_cost" runs the dispatcher under a fixed cost_efficiency objective on every tick,
+    regardless of what each row declares (answers: what does declaring an objective change,
+    isolated from the agent entirely, since both sides of that comparison are the same
+    deterministic dispatcher). Also returns the side-by-side comparison and verdict summary."""
     assert len(scenarios) == len(agent_results)
 
     per_tick = []
@@ -77,32 +82,35 @@ def build_day_report(scenarios: list[EnvironmentState], agent_results: list[Scen
     verdict_counts = {"pass": 0, "flagged": 0, "fail": 0}
 
     agent_cum = {"cost": 0.0, "revenue": 0.0, "profit": 0.0, "bought_mwh": 0.0, "sold_mwh": 0.0, "curtailed_mwh": 0.0, "unserved_mwh": 0.0, "emissions_tonnes": 0.0}
-    baseline_cum = dict(agent_cum)
+    same_obj_cum = dict(agent_cum)
+    fixed_cost_cum = dict(agent_cum)
     utilisation_values = []
 
-    baseline_rows = []
+    def _accumulate(cum: dict, entry: dict) -> None:
+        for key in ("cost", "revenue", "profit", "emissions_tonnes"):
+            cum[key] += entry[key]
+        cum["bought_mwh"] += entry["bought_mw"] * TICK_HOURS
+        cum["sold_mwh"] += entry["sold_mw"] * TICK_HOURS
+        cum["curtailed_mwh"] += entry["curtailed_mw"] * TICK_HOURS
+        cum["unserved_mwh"] += entry["unserved_mw"] * TICK_HOURS
+
     for scenario, agent_result in zip(scenarios, agent_results):
         applied = _applied(agent_result)
         decision = applied.decision
 
-        baseline_decision = dispatch(scenario, scenario.objective)
-        baseline_applied, _repairs = balance(scenario, baseline_decision)
+        same_obj_decision = dispatch(scenario, scenario.objective)
+        same_obj_applied, _repairs = balance(scenario, same_obj_decision)
+
+        fixed_cost_decision = dispatch(scenario, Objective.COST_EFFICIENCY)
+        fixed_cost_applied, _repairs = balance(scenario, fixed_cost_decision)
 
         agent_entry = _row_ledger_entry(scenario, decision)
-        baseline_entry = _row_ledger_entry(scenario, baseline_applied)
-        baseline_rows.append((baseline_decision, baseline_applied, baseline_entry))
+        same_obj_entry = _row_ledger_entry(scenario, same_obj_applied)
+        fixed_cost_entry = _row_ledger_entry(scenario, fixed_cost_applied)
 
-        for key in ("cost", "revenue", "profit", "emissions_tonnes"):
-            agent_cum[key] += agent_entry[key]
-            baseline_cum[key] += baseline_entry[key]
-        agent_cum["bought_mwh"] += agent_entry["bought_mw"] * TICK_HOURS
-        agent_cum["sold_mwh"] += agent_entry["sold_mw"] * TICK_HOURS
-        agent_cum["curtailed_mwh"] += agent_entry["curtailed_mw"] * TICK_HOURS
-        agent_cum["unserved_mwh"] += agent_entry["unserved_mw"] * TICK_HOURS
-        baseline_cum["bought_mwh"] += baseline_entry["bought_mw"] * TICK_HOURS
-        baseline_cum["sold_mwh"] += baseline_entry["sold_mw"] * TICK_HOURS
-        baseline_cum["curtailed_mwh"] += baseline_entry["curtailed_mw"] * TICK_HOURS
-        baseline_cum["unserved_mwh"] += baseline_entry["unserved_mw"] * TICK_HOURS
+        _accumulate(agent_cum, agent_entry)
+        _accumulate(same_obj_cum, same_obj_entry)
+        _accumulate(fixed_cost_cum, fixed_cost_entry)
         utilisation_values.append(agent_entry["renewable_utilisation_pct"])
 
         batteries_by_id = {b.id: b for b in scenario.batteries}
@@ -138,22 +146,39 @@ def build_day_report(scenarios: list[EnvironmentState], agent_results: list[Scen
         return {k: round(v, 2) for k, v in d.items()}
 
     agent_cum = _round_cum(agent_cum)
-    baseline_cum = _round_cum(baseline_cum)
+    same_obj_cum = _round_cum(same_obj_cum)
+    fixed_cost_cum = _round_cum(fixed_cost_cum)
+
+    def _pct(diff: float, base: float, zero_diff_ok: float) -> float | None:
+        if abs(base) > 1e-9:
+            return round((diff / abs(base)) * 100, 1)
+        return 0.0 if abs(zero_diff_ok) < 1e-9 else None
 
     comparison = {}
     for key in ("cost", "profit", "emissions_tonnes", "curtailed_mwh", "unserved_mwh"):
-        a, b = agent_cum[key], baseline_cum[key]
-        diff = round(a - b, 2)
-        pct = round((diff / abs(b)) * 100, 1) if abs(b) > 1e-9 else (0.0 if abs(a) < 1e-9 else None)
-        comparison[key] = {"agent": a, "baseline": b, "diff": diff, "pct": pct}
+        a, s, f = agent_cum[key], same_obj_cum[key], fixed_cost_cum[key]
+        diff_agent_vs_same_objective = round(a - s, 2)
+        diff_same_objective_vs_fixed_cost = round(s - f, 2)
+        comparison[key] = {
+            "agent": a, "same_objective_baseline": s, "fixed_cost_baseline": f,
+            "diff_agent_vs_same_objective": diff_agent_vs_same_objective,
+            "pct_agent_vs_same_objective": _pct(diff_agent_vs_same_objective, s, a),
+            "diff_same_objective_vs_fixed_cost": diff_same_objective_vs_fixed_cost,
+            "pct_same_objective_vs_fixed_cost": _pct(diff_same_objective_vs_fixed_cost, f, s),
+        }
 
     mean_utilisation = round(sum(utilisation_values) / len(utilisation_values), 1) if utilisation_values else 0.0
 
     return {
         "row_count": len(scenarios),
         "per_tick": per_tick,
-        "cumulative": {"agent": agent_cum, "baseline": baseline_cum, "mean_renewable_utilisation_pct": mean_utilisation},
-        "comparison_agent_vs_baseline": comparison,
+        "cumulative": {
+            "agent": agent_cum,
+            "same_objective_baseline": same_obj_cum,
+            "fixed_cost_baseline": fixed_cost_cum,
+            "mean_renewable_utilisation_pct": mean_utilisation,
+        },
+        "comparison": comparison,
         "verdict_summary": {"counts": verdict_counts, "rule_fire_counts": rule_fire_counts},
     }
 

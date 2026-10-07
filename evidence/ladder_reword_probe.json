@@ -1,0 +1,34 @@
+{
+  "run_id": "probe_ladder_reword",
+  "purpose": "Post-reword (commit 678c109) cross-objective probe: same scenario (seed 777001, D4_SURPLUS_DAY) held byte-identical across all 4 objectives via model_copy, 3 live samples each, to test whether the surplus-ladder reword made max_profit sell before charging.",
+  "scenario": {
+    "tick": 1,
+    "seed": 777001,
+    "generation_mw": 122.0,
+    "demand_mw": 93.4,
+    "surplus_mw": 28.6,
+    "transmission_headroom_mw": 180.0,
+    "sellable_surplus_mw": 28.6
+  },
+  "rows": [
+    {"objective": "cost_efficiency", "sample": 0, "mode": "agent", "sell_mw": 12.6, "charge_mw": 16.0, "status": "pass"},
+    {"objective": "cost_efficiency", "sample": 1, "mode": "agent", "sell_mw": 12.6, "charge_mw": 16.0, "status": "pass"},
+    {"objective": "cost_efficiency", "sample": 2, "mode": "agent", "sell_mw": 12.6, "charge_mw": 16.0, "status": "pass"},
+    {"objective": "min_carbon", "sample": 0, "mode": "agent", "sell_mw": 12.6, "charge_mw": 16.0, "status": "pass"},
+    {"objective": "min_carbon", "sample": 1, "mode": "agent", "sell_mw": 12.6, "charge_mw": 16.0, "status": "pass"},
+    {"objective": "min_carbon", "sample": 2, "mode": "agent", "sell_mw": 12.6, "charge_mw": 16.0, "status": "pass"},
+    {"objective": "max_renewable_utilisation", "sample": 0, "mode": "agent", "sell_mw": 12.6, "charge_mw": 16.0, "status": "pass"},
+    {"objective": "max_renewable_utilisation", "sample": 1, "mode": "agent", "sell_mw": 12.6, "charge_mw": 16.0, "status": "pass"},
+    {"objective": "max_renewable_utilisation", "sample": 2, "mode": "agent", "sell_mw": 12.6, "charge_mw": 16.0, "status": "pass"},
+    {"objective": "max_profit", "sample": 0, "mode": "agent", "sell_mw": 28.6, "charge_mw": 0.0, "status": "pass"},
+    {"objective": "max_profit", "sample": 1, "mode": "agent", "sell_mw": 28.6, "charge_mw": 0.0, "status": "pass"},
+    {"objective": "max_profit", "sample": 2, "mode": "agent", "sell_mw": 28.6, "charge_mw": 0.0, "status": "pass"}
+  ],
+  "summary_by_objective": {
+    "cost_efficiency": {"sell_mw": 12.6, "charge_mw": 16.0},
+    "min_carbon": {"sell_mw": 12.6, "charge_mw": 16.0},
+    "max_renewable_utilisation": {"sell_mw": 12.6, "charge_mw": 16.0},
+    "max_profit": {"sell_mw": 28.6, "charge_mw": 0.0}
+  },
+  "recordings_dir": "recordings/probe_ladder_reword/"
+}

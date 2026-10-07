@@ -180,12 +180,24 @@ def is_emergency(scenario: EnvironmentState, floor_pct: float) -> bool:
     return best_case_supply < scenario.total_demand_mw
 
 
-def min_required_curtailment_mw(scenario: EnvironmentState) -> float:
-    """The least curtailment that is physically necessary: surplus remaining after load,
-    maximum battery charge, and sale up to transmission headroom are all used."""
+def surplus_after_max_charge_mw(scenario: EnvironmentState) -> float:
+    """Generation minus demand minus every battery's own max charge headroom (not yet capped
+    by transmission) -- how much surplus would still need to be sold or curtailed even after
+    charging every battery to its hardware limit. Floored at 0, same as the quantity it feeds
+    into below. Addendum: surfaced to the Orchestrator directly (orchestrator_facts) so
+    charging and selling are never summed as if they drew from two separate pools."""
     generation = scenario.solar_output_mw + scenario.wind_output_mw
     total_max_charge = sum(max_charge_mw(b) for b in scenario.batteries)
-    return max(0.0, generation - scenario.total_demand_mw - total_max_charge - scenario.transmission_headroom_mw)
+    return max(0.0, generation - scenario.total_demand_mw - total_max_charge)
+
+
+def min_required_curtailment_mw(scenario: EnvironmentState) -> float:
+    """The least curtailment that is physically necessary: surplus remaining after load,
+    maximum battery charge, and sale up to transmission headroom are all used. Depends on
+    transmission_headroom_mw never being negative -- subtracting a non-negative number can't
+    change which side of the floor-at-0 the result lands on; see
+    surplus_after_max_charge_mw's own floor above."""
+    return max(0.0, surplus_after_max_charge_mw(scenario) - scenario.transmission_headroom_mw)
 
 
 def unserved_mw(scenario: EnvironmentState, decision: Decision) -> float:
@@ -335,5 +347,7 @@ def orchestrator_facts(scenario: EnvironmentState, floor_pct: float) -> dict:
         "forecast_position": position_label(forecast_net_position),
         "sellable_surplus_mw": round(sellable_surplus_mw(scenario), 1),
         "max_import_mw": round(max_import_mw(scenario), 1),
+        "min_required_curtailment_mw": round(min_required_curtailment_mw(scenario), 1),
+        "surplus_after_max_charge_mw": round(surplus_after_max_charge_mw(scenario), 1),
         **battery_headroom_facts(scenario, floor_pct),
     }

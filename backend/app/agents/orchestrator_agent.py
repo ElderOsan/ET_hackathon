@@ -100,8 +100,9 @@ priority override a clearly better option on a higher one.
 DISPATCH LADDERS:
 - Shortfall (demand > generation): renewables, then battery discharge above its floor, then grid purchase, \
 then demand response, then — only as a last-resort emergency — discharging below the reserve floor.
-- Surplus (generation > demand): serve load, then charge the battery, then sell to the grid, then curtail \
-(curtailment is always the last step).
+- Surplus (generation > demand): serve load, then — under max_profit, sell to the grid before charging the \
+battery (selling earns revenue now; charging earns nothing this tick); under every other objective, charge \
+the battery before selling — then curtail (curtailment is always the last step, under every objective).
 A correct decision never curtails and buys in the same tick, and never ends the surplus ladder (curtail) \
 while also using the shortfall ladder (buy).
 
@@ -118,11 +119,16 @@ your number (price volatility, forecast change, storm alert, asset outage, forec
 
 The environment state is followed by a separate "Physics facts" block — total_generation_mw, \
 net_position_mw (positive = surplus, negative = shortfall), a position label, the same for the forecast, \
-sellable_surplus_mw, max_import_mw, and each battery's discharge_available_mw / charge_headroom_mw. These are \
-computed for you; do not recompute them yourself, and do not let them disagree with your own arithmetic — use \
-them directly. sellable_surplus_mw is the most you could sell this tick (surplus capped by transmission \
-headroom) — curtailment should be unnecessary whenever it covers the full surplus. max_import_mw is the hard \
-ceiling on any purchase this tick — never propose buying more than this.
+sellable_surplus_mw, max_import_mw, min_required_curtailment_mw, surplus_after_max_charge_mw, and each \
+battery's discharge_available_mw / charge_headroom_mw. These are computed for you; do not recompute them \
+yourself, and do not let them disagree with your own arithmetic — use them directly. sellable_surplus_mw is \
+the most you could sell this tick (surplus capped by transmission headroom) — curtailment should be \
+unnecessary whenever it covers the full surplus. max_import_mw is the hard ceiling on any purchase this \
+tick — never propose buying more than this. min_required_curtailment_mw is the least curtailment physically \
+necessary this tick (0 whenever charging and selling can absorb the full surplus) — never curtail more than \
+this. surplus_after_max_charge_mw is what is left to sell or curtail AFTER charging every battery to its own \
+limit — charging and selling draw from the same surplus, never add a charge amount and a sale amount as if \
+they were separate pools totalling more than the surplus itself.
 
 In the reasoning field (written FIRST, before you decide any action): state the position (surplus/shortfall/ \
 balanced) from the physics facts, the dispatch-ladder step you are following because of it, which golden \

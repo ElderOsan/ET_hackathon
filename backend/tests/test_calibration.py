@@ -423,3 +423,40 @@ def test_balancer_does_not_cap_charge_within_surplus():
     charge_action = next(a for a in applied.battery_actions if a.battery_id == "battery_1")
     assert charge_action.amount_mw == 5.0
     assert not any("renewable surplus" in r.reason for r in repairs)
+
+
+# ---- orchestrator_facts: min_required_curtailment_mw / surplus_after_max_charge_mw -----
+
+
+def test_facts_transmission_headroom_never_negative_across_generated_scenarios():
+    # The min_required_curtailment_mw / surplus_after_max_charge_mw equivalence (physics.py)
+    # depends on transmission_headroom_mw >= 0 -- subtracting a non-negative number can't
+    # move the result to the other side of the floor-at-0; a negative one could. Checked
+    # across every generated profile, not just the fixture.
+    from app.agents.scenario_agent import generate_scenario
+    from app.models.schemas import GENERATED_DIFFICULTIES
+    for difficulty in GENERATED_DIFFICULTIES:
+        for seed in range(10):
+            scenario = generate_scenario(difficulty, None, seed=9000 + seed)
+            assert scenario.transmission_headroom_mw >= 0.0, f"{difficulty.value} seed={seed}: negative transmission_headroom_mw"
+
+
+def test_facts_surplus_after_max_charge_matches_min_required_curtailment_intermediate():
+    # surplus_after_max_charge_mw must be the exact intermediate term
+    # min_required_curtailment_mw subtracts transmission_headroom_mw from -- not a second,
+    # independently-computed value that could drift.
+    scenario = _tick88_scenario(total_demand_mw=90.0, total_demand_forecast_mw=90.0, transmission_headroom_mw=5.0)  # surplus 11.7MW
+    surplus_after_charge = physics.surplus_after_max_charge_mw(scenario)
+    min_curtail = physics.min_required_curtailment_mw(scenario)
+    assert min_curtail == round(max(0.0, surplus_after_charge - scenario.transmission_headroom_mw), 1)
+    # concretely: 11.7MW surplus - 16MW battery charge cap -> 0 (batteries absorb it all)
+    assert surplus_after_charge == 0.0
+    assert min_curtail == 0.0
+
+
+def test_facts_min_required_curtailment_and_surplus_after_charge_in_orchestrator_facts():
+    scenario = _tick88_scenario(total_demand_mw=50.0, total_demand_forecast_mw=50.0, transmission_headroom_mw=5.0)  # generation 101.7, surplus 51.7MW, forces real curtailment
+    facts = physics.orchestrator_facts(scenario, scenario.previous_floor_pct)
+    assert facts["surplus_after_max_charge_mw"] == round(physics.surplus_after_max_charge_mw(scenario), 1)
+    assert facts["min_required_curtailment_mw"] == round(physics.min_required_curtailment_mw(scenario), 1)
+    assert facts["min_required_curtailment_mw"] > 0.0  # a real case where curtailment is unavoidable

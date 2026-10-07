@@ -672,7 +672,7 @@
     }
   ],
   "prompt_audit": {
-    "checked": 184,
+    "checked": 416,
     "findings": []
   },
   "determinism": {

@@ -1,0 +1,109 @@
+{
+  "run_id": "round1",
+  "evaluated_against": ["evidence/gate.json", "evidence/exit_tiers.json"],
+  "prompt_version": "114f4a55af8ba01b",
+  "frozen_commit": "6cd573ae89f99e8ee6e5e32543e11fbaebaa89af",
+  "denominator_convention": {
+    "decision": "The one 429/safe-mode row stays in the denominator (72) and never counts as a pass, regardless of the dispatcher fallback's own verdict.",
+    "source": "User decision, taken as given. Matches exit_tiers.json's own run_spec.denominator_note: 'every scenario in the denominator -- no exclusions'.",
+    "note": "A literal read of the safe-mode row's own raw verdict (the dispatcher's decision, evaluated) is 'pass' -- counting it as a pass would give 62/72=86.1%. That number is NOT used anywhere in this report; it would credit a fallback mechanism as if it were the model's own first attempt, which it is not."
+  },
+  "primary_number": {"pass": 61, "of": 72, "pct": 84.7, "label": "overall first-attempt (raw) pass, 429 row counted as not-a-pass, kept in denominator"},
+  "secondary_number": {"pass": 61, "of": 71, "pct": 85.9, "label": "agent-only (429 row excluded from both numerator and denominator) -- the standard BatchRunSummary.first_attempt_pass_rate_pct convention used elsewhere in this project"},
+
+  "criteria": {
+    "overall_first_attempt_pass": {
+      "tier_G_threshold": {"min_pct": 80.0, "min_count": 58, "of": 72},
+      "tier_A_threshold": {"min_pct": 80.0, "min_count": 58, "of": 72},
+      "actual": {"count": 61, "of": 72, "pct": 84.7},
+      "tier_G_met": true, "tier_A_met": true
+    },
+    "stable_surplus_shortfall_pass": {
+      "tier_G_threshold": {"min_pct": 92.0, "min_count": 34, "of": 36},
+      "tier_A_threshold": {"min_pct": 86.0, "min_count": 31, "of": 36},
+      "actual": {"count": 33, "of": 36, "pct": 91.7},
+      "tier_G_met": false,
+      "tier_A_met": true,
+      "note": "Identical to round0_run2 (also 33/36=91.7%) -- missed by exactly one row, not a fractional margin. 92% is not an attainable score on a 36-row denominator: 33/36=91.7%, 34/36=94.4%, nothing lands between them. Reported as context for the miss, never as grounds for treating 91.7% as having met it."
+    },
+    "non_fail_rate": {
+      "tier_G_threshold": {"min_pct": 97.0},
+      "tier_A_threshold": {"min_pct": 95.0, "min_count": 69, "of": 72},
+      "actual_strict": {"count": 70, "of": 72, "pct": 97.2, "note": "the 429 row counted as neither pass nor flagged -- excluded entirely from the non-fail numerator too"},
+      "actual_lenient": {"count": 71, "of": 72, "pct": 98.6, "note": "the 429 row's own raw verdict (the dispatcher's, evaluated) was in fact 'pass', so it genuinely is non-fail, just not credited as a model pass"},
+      "tier_G_met": true, "tier_A_met": true,
+      "note": "Passes either reading; not a deciding criterion this round."
+    },
+    "per_objective_min_passes_of_18": {
+      "tier_G_threshold": 12,
+      "tier_A_threshold": 11,
+      "actual": {
+        "cost_efficiency": {"pass": 16, "flagged": 1, "fail": 1, "of": 18},
+        "max_profit": {"pass": 12, "flagged": 6, "fail": 0, "of": 18},
+        "max_renewable_utilisation": {"pass": 15, "flagged": 2, "fail": 0, "excluded_safe_mode": 1, "of": 18},
+        "min_carbon": {"pass": 18, "flagged": 0, "fail": 0, "of": 18}
+      },
+      "tier_G_met": true, "tier_A_met": true,
+      "note": "max_profit (12/18) exactly meets Tier G's own threshold with no margin."
+    },
+    "avoidable_unserved_pct": {
+      "tier_G_threshold": {"max_pct": 5.0},
+      "tier_A_threshold": {"max_pct": 5.0},
+      "actual": {"count": 1, "of": 72, "pct": 1.4, "row": {"tick": 38, "seed": 20291005, "profile": "multi_failure_cascade", "objective": "cost_efficiency", "unserved_mw": 3.7}},
+      "tier_G_met": true, "tier_A_met": true
+    },
+    "qualitative": {
+      "safe_mode_demonstrated": {
+        "tier_G_met": true, "tier_A_met": true,
+        "gate_json_literal_text": "\"safe_mode\": {\"required\": \"demonstrated\", \"status_this_patch\": \"not met — safe mode is explicitly out of scope for Brief 2 Patch 2 (it belongs to Brief 3, which is on hold). Recording this honestly as unmet rather than marking it demonstrated.\"}",
+        "ambiguity": "The text does not say whether 'demonstrated' means (a) the capability exists and works, verifiable by evidence outside any one benchmark run, or (b) the fallback was actually triggered during the benchmark being scored.",
+        "reading_taken": "(a) capability-demonstrated. 'required: demonstrated' is a capability word, not an occurrence count; the status note's own reasoning is about scope/existence at Patch 2 time (safe mode did not exist yet, Brief 3 was on hold), not about trigger frequency.",
+        "evidence_for_capability": [
+          "recording.SafeModeRecorder (backend/app/data/recording.py), built in Patch 3 Step 4",
+          "backend/tests/test_safe_mode.py -- 7 unit tests, pre-existing, passing",
+          "No-key auto-fallback verified live in the browser (Gate B7)",
+          "Invalid-key live fallback verified live in the browser, with the real Google 401/403 rejection (Gate B7)",
+          "Door 2 ('Run it in safe mode') exercised repeatedly through this session's UI work"
+        ],
+        "round1_safe_mode_count": 1,
+        "round1_cause": "A 429 RESOURCE_EXHAUSTED (free-tier quota) on tick 31, not a model failure. Stated plainly rather than presented as the fallback being exercised by design -- it was exercised by an infrastructure limit, not deliberately demonstrated within this run.",
+        "denominator_note": "Four of the five quantitative/qualitative criteria in this report are evaluated against round1's own 72 scenarios. This one is not -- it is evaluated against evidence from outside the benchmark, per the reading taken above."
+      },
+      "replay_matches_72_of_72": {
+        "tier_G_met": false,
+        "tier_A_met": false,
+        "criterion_literal_text": "\"replay matches 72/72\" (exit_tiers.json, qualitative list, identical wording under both tiers)",
+        "ambiguity": "Two readings produce different verdicts: (1) 'replay reproduces every scenario's recorded verdict' -- satisfied: the 429 row's replay faithfully reproduces its own recorded failure, so all 72 verdicts reproduce exactly. (2) 'every scenario has a usable recorded model decision to replay' -- not satisfied: 71/72, since the 429 row never produced a successful ('ok') recording to replay in the first place.",
+        "reading_taken": "(2), the strict reading, taken deliberately. Under reading (1), Tier A would be reached (it is the only failing criterion for Tier A). We are not taking that reading.",
+        "verification_method": "Actually replayed round1 via the system's own ReplayRecorder (not wrapped in SafeModeRecorder -- by explicit design, documented in backend/app/api/routes.py: 'a replay miss is a real data-availability problem that should surface as one, not be quietly papered over by the dispatcher'), using _run_matrix(..., mode='replay', run_id='round1'). Result: total=72, judged=71, unresolved=1 (tick 31, same scenario).",
+        "process_defect": "round1's 72 live calls were made back-to-back with no pacing, against a measured 15 requests/minute free-tier limit. This is a process/instrumentation defect, not a model or system defect -- the fix is pacing, not a code or prompt change. D.3 (the 96-row recording) will be paced (~4s between calls) as a direct result of this finding.",
+        "decision_not_to_fill": "The single failed scenario (tick 31) was NOT re-run to complete its recording. A rate-limited call is arguably a missing observation rather than a measurement, and there is a real argument for filling it -- but that decision would be made with foreknowledge that it is the one thing standing between this run and Tier A, and avoiding exactly that kind of contamination is what pre-registration exists to protect. This is a decision taken, not an oversight."
+      },
+      "deterministic_suite_green": {
+        "tier_G_met": true, "tier_A_met": true,
+        "pytest": "156/156 passed",
+        "step6_evidence": "Re-run this session: oracle/baselines unchanged, fault-injection matrix 70/72 intended-rule detections, 0 unexpected co-triggers (two previously-unexpected co-triggers -- rule_5 now legitimately co-firing with injected rule_11 faults on multi_failure_cascade/shortfall_day, a direct and correct consequence of the rule_8c/rule_5 state-based threshold fix -- were documentation, not behavior: step6_evidence.py's own expected-cotrigger set for the rule_11 fault injector was stale, not the fault matrix finding a new problem. Updated that one set to include rule_5; re-ran, 0 unexpected again.)"
+      },
+      "every_non_pass_classified": {"tier_G_met": true, "tier_A_met": true, "note": "every flagged/fail row below has an identified firing rule_id and a specific numeric detail"},
+      "zero_verdict_inconsistencies": {"tier_G_met": true, "tier_A_met": true, "note": "zero INCONSISTENT_VERDICT log lines in the full captured round1 run output"}
+    }
+  },
+
+  "rule_fire_breakdown_raw": {"rule_9": 6, "rule_5": 4, "rule_8b": 3, "rule_3": 1},
+
+  "fail_rows_raw": [
+    {"tick": 38, "seed": 20291005, "profile": "multi_failure_cascade", "objective": "cost_efficiency", "rule": "rule_3", "actual_mw": 3.7, "reference_mw": 0.0, "margin_mw": 3.7}
+  ],
+
+  "applied_stage_additional_fails": [
+    {"tick": 16, "seed": 20271104, "profile": "cloudy_afternoon", "objective": "min_carbon", "raw_status": "pass", "applied_status": "fail", "rule": "rule_3", "unserved_mw": 1.9, "mechanism": "battery_2 discharge proposed at 7.9MW, rate-capped to its own 6.0MW limit (not a floor issue -- SoC 61%, floor 25%); zero other repairs; 180MW of unused transmission headroom never substituted"},
+    {"tick": 20, "seed": 20271205, "profile": "cloudy_afternoon", "objective": "max_renewable_utilisation", "raw_status": "pass", "applied_status": "fail", "rule": "rule_3", "unserved_mw": 2.9, "mechanism": "same mechanism as tick 16 -- battery_2 discharge proposed at 8.9MW, rate-capped to 6.0MW, 180MW headroom unused"}
+  ],
+
+  "tier_result": {
+    "tier_G": {"reached": false, "missed_criteria": ["stable_surplus_shortfall_pass (33/36=91.7% vs 34/36=92.0% required)", "replay_matches_72_of_72 (71/72, strict reading)"]},
+    "tier_A": {"reached": false, "missed_criteria": ["replay_matches_72_of_72 (71/72, strict reading)"]},
+    "named": "neither",
+    "note": "Every quantitative threshold for Tier A is cleared, several comfortably. Tier A is missed on a single qualitative criterion, taken under its stricter of two valid readings, caused by a process defect (no pacing against the free-tier rate limit) rather than a model or system defect."
+  }
+}

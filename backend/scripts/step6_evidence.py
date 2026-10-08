@@ -242,13 +242,17 @@ def _inject_rule_11(decision, scenario):
     # The extra charge consumes generation/surplus that would otherwise have served load or
     # been sold -- unserved load (rule_3) and, if a sale was also active, selling-while-unmet
     # (rule_4) are structural consequences of the same single injected charge, not separate
-    # findings.
+    # findings. rule_5 (charging beyond unsellable surplus at a price peak) is ALSO a
+    # structural consequence on any profile whose price clears DISPATCHER_PRICE_SPIKE_THRESHOLD_USD
+    # -- state-based since the rule_8c/rule_5 fix, so no longer confined to the price_spike
+    # profile the way the old difficulty-gated threshold was. Documented here, not a new
+    # finding each time it fires.
     battery = scenario.batteries[0]
     surplus = physics.renewable_surplus_mw(scenario)
     actions = [a for a in decision.battery_actions if a.battery_id != battery.id]
     actions.append(BatteryAction(battery_id=battery.id, action="charge", amount_mw=surplus + 10.0))
     d = decision.model_copy(update={"battery_actions": actions})
-    return d, "rule_11", {"rule_3", "rule_4"}
+    return d, "rule_11", {"rule_3", "rule_4", "rule_5"}
 
 
 FAULT_INJECTORS = [

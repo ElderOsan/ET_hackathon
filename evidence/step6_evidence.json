@@ -455,7 +455,8 @@
       "fault": "rule_11",
       "intended_caught": true,
       "cotriggered": [
-        "rule_3"
+        "rule_3",
+        "rule_5"
       ],
       "unexpected_false_alarms": []
     },
@@ -666,13 +667,14 @@
       "fault": "rule_11",
       "intended_caught": true,
       "cotriggered": [
-        "rule_3"
+        "rule_3",
+        "rule_5"
       ],
       "unexpected_false_alarms": []
     }
   ],
   "prompt_audit": {
-    "checked": 416,
+    "checked": 466,
     "findings": []
   },
   "determinism": {

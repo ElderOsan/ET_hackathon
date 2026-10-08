@@ -242,12 +242,7 @@ export default function App() {
             Compare objectives on one state
           </button>
           <button className="secondary" disabled={loading} onClick={() => loadPreset("stable_day", 200001)}>A calm day</button>
-          <button className="secondary" disabled={loading} onClick={() => loadPreset(
-            "multi_failure_cascade", 300001,
-            "This generator profile always bundles all four cascade events together (battery outage, transmission at capacity, demand surge, storm alert) — there is no “storm only” scenario in the generator. This is the same profile as “A multi-failure cascade”, a different seed."
-          )}>
-            A storm
-          </button>
+          <button className="secondary" disabled={loading} onClick={() => loadPreset("price_spike", 400001)}>A price spike</button>
           <button className="secondary" disabled={loading} onClick={() => loadPreset("multi_failure_cascade", 300002)}>A multi-failure cascade</button>
         </div>
         {presetHint && (

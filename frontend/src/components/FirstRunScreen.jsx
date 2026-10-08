@@ -61,13 +61,22 @@ export default function FirstRunScreen({ status, onChooseRecordedDay, onChooseSa
               <>
                 <button onClick={() => setShowKeyHelp((v) => !v)}>How do I add a key?</button>
                 {showKeyHelp && (
-                  <p style={{ fontSize: 12, color: "#9aa4b2", marginTop: 8 }}>
-                    No key is configured on this machine. Add <code>GEMINI_API_KEY</code> to{" "}
-                    <code>backend/.env</code> (a free key, no credit card, from{" "}
-                    <code>aistudio.google.com</code>), then restart the app. The key stays on
-                    your machine and is sent nowhere but Google — it is never read by, or
-                    entered into, this browser.
-                  </p>
+                  <ol style={{ fontSize: 12, color: "#c7ccd4", marginTop: 8, paddingLeft: 18 }}>
+                    <li style={{ marginBottom: 6 }}>
+                      Get a free key (no credit card) at <code>aistudio.google.com</code>.
+                    </li>
+                    <li style={{ marginBottom: 6 }}>
+                      Open <code>backend/.env</code> (copy <code>backend/.env.example</code> first
+                      if it doesn't exist yet) and change this line:{" "}
+                      <code>GEMINI_API_KEY=your-gemini-key-here</code> — replace{" "}
+                      <code>your-gemini-key-here</code> with your real key.
+                    </li>
+                    <li>
+                      Stop and restart the app (close the terminal window / re-run{" "}
+                      <code>run.bat</code> or <code>run.sh</code>) — the key is only read once,
+                      at startup.
+                    </li>
+                  </ol>
                 )}
               </>
             )

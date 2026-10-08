@@ -1,0 +1,38 @@
+{
+  "cache_key": "21dc1cdc063e4e0bcb4497dc",
+  "scenario_hash": "1b3afbf23114e962",
+  "prompt_version": "114f4a55af8ba01b",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 1.0,
+  "sample_index": 53,
+  "tick": 54,
+  "seed": 254,
+  "recorded_at": 1791453919.7557657,
+  "request": {
+    "contents": "Declared objective for this tick: max_profit\n\nEnvironment state:\n{\n  \"tick\": 54,\n  \"seed\": 254,\n  \"difficulty\": \"file_input\",\n  \"objective\": \"max_profit\",\n  \"solar_output_mw\": 106.8,\n  \"solar_forecast_mw\": 107.6,\n  \"wind_output_mw\": 14.0,\n  \"wind_forecast_mw\": 16.7,\n  \"solar_farms\": [],\n  \"wind_farms\": [],\n  \"base_demand_mw\": 72.8,\n  \"base_demand_forecast_mw\": 73.1,\n  \"total_demand_mw\": 104.4,\n  \"total_demand_forecast_mw\": 104.7,\n  \"grid_frequency_hz\": 49.986,\n  \"transmission_constraint_mw\": 180.0,\n  \"transmission_headroom_mw\": 180.0,\n  \"batteries\": [\n    {\n      \"id\": \"battery_1\",\n      \"capacity_mwh\": 40.0,\n      \"state_of_charge_pct\": 58.2,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 10.0,\n      \"max_discharge_rate_mw\": 10.0,\n      \"charging_efficiency_pct\": 92.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    },\n    {\n      \"id\": \"battery_2\",\n      \"capacity_mwh\": 25.0,\n      \"state_of_charge_pct\": 49.3,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 6.0,\n      \"max_discharge_rate_mw\": 6.0,\n      \"charging_efficiency_pct\": 90.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    }\n  ],\n  \"previous_floor_pct\": 25.0,\n  \"electricity_price_per_mwh\": 68.3,\n  \"buy_price_per_mwh\": 71.72,\n  \"sell_price_per_mwh\": 64.88,\n  \"carbon_price_per_ton\": 31.9,\n  \"grid_carbon_intensity_t_per_mwh\": 0.494,\n  \"demand_response_incentive_per_mwh\": 18.6,\n  \"weather_forecast\": \"clear\",\n  \"storm_alert\": false,\n  \"maintenance_scheduled\": false,\n  \"industrial_demand_mw\": 31.6,\n  \"events\": []\n}\n\nPhysics facts (computed \u2014 use directly, do not recompute):\n{\n  \"total_generation_mw\": 120.8,\n  \"net_position_mw\": 16.4,\n  \"position\": \"surplus\",\n  \"forecast_total_generation_mw\": 124.3,\n  \"forecast_net_position_mw\": 19.6,\n  \"forecast_position\": \"surplus\",\n  \"sellable_surplus_mw\": 16.4,\n  \"max_import_mw\": 180.0,\n  \"min_required_curtailment_mw\": 0.0,\n  \"surplus_after_max_charge_mw\": 0.4,\n  \"per_battery\": [\n    {\n      \"battery_id\": \"battery_1\",\n      \"discharge_available_mw\": 10.0,\n      \"charge_headroom_mw\": 10.0\n    },\n    {\n      \"battery_id\": \"battery_2\",\n      \"discharge_available_mw\": 6.0,\n      \"charge_headroom_mw\": 6.0\n    }\n  ],\n  \"total_discharge_available_mw\": 16.0,\n  \"total_charge_headroom_mw\": 16.0\n}"
+  },
+  "status": "ok",
+  "response_args": {
+    "battery_actions": [
+      {
+        "battery_id": "battery_1",
+        "amount_mw": 10,
+        "action": "charge"
+      },
+      {
+        "action": "charge",
+        "amount_mw": 6,
+        "battery_id": "battery_2"
+      }
+    ],
+    "demand_response_triggered": false,
+    "reasoning": "Position is surplus (+16.4 MW). Objective is max_profit: under max_profit, sell to the grid before charging batteries, but here sellable surplus is fully absorbed by max charging headroom (16 MW total across batteries), leaving 0.4 MW surplus which is curtailed. Golden Rules 1-4 held. Cascade: max_profit (profit/cost/carbon).",
+    "market_amount_mw": 0,
+    "market_action": "hold",
+    "reserve_floor_pct": 25,
+    "curtail_wind_mw": 0,
+    "floor_justification": "Stable weather forecast, calm conditions, normal price volatility.",
+    "curtail_solar_mw": 0.4
+  },
+  "latency_ms": 1609.0
+}

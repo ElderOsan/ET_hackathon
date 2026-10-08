@@ -1,0 +1,38 @@
+{
+  "cache_key": "042b720c381260b8b0ae7750",
+  "scenario_hash": "45690741739e5173",
+  "prompt_version": "114f4a55af8ba01b",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 1.0,
+  "sample_index": 21,
+  "tick": 22,
+  "seed": 222,
+  "recorded_at": 1791453714.6670318,
+  "request": {
+    "contents": "Declared objective for this tick: cost_efficiency\n\nEnvironment state:\n{\n  \"tick\": 22,\n  \"seed\": 222,\n  \"difficulty\": \"file_input\",\n  \"objective\": \"cost_efficiency\",\n  \"solar_output_mw\": 1.4,\n  \"solar_forecast_mw\": 1.6,\n  \"wind_output_mw\": 33.3,\n  \"wind_forecast_mw\": 30.4,\n  \"solar_farms\": [],\n  \"wind_farms\": [],\n  \"base_demand_mw\": 75.5,\n  \"base_demand_forecast_mw\": 77.8,\n  \"total_demand_mw\": 110.7,\n  \"total_demand_forecast_mw\": 113.0,\n  \"grid_frequency_hz\": 49.959,\n  \"transmission_constraint_mw\": 180.0,\n  \"transmission_headroom_mw\": 180.0,\n  \"batteries\": [\n    {\n      \"id\": \"battery_1\",\n      \"capacity_mwh\": 40.0,\n      \"state_of_charge_pct\": 61.4,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 10.0,\n      \"max_discharge_rate_mw\": 10.0,\n      \"charging_efficiency_pct\": 92.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    },\n    {\n      \"id\": \"battery_2\",\n      \"capacity_mwh\": 25.0,\n      \"state_of_charge_pct\": 60.4,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 6.0,\n      \"max_discharge_rate_mw\": 6.0,\n      \"charging_efficiency_pct\": 90.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    }\n  ],\n  \"previous_floor_pct\": 25.0,\n  \"electricity_price_per_mwh\": 72.0,\n  \"buy_price_per_mwh\": 75.6,\n  \"sell_price_per_mwh\": 68.4,\n  \"carbon_price_per_ton\": 27.8,\n  \"grid_carbon_intensity_t_per_mwh\": 0.801,\n  \"demand_response_incentive_per_mwh\": 19.6,\n  \"weather_forecast\": \"clear\",\n  \"storm_alert\": false,\n  \"maintenance_scheduled\": false,\n  \"industrial_demand_mw\": 35.2,\n  \"events\": []\n}\n\nPhysics facts (computed \u2014 use directly, do not recompute):\n{\n  \"total_generation_mw\": 34.7,\n  \"net_position_mw\": -76.0,\n  \"position\": \"shortfall\",\n  \"forecast_total_generation_mw\": 32.0,\n  \"forecast_net_position_mw\": -81.0,\n  \"forecast_position\": \"shortfall\",\n  \"sellable_surplus_mw\": 0.0,\n  \"max_import_mw\": 180.0,\n  \"min_required_curtailment_mw\": 0.0,\n  \"surplus_after_max_charge_mw\": 0.0,\n  \"per_battery\": [\n    {\n      \"battery_id\": \"battery_1\",\n      \"discharge_available_mw\": 10.0,\n      \"charge_headroom_mw\": 10.0\n    },\n    {\n      \"battery_id\": \"battery_2\",\n      \"discharge_available_mw\": 6.0,\n      \"charge_headroom_mw\": 6.0\n    }\n  ],\n  \"total_discharge_available_mw\": 16.0,\n  \"total_charge_headroom_mw\": 16.0\n}"
+  },
+  "status": "ok",
+  "response_args": {
+    "reasoning": "Position: shortfall. Shortfall ladder step: renewables + battery discharge + grid purchase. Binding golden rules: 1 (Reliability, serving total_demand_mw=110.7 via generation 34.7 + discharge 16 + purchase 60), 2 (Grid stability, headroom 180). Cascade: cost_efficiency (cost then carbon then renewable utilisation), purchasing 60 MW to cover remaining shortfall.",
+    "market_amount_mw": 60,
+    "demand_response_triggered": false,
+    "curtail_solar_mw": 0,
+    "curtail_wind_mw": 0,
+    "battery_actions": [
+      {
+        "battery_id": "battery_1",
+        "amount_mw": 10,
+        "action": "discharge"
+      },
+      {
+        "battery_id": "battery_2",
+        "action": "discharge",
+        "amount_mw": 6
+      }
+    ],
+    "market_action": "buy",
+    "floor_justification": "Calm weather, stable forecast confidence, no price spikes or volatility signals, maintaining standard 25% floor.",
+    "reserve_floor_pct": 25
+  },
+  "latency_ms": 1562.0
+}

@@ -1,8 +1,0 @@
-{
-  "run_id": "smoke_facts_ladder",
-  "model": "smoke",
-  "seed": 90000001,
-  "seed_set": "smoke",
-  "created_at": 1791394878.9897149,
-  "scenario_count": 8
-}

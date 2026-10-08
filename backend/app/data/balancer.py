@@ -99,7 +99,9 @@ def balance(scenario: EnvironmentState, proposal: Decision) -> tuple[Decision, l
     # --- Phase A: load must be met before any sale or curtailment is allowed. If still short
     # after both, unwind battery charging too (largest proposed charge first) — charging while
     # load is unmet is never correct, same as selling or curtailing while unmet (Brief 2 Patch,
-    # Step 5, finding #4). Unwind order: curtailment, then sale, then charging. -------------
+    # Step 5, finding #4). Unwind order: sale, then curtailment, then charging (matches the
+    # code immediately below and tests/test_balancer_unwind_order.py -- this comment
+    # previously stated the reverse order, which the code never implemented). -------------
     if served < total_demand - BALANCE_TOLERANCE_MW and sale > 0:
         repairs.append(FieldRepair(field="market_amount_mw(sell)", proposed=sale, applied=0.0, delta_mw=-sale, reason="load unserved — cannot sell while demand is unmet"))
         sale = 0.0

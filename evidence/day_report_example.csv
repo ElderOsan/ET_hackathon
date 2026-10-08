@@ -1,7 +1,7 @@
 tick,seed,objective,solar_output_mw,wind_output_mw,total_demand_mw,electricity_price_per_mwh,battery_1_soc_pct_before,battery_2_soc_pct_before,battery_1_soc_pct_after,battery_2_soc_pct_after,market_action,market_amount_mw,battery_1_action,battery_1_amount_mw,battery_2_action,battery_2_amount_mw,curtail_solar_mw,curtail_wind_mw,applied_floor_pct,mode,raw_verdict,applied_verdict,failing_rules,sold_mw,bought_mw,charged_mw,discharged_mw,curtailed_mw,unserved_mw,cost,revenue,profit,emissions_tonnes,renewable_utilisation_pct
 1,100,none,0.0,45.0,110.0,42.0,45.0,50.0,38.75,44.0,buy,49.0,discharge,10.0,discharge,6.0,0.0,0.0,25.0,agent,pass,pass,,0.0,49.0,0,16.0,0.0,0.0,540.2,0.0,-699.8,6.738,100.0
 2,101,none,0.0,38.0,103.0,40.0,42.0,48.0,35.75,48.0,buy,55.0,discharge,10.0,hold,0.0,0.0,0.0,25.0,agent,flagged,flagged,rule_8b,0.0,55.0,0,10.0,0.0,0.0,577.5,0.0,-672.5,7.563,100.0
-3,102,none,0.0,20.0,116.0,55.0,55.0,55.0,48.75,49.0,buy,80.0,discharge,10.0,discharge,6.0,0.0,0.0,45.0,agent,pass,pass,,0.0,80.0,0,16.0,0.0,0.0,1155.0,0.0,-1364.0,10.0,100.0
+3,102,none,0.0,20.0,116.0,55.0,55.0,55.0,48.75,49.0,buy,80.0,discharge,10.0,discharge,6.0,0.0,0.0,35.0,agent,pass,pass,,0.0,80.0,0,16.0,0.0,0.0,1155.0,0.0,-1364.0,10.0,100.0
 4,103,min_carbon,20.0,28.0,123.0,28.0,50.0,52.0,43.75,46.0,buy,59.0,discharge,10.0,discharge,6.0,0.0,0.0,25.0,agent,pass,pass,,0.0,59.0,0,16.0,0.0,0.0,433.6,0.0,-540.0,12.537,100.0
 5,104,max_profit,85.0,30.0,80.0,45.0,50.0,50.0,55.75,55.4,sell,12.0,charge,10.0,charge,6.0,7.0,0.0,25.0,agent,pass,pass,,12.0,0.0,16.0,0,7.0,0.0,0.0,128.2,284.2,0.0,93.9
 6,105,none,100.0,28.0,84.0,38.0,50.0,50.0,55.75,55.4,sell,12.0,charge,10.0,charge,6.0,16.0,0.0,25.0,agent,pass,pass,,12.0,0.0,16.0,0,16.0,0.0,0.0,108.3,240.1,0.0,87.5

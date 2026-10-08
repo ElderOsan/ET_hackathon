@@ -85,8 +85,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable night, calm forecast, no volatility signals; maintaining standard 25% floor.",
-          "reasoning": "Position: shortfall (net position -65.0 MW). Following shortfall ladder: renewables (45 MW), battery discharge above floor (16 MW total from battery_1 and battery_2), then grid purchase (49 MW to bridge remaining shortfall). Golden Rules 1 (Reliability) and 4 (Battery Protection) binding. Cost efficiency objective: buying minimum required power after renewables and batteries.",
+          "floor_justification": "Stable night forecast, calm weather, low volatility signals; reserve floor set to 25.0%.",
+          "reasoning": "Position: shortfall. Dispatch ladder: renewables (45 MW), battery discharge (16 MW total from battery_1 and battery_2 above floor), then grid purchase (49 MW) to cover total_demand_mw of 110 MW. Golden rules binding: Reliability (serving total_demand_mw=110) and Battery Protection. Objective cascade: cost_efficiency (cost minimization via cheapest remaining deficit covered by grid purchase).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -298,8 +298,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable night, calm forecast, no volatility signals; maintaining standard 25% floor.",
-          "reasoning": "Position: shortfall (net position -65.0 MW). Following shortfall ladder: renewables (45 MW), battery discharge above floor (16 MW total from battery_1 and battery_2), then grid purchase (49 MW to bridge remaining shortfall). Golden Rules 1 (Reliability) and 4 (Battery Protection) binding. Cost efficiency objective: buying minimum required power after renewables and batteries.",
+          "floor_justification": "Stable night forecast, calm weather, low volatility signals; reserve floor set to 25.0%.",
+          "reasoning": "Position: shortfall. Dispatch ladder: renewables (45 MW), battery discharge (16 MW total from battery_1 and battery_2 above floor), then grid purchase (49 MW) to cover total_demand_mw of 110 MW. Golden rules binding: Reliability (serving total_demand_mw=110) and Battery Protection. Objective cascade: cost_efficiency (cost minimization via cheapest remaining deficit covered by grid purchase).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -588,6 +588,11 @@
               "battery_id": "battery_1",
               "action": "discharge",
               "amount_mw": 10.0
+            },
+            {
+              "battery_id": "battery_2",
+              "action": "hold",
+              "amount_mw": 0.0
             }
           ],
           "market_action": "buy",
@@ -597,8 +602,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm pre-dawn conditions with standard battery maintenance; setting reserve floor at 25% within normal 20-30% stable band.",
-          "reasoning": "Position: shortfall (net position -65.0 MW). Following shortfall ladder: renewables (38 MW), battery discharge above floor (10 MW from battery_1), grid purchase (55 MW to cover remainder). Rules: reliability and battery protection binding. Objective: cost_efficiency (purchasing required shortfall at lowest cost).",
+          "floor_justification": "Calm weather, no volatility signals, maintaining standard 25% floor.",
+          "reasoning": "Position: shortfall. Shortfall ladder step: renewables (38 MW), battery discharge (10 MW), then grid purchase (55 MW). Golden rules: Reliability (serving total_demand_mw of 103 MW) and Battery Protection (discharging battery_1 safely above floor) are binding. Cascade: cost_efficiency (minimising cost via purchase and battery discharge).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -796,6 +801,11 @@
               "battery_id": "battery_1",
               "action": "discharge",
               "amount_mw": 10.0
+            },
+            {
+              "battery_id": "battery_2",
+              "action": "hold",
+              "amount_mw": 0.0
             }
           ],
           "market_action": "buy",
@@ -805,8 +815,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm pre-dawn conditions with standard battery maintenance; setting reserve floor at 25% within normal 20-30% stable band.",
-          "reasoning": "Position: shortfall (net position -65.0 MW). Following shortfall ladder: renewables (38 MW), battery discharge above floor (10 MW from battery_1), grid purchase (55 MW to cover remainder). Rules: reliability and battery protection binding. Objective: cost_efficiency (purchasing required shortfall at lowest cost).",
+          "floor_justification": "Calm weather, no volatility signals, maintaining standard 25% floor.",
+          "reasoning": "Position: shortfall. Shortfall ladder step: renewables (38 MW), battery discharge (10 MW), then grid purchase (55 MW). Golden rules: Reliability (serving total_demand_mw of 103 MW) and Battery Protection (discharging battery_1 safely above floor) are binding. Cascade: cost_efficiency (minimising cost via purchase and battery discharge).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -1107,10 +1117,10 @@
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
-          "proposed_floor_pct": 45.0,
-          "applied_floor_pct": 45.0,
-          "floor_justification": "Storm alert and price volatility signal active; raising floor to 45% ahead of forecasted volatility.",
-          "reasoning": "Position is shortfall (-96.0 MW). Following shortfall ladder: renewables (20 MW), battery discharge (16 MW total), then grid purchase (80 MW, well within max_import_mw 150). Golden Rules 1, 2, and 4 (reliability, grid stability, battery protection) are binding. Cost efficiency objective applies.",
+          "proposed_floor_pct": 35.0,
+          "applied_floor_pct": 35.0,
+          "floor_justification": "Storm alert active with approaching storm; raising floor to 35% for volatility headroom.",
+          "reasoning": "Position is shortfall (-96 MW). Following shortfall ladder: use renewables (20 MW), discharge batteries to max capacity (16 MW total: 10 MW battery_1, 6 MW battery_2), then buy remaining deficit (80 MW) from the grid. Golden rules 1 and 2 satisfied (reliability met, transmission headroom 150 MW > 80 MW purchase). Objective is cost_efficiency, minimizing purchase cost. Reserve floor set to 35% due to storm alert and volatility.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -1223,7 +1233,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Applied floor 45.0% is within [20.0, 60.0]%.",
+              "detail": "Applied floor 35.0% is within [20.0, 60.0]%.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -1234,7 +1244,7 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Proposed floor 45.0% is within the expected 30.0-45.0% band.",
+              "detail": "Proposed floor 35.0% is within the expected 30.0-45.0% band.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -1245,7 +1255,7 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Floor at 45.0% is either within the calm band or justified by a volatility signal.",
+              "detail": "Floor at 35.0% is either within the calm band or justified by a volatility signal.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -1320,10 +1330,10 @@
           "curtail_solar_mw": 0.0,
           "curtail_wind_mw": 0.0,
           "demand_response_triggered": false,
-          "proposed_floor_pct": 45.0,
-          "applied_floor_pct": 45.0,
-          "floor_justification": "Storm alert and price volatility signal active; raising floor to 45% ahead of forecasted volatility.",
-          "reasoning": "Position is shortfall (-96.0 MW). Following shortfall ladder: renewables (20 MW), battery discharge (16 MW total), then grid purchase (80 MW, well within max_import_mw 150). Golden Rules 1, 2, and 4 (reliability, grid stability, battery protection) are binding. Cost efficiency objective applies.",
+          "proposed_floor_pct": 35.0,
+          "applied_floor_pct": 35.0,
+          "floor_justification": "Storm alert active with approaching storm; raising floor to 35% for volatility headroom.",
+          "reasoning": "Position is shortfall (-96 MW). Following shortfall ladder: use renewables (20 MW), discharge batteries to max capacity (16 MW total: 10 MW battery_1, 6 MW battery_2), then buy remaining deficit (80 MW) from the grid. Golden rules 1 and 2 satisfied (reliability met, transmission headroom 150 MW > 80 MW purchase). Objective is cost_efficiency, minimizing purchase cost. Reserve floor set to 35% due to storm alert and volatility.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -1436,7 +1446,7 @@
               "severity": "fail",
               "passed": true,
               "applicable": true,
-              "detail": "Applied floor 45.0% is within [20.0, 60.0]%.",
+              "detail": "Applied floor 35.0% is within [20.0, 60.0]%.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -1447,7 +1457,7 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Proposed floor 45.0% is within the expected 30.0-45.0% band.",
+              "detail": "Proposed floor 35.0% is within the expected 30.0-45.0% band.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -1458,7 +1468,7 @@
               "severity": "flagged",
               "passed": true,
               "applicable": true,
-              "detail": "Floor at 45.0% is either within the calm band or justified by a volatility signal.",
+              "detail": "Floor at 35.0% is either within the calm band or justified by a volatility signal.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -1624,8 +1634,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm morning ramp with no extreme volatility signals; holding reserve floor at 25.0% as planned.",
-          "reasoning": "Position: shortfall. Dispatch step: renewables (48 MW), battery discharge (16 MW total), grid purchase (59 MW). Golden rules: 1 (reliability served via total_demand_mw=123), 2 (headroom=180), 3 (no curtailment), 4 (batteries discharged within safe limits above reserve floor). Cascade: min_carbon priority (purchased MWh minimized via full battery discharge; remaining shortfall met by grid import with carbon intensity 0.85 t/MWh).",
+          "floor_justification": "Stable conditions with morning ramp forecast; keeping floor at 25% as no volatility or storms are present.",
+          "reasoning": "Position is shortfall (net -75.0 MW). Following shortfall ladder: renewables, then battery discharge above floor (battery_1: 10 MW, battery_2: 6 MW), then grid purchase for the remaining 59 MW. Golden rules: Reliability and battery protection respected. Cascade objective: min_carbon (carbon then cost then renewable utilisation). Purchased MWh will incur carbon, but grid import is necessary to serve total demand after all local generation and maximum safe battery discharge.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -1837,8 +1847,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm morning ramp with no extreme volatility signals; holding reserve floor at 25.0% as planned.",
-          "reasoning": "Position: shortfall. Dispatch step: renewables (48 MW), battery discharge (16 MW total), grid purchase (59 MW). Golden rules: 1 (reliability served via total_demand_mw=123), 2 (headroom=180), 3 (no curtailment), 4 (batteries discharged within safe limits above reserve floor). Cascade: min_carbon priority (purchased MWh minimized via full battery discharge; remaining shortfall met by grid import with carbon intensity 0.85 t/MWh).",
+          "floor_justification": "Stable conditions with morning ramp forecast; keeping floor at 25% as no volatility or storms are present.",
+          "reasoning": "Position is shortfall (net -75.0 MW). Following shortfall ladder: renewables, then battery discharge above floor (battery_1: 10 MW, battery_2: 6 MW), then grid purchase for the remaining 59 MW. Golden rules: Reliability and battery protection respected. Cascade objective: min_carbon (carbon then cost then renewable utilisation). Purchased MWh will incur carbon, but grid import is necessary to serve total demand after all local generation and maximum safe battery discharge.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -2139,8 +2149,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable conditions, calm forecast, maintaining baseline 25% floor.",
-          "reasoning": "Position: surplus (35 MW surplus). Dispatch ladder: serve load, charge battery (16 MW total), sell to grid (12 MW, capped by transmission headroom), curtail remaining 7 MW solar. Golden Rules 1, 2, 3, 4 respected. Objective: max_profit (charging adds value at sell price, selling maximizes profit under transmission constraint).",
+          "floor_justification": "Stable conditions, calm forecast, maintaining standard 25% floor.",
+          "reasoning": "Position: surplus (35 MW). Objective: max_profit (sell to grid before charging battery). Golden Rules: reliability and grid stability maintained, transmission headroom (12 MW) fully utilized via sale, minimal curtailment (7 MW required due to line constraint). Battery actions: charge both batteries (16 MW total) from renewable surplus. Market action: sell 12 MW. Curtailment: 7 MW curtailed to respect transmission headroom.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -2352,8 +2362,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable conditions, calm forecast, maintaining baseline 25% floor.",
-          "reasoning": "Position: surplus (35 MW surplus). Dispatch ladder: serve load, charge battery (16 MW total), sell to grid (12 MW, capped by transmission headroom), curtail remaining 7 MW solar. Golden Rules 1, 2, 3, 4 respected. Objective: max_profit (charging adds value at sell price, selling maximizes profit under transmission constraint).",
+          "floor_justification": "Stable conditions, calm forecast, maintaining standard 25% floor.",
+          "reasoning": "Position: surplus (35 MW). Objective: max_profit (sell to grid before charging battery). Golden Rules: reliability and grid stability maintained, transmission headroom (12 MW) fully utilized via sale, minimal curtailment (7 MW required due to line constraint). Battery actions: charge both batteries (16 MW total) from renewable surplus. Market action: sell 12 MW. Curtailment: 7 MW curtailed to respect transmission headroom.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -2654,8 +2664,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable day, bright midday surplus, calm forecast, no volatility signals, keeping reserve floor at 25%.",
-          "reasoning": "Position: surplus (44.0 MW surplus). Ladder step: serve load, charge batteries, sell to grid within headroom, curtail remaining. Golden rules: 1 (reliability), 2 (transmission headroom 12 MW respected), 3 (minimal curtailment, only after charging and selling up to headroom). Cascade: cost_efficiency (sell at 36.1, charge batteries from renewable surplus).",
+          "floor_justification": "Calm forecast and bright midday surplus; maintaining 25% stable baseline floor.",
+          "reasoning": "Position: surplus (44 MW net). Objective: cost_efficiency (cost, carbon, renewable utilisation). Under surplus ladder for cost_efficiency: serve load, charge batteries from renewable surplus (battery_1: 10 MW, battery_2: 6 MW), then sell to grid up to transmission headroom (12 MW), then curtail remaining surplus (16 MW). Golden Rules 1, 2, and 3 respected (no buying and curtailing simultaneously; transmission headroom respected at 12 MW).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -2867,8 +2877,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable day, bright midday surplus, calm forecast, no volatility signals, keeping reserve floor at 25%.",
-          "reasoning": "Position: surplus (44.0 MW surplus). Ladder step: serve load, charge batteries, sell to grid within headroom, curtail remaining. Golden rules: 1 (reliability), 2 (transmission headroom 12 MW respected), 3 (minimal curtailment, only after charging and selling up to headroom). Cascade: cost_efficiency (sell at 36.1, charge batteries from renewable surplus).",
+          "floor_justification": "Calm forecast and bright midday surplus; maintaining 25% stable baseline floor.",
+          "reasoning": "Position: surplus (44 MW net). Objective: cost_efficiency (cost, carbon, renewable utilisation). Under surplus ladder for cost_efficiency: serve load, charge batteries from renewable surplus (battery_1: 10 MW, battery_2: 6 MW), then sell to grid up to transmission headroom (12 MW), then curtail remaining surplus (16 MW). Golden Rules 1, 2, and 3 respected (no buying and curtailing simultaneously; transmission headroom respected at 12 MW).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -3169,8 +3179,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable day, calm forecast; maintaining baseline reserve floor at 25.0%.",
-          "reasoning": "Position is surplus (net +40.0 MW). Following surplus dispatch ladder: serve load, charge batteries up to 16 MW total headroom, sell 12 MW (max transmission headroom), and curtail remaining 12 MW surplus. Golden rules 1, 2, 3, 4 respected. Objective is max_renewable_utilisation, prioritizing renewable utilisation (charging and selling renewables while curtailing only excess beyond capacity).",
+          "floor_justification": "Calm early afternoon, stable forecast, no storm or volatility signals, maintaining standard 25% floor.",
+          "reasoning": "Position is surplus (net_position_mw = 40.0). Objective is max_renewable_utilisation: charge batteries first (battery_1: 10 MW, battery_2: 6 MW), then sell up to transmission headroom (12 MW sellable_surplus_mw), and curtail the remaining physical surplus (12 MW). Golden rules 1-4 respected. Cascade: renewable utilisation prioritized by charging and selling maximum possible renewable energy before curtailing the rest.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -3382,8 +3392,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable day, calm forecast; maintaining baseline reserve floor at 25.0%.",
-          "reasoning": "Position is surplus (net +40.0 MW). Following surplus dispatch ladder: serve load, charge batteries up to 16 MW total headroom, sell 12 MW (max transmission headroom), and curtail remaining 12 MW surplus. Golden rules 1, 2, 3, 4 respected. Objective is max_renewable_utilisation, prioritizing renewable utilisation (charging and selling renewables while curtailing only excess beyond capacity).",
+          "floor_justification": "Calm early afternoon, stable forecast, no storm or volatility signals, maintaining standard 25% floor.",
+          "reasoning": "Position is surplus (net_position_mw = 40.0). Objective is max_renewable_utilisation: charge batteries first (battery_1: 10 MW, battery_2: 6 MW), then sell up to transmission headroom (12 MW sellable_surplus_mw), and curtail the remaining physical surplus (12 MW). Golden rules 1-4 respected. Cascade: renewable utilisation prioritized by charging and selling maximum possible renewable energy before curtailing the rest.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -3686,14 +3696,14 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 35.0,
           "applied_floor_pct": 35.0,
-          "floor_justification": "Afternoon price spike and volatile conditions drive raising the floor to 35% ahead of volatility.",
-          "reasoning": "Position is shortfall (-32.0 MW). Following shortfall ladder: use renewables (108 MW), discharge batteries to max capacity (battery_1: 10 MW, battery_2: 6 MW), then purchase remaining 16 MW from grid. Golden rules 1, 2, 3, 4 respected. Objective: max_profit, prioritising profit then cost then carbon, buying minimum required energy and maximizing discharge during high price spike.",
+          "floor_justification": "Afternoon price spike active, forecast shows continued shortfall.",
+          "reasoning": "Position: shortfall (-32.0 MW). Dispatch-ladder step: renewables, then battery discharge (16 MW total), then grid purchase (16 MW). Golden rules binding: reliability (total_demand_mw=140), battery protection, grid stability. Cascade: max_profit (profit, then cost, then carbon).",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
           "tick": 8,
-          "status": "flagged",
+          "status": "pass",
           "rules": [
             {
               "rule_id": "rule_1",
@@ -3820,9 +3830,9 @@
               "rule_id": "rule_8c",
               "description": "A floor raised above the calm band needs a volatility signal",
               "severity": "flagged",
-              "passed": false,
+              "passed": true,
               "applicable": true,
-              "detail": "Floor proposed at 35.0% (above the calm band's 30.0%) with no volatility signal in the scenario.",
+              "detail": "Floor at 35.0% is either within the calm band or justified by a volatility signal.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -3872,7 +3882,7 @@
               "value_reference": 0.0
             }
           ],
-          "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+          "notes": "All checks passed."
         }
       },
       {
@@ -3899,14 +3909,14 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 35.0,
           "applied_floor_pct": 35.0,
-          "floor_justification": "Afternoon price spike and volatile conditions drive raising the floor to 35% ahead of volatility.",
-          "reasoning": "Position is shortfall (-32.0 MW). Following shortfall ladder: use renewables (108 MW), discharge batteries to max capacity (battery_1: 10 MW, battery_2: 6 MW), then purchase remaining 16 MW from grid. Golden rules 1, 2, 3, 4 respected. Objective: max_profit, prioritising profit then cost then carbon, buying minimum required energy and maximizing discharge during high price spike.",
+          "floor_justification": "Afternoon price spike active, forecast shows continued shortfall.",
+          "reasoning": "Position: shortfall (-32.0 MW). Dispatch-ladder step: renewables, then battery discharge (16 MW total), then grid purchase (16 MW). Golden rules binding: reliability (total_demand_mw=140), battery protection, grid stability. Cascade: max_profit (profit, then cost, then carbon).",
           "mode": "agent",
           "failure_detail": null
         },
         "evaluation": {
           "tick": 8,
-          "status": "flagged",
+          "status": "pass",
           "rules": [
             {
               "rule_id": "rule_1",
@@ -4033,9 +4043,9 @@
               "rule_id": "rule_8c",
               "description": "A floor raised above the calm band needs a volatility signal",
               "severity": "flagged",
-              "passed": false,
+              "passed": true,
               "applicable": true,
-              "detail": "Floor proposed at 35.0% (above the calm band's 30.0%) with no volatility signal in the scenario.",
+              "detail": "Floor at 35.0% is either within the calm band or justified by a volatility signal.",
               "value_label": null,
               "value_actual": null,
               "value_reference": null
@@ -4096,7 +4106,7 @@
               "value_reference": null
             }
           ],
-          "notes": "Golden rules held, but the decision diverges from the expected cascade, reserve-floor behavior, or needed balancer repair."
+          "notes": "All checks passed."
         }
       }
     ],
@@ -4201,8 +4211,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm conditions with stable forecast; maintaining baseline 25% floor.",
-          "reasoning": "Position: shortfall. Following shortfall ladder: renewables (70 MW), then battery discharge above floor (16 MW total), then grid purchase (71 MW). Golden Rules: 1 (Reliability & total_demand_mw served) and 2 (Grid stability/headroom) binding. Objective: cost_efficiency (cost minimization via grid purchase after renewables & battery dispatch).",
+          "floor_justification": "Stable day, calm forecast with normal price volatility; maintaining 25% floor.",
+          "reasoning": "Position is shortfall (-87.0 MW). Following shortfall ladder: use renewables (70 MW), discharge batteries to their limits (battery_1: 10 MW, battery_2: 6 MW), then buy remaining shortfall (71 MW) from the grid. Golden rules 1, 2, 4 respected. Objective is cost_efficiency: minimizing cost via optimal dispatch.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -4414,8 +4424,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Calm conditions with stable forecast; maintaining baseline 25% floor.",
-          "reasoning": "Position: shortfall. Following shortfall ladder: renewables (70 MW), then battery discharge above floor (16 MW total), then grid purchase (71 MW). Golden Rules: 1 (Reliability & total_demand_mw served) and 2 (Grid stability/headroom) binding. Objective: cost_efficiency (cost minimization via grid purchase after renewables & battery dispatch).",
+          "floor_justification": "Stable day, calm forecast with normal price volatility; maintaining 25% floor.",
+          "reasoning": "Position is shortfall (-87.0 MW). Following shortfall ladder: use renewables (70 MW), discharge batteries to their limits (battery_1: 10 MW, battery_2: 6 MW), then buy remaining shortfall (71 MW) from the grid. Golden rules 1, 2, 4 respected. Objective is cost_efficiency: minimizing cost via optimal dispatch.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -4716,8 +4726,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable evening ramp-up, normal volatility, setting standard 25% floor.",
-          "reasoning": "Position: shortfall. Ladder step: renewables (37 MW), battery discharge (16 MW), grid purchase (121 MW). Golden Rules 1, 2, 4 binding. Cost efficiency objective (cost then carbon then renewable utilisation).",
+          "floor_justification": "Calm forecast and stable weather, maintaining standard 25% floor.",
+          "reasoning": "Position: shortfall. Shortfall ladder step: renewables (37 MW), then battery discharge above floor (16 MW total), then grid purchase (121 MW to cover the remaining deficit). Binding Golden Rules: Reliability (critical load served) and Grid Stability (headroom 180 MW > 121 MW import). Cascade layer: cost_efficiency (minimizing purchase cost).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -4929,8 +4939,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable evening ramp-up, normal volatility, setting standard 25% floor.",
-          "reasoning": "Position: shortfall. Ladder step: renewables (37 MW), battery discharge (16 MW), grid purchase (121 MW). Golden Rules 1, 2, 4 binding. Cost efficiency objective (cost then carbon then renewable utilisation).",
+          "floor_justification": "Calm forecast and stable weather, maintaining standard 25% floor.",
+          "reasoning": "Position: shortfall. Shortfall ladder step: renewables (37 MW), then battery discharge above floor (16 MW total), then grid purchase (121 MW to cover the remaining deficit). Binding Golden Rules: Reliability (critical load served) and Grid Stability (headroom 180 MW > 121 MW import). Cascade layer: cost_efficiency (minimizing purchase cost).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -5231,8 +5241,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Evening peak shortfall, calm volatility with stable forecast; maintaining standard 25% floor.",
-          "reasoning": "Position: shortfall. Dispatch ladder: renewables (35 MW) -> battery discharge (16 MW) -> grid purchase (126 MW). Binding rules: Reliability (rule 1), Grid stability (rule 2), Battery protection (rule 4). Cascade: cost_efficiency (cost then carbon).",
+          "floor_justification": "Evening peak shortfall; moderate volatility warrants maintaining a steady 25% reserve floor.",
+          "reasoning": "Position is shortfall (-142.0 MW). Following shortfall ladder: use renewables (35 MW), discharge batteries above floor (battery_1: 10 MW, battery_2: 6 MW), then buy remaining deficit from the grid (126 MW). Golden Rules 1 (reliability) & 2 (headroom) binding. Objective is cost_efficiency (cost, carbon, renewable utilisation).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -5444,8 +5454,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Evening peak shortfall, calm volatility with stable forecast; maintaining standard 25% floor.",
-          "reasoning": "Position: shortfall. Dispatch ladder: renewables (35 MW) -> battery discharge (16 MW) -> grid purchase (126 MW). Binding rules: Reliability (rule 1), Grid stability (rule 2), Battery protection (rule 4). Cascade: cost_efficiency (cost then carbon).",
+          "floor_justification": "Evening peak shortfall; moderate volatility warrants maintaining a steady 25% reserve floor.",
+          "reasoning": "Position is shortfall (-142.0 MW). Following shortfall ladder: use renewables (35 MW), discharge batteries above floor (battery_1: 10 MW, battery_2: 6 MW), then buy remaining deficit from the grid (126 MW). Golden Rules 1 (reliability) & 2 (headroom) binding. Objective is cost_efficiency (cost, carbon, renewable utilisation).",
           "mode": "agent",
           "failure_detail": null
         },
@@ -5746,8 +5756,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable late night conditions, no storm alert or price spike volatility; maintaining calm-day floor at 25%.",
-          "reasoning": "Position: shortfall. Ladder step: renewables (38 MW), battery discharge above floor (11 MW), grid purchase (97 MW). Binding rules: Rule 1 (Reliability - critical load served), Rule 2 (Grid stability), Rule 3 & 4 (Battery protection and minimal curtailment). Cascade: cost_efficiency (cost then carbon then renewable utilisation) via grid purchase to cover remaining shortfall.",
+          "floor_justification": "Calm late night forecast, minor price volatility, holding steady baseline reserve floor at 25%",
+          "reasoning": "Position is shortfall (-108.0 MW net position). Dispatch ladder: use renewables (38.0 MW), discharge batteries above floor (11.0 MW total: 8.0 MW battery_1, 3.0 MW battery_2), then buy remaining 97.0 MW from the grid. Golden rules 1 (reliability) and 2 (grid stability) binding; cost_efficiency objective applied to minimize purchase cost.",
           "mode": "agent",
           "failure_detail": null
         },
@@ -5959,8 +5969,8 @@
           "demand_response_triggered": false,
           "proposed_floor_pct": 25.0,
           "applied_floor_pct": 25.0,
-          "floor_justification": "Stable late night conditions, no storm alert or price spike volatility; maintaining calm-day floor at 25%.",
-          "reasoning": "Position: shortfall. Ladder step: renewables (38 MW), battery discharge above floor (11 MW), grid purchase (97 MW). Binding rules: Rule 1 (Reliability - critical load served), Rule 2 (Grid stability), Rule 3 & 4 (Battery protection and minimal curtailment). Cascade: cost_efficiency (cost then carbon then renewable utilisation) via grid purchase to cover remaining shortfall.",
+          "floor_justification": "Calm late night forecast, minor price volatility, holding steady baseline reserve floor at 25%",
+          "reasoning": "Position is shortfall (-108.0 MW net position). Dispatch ladder: use renewables (38.0 MW), discharge batteries above floor (11.0 MW total: 8.0 MW battery_1, 3.0 MW battery_2), then buy remaining 97.0 MW from the grid. Golden rules 1 (reliability) and 2 (grid stability) binding; cost_efficiency objective applied to minimize purchase cost.",
           "mode": "agent",
           "failure_detail": null
         },

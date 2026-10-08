@@ -80,6 +80,11 @@
             "battery_id": "battery_1",
             "action": "discharge",
             "amount_mw": 10.0
+          },
+          {
+            "battery_id": "battery_2",
+            "action": "hold",
+            "amount_mw": 0.0
           }
         ],
         "curtail_solar_mw": 0.0,
@@ -145,7 +150,7 @@
         "curtail_wind_mw": 0.0,
         "mode": "agent"
       },
-      "applied_floor_pct": 45.0,
+      "applied_floor_pct": 35.0,
       "resulting_soc_pct": {
         "battery_1": 48.75,
         "battery_2": 49.0

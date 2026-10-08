@@ -460,3 +460,85 @@ def test_facts_min_required_curtailment_and_surplus_after_charge_in_orchestrator
     assert facts["surplus_after_max_charge_mw"] == round(physics.surplus_after_max_charge_mw(scenario), 1)
     assert facts["min_required_curtailment_mw"] == round(physics.min_required_curtailment_mw(scenario), 1)
     assert facts["min_required_curtailment_mw"] > 0.0  # a real case where curtailment is unavoidable
+
+
+# ---- Prompt freeze guards (evidence/prompt_freeze.json, commit 6cd573a) -------------------
+# Pinned the moment the prompt was frozen for submission (Gate 0.4 -> Option C: the rule_3
+# capability gap is documented, not fixed -- no further SYSTEM_PROMPT/facts/schema changes
+# are planned before the final run). These three constants exist so an ACCIDENTAL edit to
+# any of them fails pytest in seconds instead of being discovered tomorrow when 96 rows miss
+# their replay cache. If a change here is DELIBERATE, update the constant below AND
+# re-record every recording under recordings/ that depends on it -- do not just loosen the
+# assertion to make it pass again.
+
+# prompt_version() hashes SYSTEM_PROMPT + the submit_decision tool schema as one blob --
+# covers both, but says nothing about scenario fields or facts VALUES (see the two guards
+# below, which cover what this one can't).
+_FROZEN_PROMPT_VERSION = "114f4a55af8ba01b"
+
+# orchestrator_facts()'s exact key set at freeze time. A KEY-SET check only -- it catches a
+# fact being added/removed/renamed, not a change to the arithmetic behind an existing key
+# (that's what the scenario_hash guards below are for, since scenario_hash hashes the
+# facts' VALUES, not just their names).
+_FROZEN_FACTS_KEYS = frozenset({
+    "forecast_net_position_mw", "forecast_position", "forecast_total_generation_mw",
+    "max_import_mw", "min_required_curtailment_mw", "net_position_mw", "per_battery",
+    "position", "sellable_surplus_mw", "surplus_after_max_charge_mw",
+    "total_charge_headroom_mw", "total_discharge_available_mw", "total_generation_mw",
+})
+
+# scenario_hash() hashes objective + non-hidden scenario fields + orchestrator_facts()
+# output -- these two pinned hashes are the only guard that would catch a change to the
+# MATH inside a physics function feeding a fact that's already in the key set above (e.g.
+# a miscalculation introduced while touching unrelated dead code in the same module). One
+# surplus scenario, one shortfall scenario, both fixed seeds.
+_FROZEN_SCENARIO_HASH_SURPLUS = "409ee63ffcea6f1d"   # D4_SURPLUS_DAY, seed=1_000_001
+_FROZEN_SCENARIO_HASH_SHORTFALL = "2043926da5d14061"  # D5_SHORTFALL_DAY, seed=1_000_002
+
+
+def test_freeze_prompt_version_unchanged():
+    from app.agents import orchestrator_agent
+    actual = orchestrator_agent.prompt_version()
+    assert actual == _FROZEN_PROMPT_VERSION, (
+        f"SYSTEM_PROMPT or the tool schema changed after the freeze "
+        f"(expected prompt_version {_FROZEN_PROMPT_VERSION!r}, got {actual!r}). "
+        f"Every recording is now invalid. If this change was deliberate, update the "
+        f"constant and re-record; if not, revert it."
+    )
+
+
+def test_freeze_orchestrator_facts_key_set_unchanged():
+    from app.agents.scenario_agent import generate_scenario
+    from app.models.schemas import Difficulty
+    scenario = generate_scenario(Difficulty.D4_SURPLUS_DAY, None, seed=1_000_001)
+    actual_keys = frozenset(physics.orchestrator_facts(scenario, scenario.previous_floor_pct).keys())
+    assert actual_keys == _FROZEN_FACTS_KEYS, (
+        f"orchestrator_facts() changed its key set after the freeze "
+        f"(expected {sorted(_FROZEN_FACTS_KEYS)}, got {sorted(actual_keys)}). "
+        f"Every recording is now invalid. If this change was deliberate, update the "
+        f"constant and re-record; if not, revert it."
+    )
+
+
+def test_freeze_scenario_hash_unchanged():
+    from app.agents import orchestrator_agent
+    from app.agents.scenario_agent import generate_scenario
+    from app.models.schemas import Difficulty
+    surplus = generate_scenario(Difficulty.D4_SURPLUS_DAY, None, seed=1_000_001)
+    shortfall = generate_scenario(Difficulty.D5_SHORTFALL_DAY, None, seed=1_000_002)
+    actual_surplus = orchestrator_agent.scenario_hash(surplus)
+    actual_shortfall = orchestrator_agent.scenario_hash(shortfall)
+    assert actual_surplus == _FROZEN_SCENARIO_HASH_SURPLUS, (
+        f"scenario_hash() changed for the pinned surplus reference scenario after the "
+        f"freeze (expected {_FROZEN_SCENARIO_HASH_SURPLUS!r}, got {actual_surplus!r}) -- "
+        f"the math behind a value in orchestrator_facts() moved, even though the key set "
+        f"didn't. Every recording is now invalid. If this change was deliberate, update "
+        f"the constant and re-record; if not, revert it."
+    )
+    assert actual_shortfall == _FROZEN_SCENARIO_HASH_SHORTFALL, (
+        f"scenario_hash() changed for the pinned shortfall reference scenario after the "
+        f"freeze (expected {_FROZEN_SCENARIO_HASH_SHORTFALL!r}, got {actual_shortfall!r}) -- "
+        f"the math behind a value in orchestrator_facts() moved, even though the key set "
+        f"didn't. Every recording is now invalid. If this change was deliberate, update "
+        f"the constant and re-record; if not, revert it."
+    )

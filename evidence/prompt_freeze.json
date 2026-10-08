@@ -1,0 +1,34 @@
+{
+  "frozen_commit_sha": "6cd573ae89f99e8ee6e5e32543e11fbaebaa89af",
+  "frozen_at_utc": "2026-10-08T04:26:02Z",
+  "prompt_version": "114f4a55af8ba01b",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 1.0,
+  "note": "Prompt frozen for ET hackathon submission. Gate 0.4 resolved as Option C -- rule_3 capability gap documented, not fixed.",
+  "frozen_set": [
+    "SYSTEM_PROMPT",
+    "the submit_decision tool schema",
+    "orchestrator_facts() output keys",
+    "the Decision schema",
+    "the EnvironmentState scenario fields"
+  ],
+  "reference_scenario_hashes": {
+    "surplus (D4_SURPLUS_DAY, seed=1000001)": "409ee63ffcea6f1d",
+    "shortfall (D5_SHORTFALL_DAY, seed=1000002)": "2043926da5d14061"
+  },
+  "orchestrator_facts_key_set": [
+    "forecast_net_position_mw",
+    "forecast_position",
+    "forecast_total_generation_mw",
+    "max_import_mw",
+    "min_required_curtailment_mw",
+    "net_position_mw",
+    "per_battery",
+    "position",
+    "sellable_surplus_mw",
+    "surplus_after_max_charge_mw",
+    "total_charge_headroom_mw",
+    "total_discharge_available_mw",
+    "total_generation_mw"
+  ]
+}

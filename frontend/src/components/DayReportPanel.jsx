@@ -149,6 +149,10 @@ export default function DayReportPanel({ source }) {
   return (
     <div className="panel">
       <h2>Day report — {source?.label}</h2>
+      <p style={{ fontSize: 12, color: "#9aa4b2", margin: "0 0 2px" }}>
+        A full day's decisions laid out in one place: totals, how the agent compares to a
+        plain deterministic controller, and every 15-minute interval's own verdict.
+      </p>
       <p style={{ fontSize: 13, color: "#9aa4b2" }}>
         {report.row_count} intervals · declared objective: <strong>{headerObjectiveLabel}</strong>
       </p>
@@ -211,14 +215,14 @@ export default function DayReportPanel({ source }) {
       </table>
 
       <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline", marginTop: 16 }}>
-        <h3 style={{ fontSize: 14 }}>Per-tick</h3>
+        <h3 style={{ fontSize: 14 }} title="tick">Per-interval</h3>
         <label style={{ fontSize: 12, color: "#9aa4b2" }}>
           <input type="checkbox" checked={sortChronological} onChange={(e) => setSortChronological(e.target.checked)} /> Chronological (default: violations first)
         </label>
       </div>
       <table>
         <thead>
-          <tr><th>Tick</th><th>Objective</th><th>Decision</th><th>Floor</th><th>Raw</th><th>Applied</th><th>Failing rules</th></tr>
+          <tr><th title="tick">Interval</th><th>Objective</th><th>Decision</th><th>Floor</th><th>Raw</th><th>Applied</th><th>Failing rules</th></tr>
         </thead>
         <tbody>
           {sortedPerTick.map((row) => (

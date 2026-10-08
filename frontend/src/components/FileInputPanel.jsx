@@ -1,7 +1,8 @@
 import { Fragment, useRef, useState } from "react";
 import { api } from "../api";
 import OutcomeBadge, { ArmedModeLabel } from "./OutcomeBadge";
-import { objectiveLabel } from "../outcome";
+import EvaluatorPanel from "./EvaluatorPanel";
+import { classifyRequestError, objectiveLabel } from "../outcome";
 
 export default function FileInputPanel({ onOpenDayReport }) {
   const fileRef = useRef(null);
@@ -61,8 +62,12 @@ export default function FileInputPanel({ onOpenDayReport }) {
   return (
     <div className="panel">
       <h2>File Input (bulk CSV/Excel)</h2>
+      <p style={{ fontSize: 12, color: "#9aa4b2", margin: "-6px 0 6px" }}>
+        Upload a day's worth of intervals and run them through the Orchestrator and the
+        Evaluator, one at a time.
+      </p>
       <p style={{ fontSize: 13, color: "#9aa4b2" }}>
-        Each row is one complete, independent tick — its own battery state of charge, no carry-over from the previous row.
+        Each row is one complete, independent 15-minute interval <span style={{ color: "#6b7585" }}>(tick)</span> — its own battery state of charge, no carry-over from the previous row.
       </p>
       <div className="row">
         <button type="button" className="secondary" onClick={api.downloadFileInputTemplate}>Download template</button>
@@ -84,7 +89,14 @@ export default function FileInputPanel({ onOpenDayReport }) {
       </div>
 
       {previewing && <p>Validating {fileName}…</p>}
-      {previewError && <p className="error">{previewError}</p>}
+      {previewError && (() => {
+        const info = classifyRequestError(previewError);
+        return (
+          <p className="error">
+            {info ? <><strong>{info.cause}.</strong> {info.action}<br /><span style={{ fontSize: 11, opacity: 0.7 }}>{previewError}</span></> : previewError}
+          </p>
+        );
+      })()}
 
       {preview && (
         <>
@@ -97,7 +109,7 @@ export default function FileInputPanel({ onOpenDayReport }) {
           </p>
           <table style={{ marginBottom: 12 }}>
             <thead>
-              <tr><th>Row</th><th>Tick</th><th>Status</th><th>Volatility (derived)</th><th>Expected floor band</th><th>Errors</th></tr>
+              <tr><th>Row</th><th title="tick">Interval</th><th>Status</th><th>Volatility (derived)</th><th>Expected floor band</th><th>Errors</th></tr>
             </thead>
             <tbody>
               {preview.rows.map((r) => (
@@ -138,16 +150,20 @@ export default function FileInputPanel({ onOpenDayReport }) {
             <table style={{ marginTop: 12 }}>
               <thead>
                 <tr>
-                  <th>Row</th><th>Tick</th><th>Objective</th><th>Mode</th><th>Raw</th><th>Applied</th><th>Repaired</th><th>Applied failed/flagged rules</th>
+                  <th>Row</th><th title="tick">Interval</th><th>Objective</th><th>Mode</th><th>Raw</th><th>Applied</th><th>Repaired</th><th>Applied failed/flagged rules</th>
                 </tr>
               </thead>
               <tbody>
                 {preview.rows.filter((r) => r.status === "ok" && resultsByRow[r.row_index]).map((r) => {
                   const res = resultsByRow[r.row_index];
                   if (res.error) {
+                    const info = classifyRequestError(res.error);
                     return (
                       <tr key={r.row_index}>
-                        <td>{r.row_index}</td><td>{r.tick}</td><td colSpan={6} style={{ color: "#ff8a8a" }}>run failed: {res.error}</td>
+                        <td>{r.row_index}</td><td>{r.tick}</td>
+                        <td colSpan={6} style={{ color: "#ff8a8a", fontSize: 12 }}>
+                          {info ? <><strong>{info.cause}.</strong> {info.action}</> : `run failed: ${res.error}`}
+                        </td>
                       </tr>
                     );
                   }
@@ -170,7 +186,8 @@ export default function FileInputPanel({ onOpenDayReport }) {
                       {isOpen && (
                         <tr>
                           <td colSpan={8}>
-                            <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
+                            <EvaluatorPanel evaluation={appliedStage.evaluation} />
+                            <div className="row" style={{ alignItems: "flex-start", gap: 16, marginTop: 8 }}>
                               <div style={{ flex: 1 }}>
                                 <p style={{ fontSize: 11, color: "#9aa4b2" }}>Scenario (tick {res.scenario.tick})</p>
                                 <pre style={{ maxHeight: 240 }}>{JSON.stringify(res.scenario, null, 2)}</pre>

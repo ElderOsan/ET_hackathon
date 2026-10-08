@@ -174,6 +174,10 @@ export default function ManualEntryForm({ original, presets, onSubmit, loading }
   return (
     <div className="panel">
       <h2>Manual Entry</h2>
+      <p style={{ fontSize: 12, color: "#9aa4b2", margin: "-6px 0 10px" }}>
+        Start from a generated scenario and edit any field by hand before sending it to the
+        Orchestrator.
+      </p>
 
       <div className="panel" style={{ background: "#14181e" }}>
         <h2>Scenario</h2>

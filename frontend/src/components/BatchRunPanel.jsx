@@ -1,6 +1,17 @@
 import { Fragment, useEffect, useState } from "react";
 import { api } from "../api";
-import { objectiveLabel } from "../outcome";
+import { classifyRequestError, objectiveLabel } from "../outcome";
+import OutcomeBadge, { ArmedModeLabel } from "./OutcomeBadge";
+import EvaluatorPanel from "./EvaluatorPanel";
+
+// Matches GENERATED_DIFFICULTIES (backend/app/models/schemas.py: every Difficulty except
+// FILE_INPUT) and Objective's 4 values -- the UI only exposes "full matrix" (all 4
+// objectives) and "strip objective" (1, no objective), never a partial list, so the count is
+// always one of these two shapes. ESTIMATED_SECONDS_PER_CALL matches file_input.py's own
+// measured-mean-latency constant, reused here for consistency rather than inventing a second
+// number -- this is client-side arithmetic, not a new backend call.
+const GENERATED_DIFFICULTY_COUNT = 6;
+const ESTIMATED_SECONDS_PER_CALL = 3.3;
 
 export default function BatchRunPanel() {
   const [nPerCell, setNPerCell] = useState(1);
@@ -23,6 +34,9 @@ export default function BatchRunPanel() {
       api.listRecordings().then(setRecordings).catch(() => setRecordings([]));
     }
   }, [mode]);
+
+  const estimatedScenarios = mode === "replay" ? null : GENERATED_DIFFICULTY_COUNT * (stripObjective ? 1 : 4) * Math.max(1, Number(nPerCell) || 1);
+  const estimatedSeconds = estimatedScenarios == null ? null : Math.round(estimatedScenarios * ESTIMATED_SECONDS_PER_CALL);
 
   async function runBatch() {
     setLoading(true);
@@ -54,6 +68,10 @@ export default function BatchRunPanel() {
   return (
     <div className="panel">
       <h2>Batch Run</h2>
+      <p style={{ fontSize: 12, color: "#9aa4b2", margin: "-6px 0 10px" }}>
+        Runs many scenarios at once across difficulties and objectives, for an aggregate pass
+        rate rather than one decision at a time.
+      </p>
       <div className="row" style={{ marginBottom: 8 }}>
         <label>
           Mode:{" "}
@@ -106,12 +124,34 @@ export default function BatchRunPanel() {
           <input type="checkbox" checked={stripObjective} onChange={(e) => setStripObjective(e.target.checked)} disabled={mode === "replay"} />
           Strip objective (test cost_efficiency fallback)
         </label>
+        <ArmedModeLabel requestedMode={mode} />
         <button onClick={runBatch} disabled={loading || (mode === "replay" && !selectedRunId)}>
           {loading ? "Running…" : mode === "replay" ? "Replay" : "Run Batch"}
         </button>
       </div>
 
-      {error && <p className="error">{error}</p>}
+      {estimatedScenarios != null && !loading && !summary && (
+        <p style={{ fontSize: 12, color: "#9aa4b2", margin: "4px 0 0" }}>
+          Estimated: <strong>{estimatedScenarios}</strong> scenario{estimatedScenarios === 1 ? "" : "s"}
+          {mode !== "safe" && <> (model calls), ~<strong>{estimatedSeconds}s</strong></>}
+          {mode === "safe" && <> — no model calls, near-instant</>}
+        </p>
+      )}
+      {loading && (
+        <p style={{ fontSize: 13, color: "#9aa4b2", margin: "8px 0 0" }}>
+          Running the batch{estimatedSeconds != null && mode !== "safe" ? ` — one request covers all ${estimatedScenarios} scenarios, expect roughly ${estimatedSeconds}s` : ""}.
+          This is a single request; the page will update when it completes.
+        </p>
+      )}
+
+      {error && (() => {
+        const info = classifyRequestError(error);
+        return (
+          <p className="error">
+            {info ? <><strong>{info.cause}.</strong> {info.action}<br /><span style={{ fontSize: 11, opacity: 0.7 }}>{error}</span></> : error}
+          </p>
+        );
+      })()}
 
       {summary && (
         <>
@@ -180,7 +220,7 @@ export default function BatchRunPanel() {
           <table style={{ marginTop: 12 }}>
             <thead>
               <tr>
-                <th>Tick</th>
+                <th title="tick">Interval</th>
                 <th>Difficulty</th>
                 <th>Objective</th>
                 <th>Mode</th>
@@ -196,18 +236,13 @@ export default function BatchRunPanel() {
                 const appliedStage = r.stages.find((s) => s.name === "applied");
                 const failedRules = appliedStage.evaluation.rules.filter((x) => !x.passed && x.applicable).map((x) => x.rule_id);
                 const isOpen = expandedTick === r.scenario.tick;
-                const rowMode = appliedStage.decision.mode;
                 return (
                   <Fragment key={r.scenario.tick}>
                     <tr style={{ cursor: "pointer" }} onClick={() => setExpandedTick(isOpen ? null : r.scenario.tick)}>
                       <td>{r.scenario.tick}</td>
                       <td>{r.scenario.difficulty}</td>
                       <td>{objectiveLabel(r.scenario.objective)}</td>
-                      <td>{rowMode !== "agent" && (
-                        <span className="badge" style={{ background: rowMode === "safe_mode" ? "#3a2a1f" : "#4a1f23", color: rowMode === "safe_mode" ? "#f5a666" : "#ff8a8a" }}>
-                          {rowMode}
-                        </span>
-                      )}</td>
+                      <td><OutcomeBadge decision={appliedStage.decision} requestedMode={mode} /></td>
                       <td><span className={`badge ${rawStage.evaluation.status}`}>{rawStage.evaluation.status}</span></td>
                       <td><span className={`badge ${appliedStage.evaluation.status}`}>{appliedStage.evaluation.status}</span></td>
                       <td>{r.repaired ? "yes" : "no"}</td>
@@ -216,7 +251,8 @@ export default function BatchRunPanel() {
                     {isOpen && (
                       <tr>
                         <td colSpan={8}>
-                          <div className="row" style={{ alignItems: "flex-start", gap: 16 }}>
+                          <EvaluatorPanel evaluation={appliedStage.evaluation} />
+                          <div className="row" style={{ alignItems: "flex-start", gap: 16, marginTop: 8 }}>
                             <div style={{ flex: 1 }}>
                               <p style={{ fontSize: 11, color: "#9aa4b2" }}>Scenario (seed {r.scenario.seed})</p>
                               <pre style={{ maxHeight: 240 }}>{JSON.stringify(r.scenario, null, 2)}</pre>

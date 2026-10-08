@@ -95,6 +95,7 @@ pre {
 .badge.pass { background: #1e4620; color: #6fe382; }
 .badge.fail { background: #4a1f23; color: #ff8a8a; }
 .badge.flagged { background: #4a3c1f; color: #f5c663; }
+.badge.na { background: #262c35; color: #6b7585; }
 
 .rule-list {
   list-style: none;

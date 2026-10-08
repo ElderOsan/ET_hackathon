@@ -44,6 +44,10 @@ export default function EvaluatorPanel({ evaluation }) {
   return (
     <div className="panel">
       <h2>3. Evaluator</h2>
+      <p style={{ fontSize: 12, color: "#9aa4b2", margin: "-6px 0 10px" }}>
+        A deterministic checker, separate from the model, grading the decision against safety
+        rules it never sees.
+      </p>
       <div className="row" style={{ marginBottom: 8 }}>
         <span className={`badge ${evaluation.status}`}>{evaluation.status}</span>
         <span style={{ fontSize: 13, color: "#9aa4b2" }}>{evaluation.notes}</span>
@@ -61,9 +65,12 @@ export default function EvaluatorPanel({ evaluation }) {
       )}
 
       {naRules.length > 0 && (
-        <ul className="rule-list" style={{ marginTop: 8 }}>
-          {naRules.map((r) => <RuleRow key={r.rule_id} r={r} />)}
-        </ul>
+        <>
+          <h3 style={{ fontSize: 13, color: "#6b7585", margin: "10px 0 4px" }}>Not applicable ({naRules.length}) — nothing for this rule to judge here, not a pass</h3>
+          <ul className="rule-list">
+            {naRules.map((r) => <RuleRow key={r.rule_id} r={r} />)}
+          </ul>
+        </>
       )}
 
       {passing.length > 0 && (

@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState } from "react";
 import { api } from "../api";
+import { objectiveLabel } from "../outcome";
 
 export default function BatchRunPanel() {
   const [nPerCell, setNPerCell] = useState(1);
@@ -201,7 +202,7 @@ export default function BatchRunPanel() {
                     <tr style={{ cursor: "pointer" }} onClick={() => setExpandedTick(isOpen ? null : r.scenario.tick)}>
                       <td>{r.scenario.tick}</td>
                       <td>{r.scenario.difficulty}</td>
-                      <td>{r.scenario.objective || "none"}</td>
+                      <td>{objectiveLabel(r.scenario.objective)}</td>
                       <td>{rowMode !== "agent" && (
                         <span className="badge" style={{ background: rowMode === "safe_mode" ? "#3a2a1f" : "#4a1f23", color: rowMode === "safe_mode" ? "#f5a666" : "#ff8a8a" }}>
                           {rowMode}

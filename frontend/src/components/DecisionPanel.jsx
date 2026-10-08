@@ -1,3 +1,6 @@
+import OutcomeBadge from "./OutcomeBadge";
+import { isCacheMiss } from "../outcome";
+
 function plainActions(decision) {
   const lines = [];
   for (const a of decision.battery_actions.filter((a) => a.action !== "hold")) {
@@ -19,6 +22,7 @@ function classifyError(detail) {
   if (!detail) return null;
   const d = detail.toLowerCase();
   if (d.includes("safe mode selected")) return null; // an intentional choice, not a failure -- no "next action" needed
+  if (d.includes("no recording for this scenario")) return { cause: "No recording matches this build", action: "The recorded day is being re-made — try again once it's updated, or use Safe mode / Live mode." };
   if (d.includes("gemini_api_key is not set")) return { cause: "No API key configured", action: "Add GEMINI_API_KEY to backend/.env, or keep using Safe mode / a Recorded run — neither needs one." };
   if (d.includes("simulated api outage")) return { cause: "Outage simulated manually", action: "Uncheck “Simulate API outage” in Controls to resume live calls." };
   if (d.includes("401") || d.includes("403") || d.includes("permission") || d.includes("invalid") && d.includes("key")) return { cause: "Invalid or unauthorized API key", action: "Check GEMINI_API_KEY in backend/.env against aistudio.google.com." };
@@ -39,23 +43,32 @@ function decisionProfit(scenario, decision) {
   return { saleMw, purchaseMw, revenue, cost, netProfit: Math.round((revenue - cost) * 10) / 10 };
 }
 
-export default function DecisionPanel({ scenario, rawStage, appliedStage, repairs, repaired, infeasible, marginInfeasible }) {
+export default function DecisionPanel({ scenario, rawStage, appliedStage, repairs, repaired, infeasible, marginInfeasible, requestedMode }) {
   if (!appliedStage) return null;
   const applied = appliedStage.decision;
   const floorAdjusted = applied.proposed_floor_pct !== applied.applied_floor_pct;
   const profit = decisionProfit(scenario, applied);
   const errorInfo = applied.mode !== "agent" ? classifyError(applied.failure_detail) : null;
+  const cacheMiss = isCacheMiss(applied);
 
   return (
     <div className="panel">
-      <h2>2. Orchestrator Decision</h2>
+      <h2 style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        2. Orchestrator Decision
+        <OutcomeBadge decision={applied} requestedMode={requestedMode} showEvaluatorLine />
+      </h2>
       {applied.mode === "safe_mode" && (
         <p style={{ fontSize: 13, color: "#f5a666", background: "#3a2a1f", padding: 8, borderRadius: 6, fontWeight: 600 }}>
           ⚠ SAFE MODE — the Orchestrator could not respond, so this decision is the deterministic dispatcher's own (no model call).
           {errorInfo && <><br /><span style={{ fontWeight: 400 }}>{errorInfo.cause}. {errorInfo.action}</span></>}
         </p>
       )}
-      {(applied.mode === "model_call_failed" || applied.mode === "parse_failed") && (
+      {cacheMiss && (
+        <p style={{ fontSize: 13, color: "#8fb4ff", background: "#1f2b45", padding: 8, borderRadius: 6, fontWeight: 600 }}>
+          ⓘ NO RECORDING MATCHES THIS BUILD — this is not an agent failure or a rule violation. The recorded day is being re-made; try again once it's updated, or use Safe mode / Live mode.
+        </p>
+      )}
+      {!cacheMiss && (applied.mode === "model_call_failed" || applied.mode === "parse_failed") && (
         <p style={{ fontSize: 13, color: "#ff8a8a", background: "#3a2a1f", padding: 8, borderRadius: 6, fontWeight: 600 }}>
           ⚠ UNRESOLVED — even the Safe-mode fallback did not run for this scenario; it is marked FAIL.
           {errorInfo && <><br /><span style={{ fontWeight: 400 }}>{errorInfo.cause}. {errorInfo.action}</span></>}

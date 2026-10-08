@@ -6,11 +6,16 @@ import EvaluatorPanel from "./components/EvaluatorPanel";
 import BatchRunPanel from "./components/BatchRunPanel";
 import ManualEntryForm from "./components/ManualEntryForm";
 import FileInputPanel from "./components/FileInputPanel";
+import FirstRunScreen from "./components/FirstRunScreen";
+import DayReportPanel from "./components/DayReportPanel";
+import { ArmedModeLabel } from "./components/OutcomeBadge";
+
+const INTRO_DISMISSED_KEY = "orchestrator_intro_dismissed";
 
 export default function App() {
   const [presets, setPresets] = useState({ difficulties: [], objectives: [] });
   const [mode, setMode] = useState("auto"); // scenario entry mode: auto / manual
-  const [runMode, setRunMode] = useState("live"); // model-call mode: live / safe (Patch 3, Step 4)
+  const [runMode, setRunMode] = useState("live"); // model-call mode: live / safe / replay (Patch 3, Step 4)
   const [status, setStatus] = useState(null); // {key_configured, model, simulating_outage}
   const [difficulty, setDifficulty] = useState("");
   const [objective, setObjective] = useState("");
@@ -18,6 +23,9 @@ export default function App() {
   const [result, setResult] = useState(null); // full ScenarioRunResult: scenario/proposal/applied/repairs/repaired/evaluation
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // B1: "intro" (first-run screen) | "main" (today's existing layout) | "dayReport" (Door 1).
+  const [view, setView] = useState("intro");
+  const [dayReportSource, setDayReportSource] = useState(null); // {label} -- which door opened it, for DayReportPanel's own fetch
 
   useEffect(() => {
     api
@@ -31,10 +39,50 @@ export default function App() {
       .status()
       .then((s) => {
         setStatus(s);
-        if (!s.key_configured) setRunMode("safe"); // no key -> default straight to Safe mode, no error shown
+        if (!s.key_configured) {
+          setRunMode("safe"); // no key -> default straight to Safe mode, no error shown
+          setView("intro"); // B1: no key configured -> always show the doors, not just first visit
+        } else if (localStorage.getItem(INTRO_DISMISSED_KEY)) {
+          setView("main");
+        }
       })
       .catch(() => {});
   }, []);
+
+  function dismissIntro() {
+    try {
+      localStorage.setItem(INTRO_DISMISSED_KEY, "1");
+    } catch {
+      /* private window / blocked storage -- the tour just reshows next time, harmless */
+    }
+    setView("main");
+  }
+
+  function openIntro() {
+    setView("intro");
+  }
+
+  // Door 2: safe mode, main view, mode already selected.
+  function chooseDoorSafeMode() {
+    setMode("auto");
+    setRunMode("safe");
+    dismissIntro();
+  }
+
+  // Door 3: key is reported as configured or not (boolean only -- never the value), handled
+  // entirely by the door's own copy; "go straight to the main view in live mode" when one is.
+  function chooseDoorLiveAgent() {
+    setMode("auto");
+    setRunMode("live");
+    dismissIntro();
+  }
+
+  // Door 1: the recorded 96-row day. Opens the day-report screen; DayReportPanel itself runs
+  // the mode="replay" sequence (never live -- see DayReportPanel/api.runFileInputRow).
+  function chooseDoorRecordedDay() {
+    setDayReportSource({ label: "96-row recorded day" });
+    setView("dayReport");
+  }
 
   async function toggleSimulateOutage(e) {
     const enabled = e.target.checked;
@@ -92,10 +140,46 @@ export default function App() {
     }
   }
 
+  if (view === "intro") {
+    return (
+      <div className="app">
+        <h1>Renewable Energy Orchestrator</h1>
+        <p className="subtitle">ET × Accenture AI Hackathon — Agentic Edition</p>
+        <FirstRunScreen
+          status={status}
+          onChooseRecordedDay={chooseDoorRecordedDay}
+          onChooseSafeMode={chooseDoorSafeMode}
+          onChooseLiveAgent={chooseDoorLiveAgent}
+          onSkip={dismissIntro}
+        />
+      </div>
+    );
+  }
+
+  if (view === "dayReport") {
+    return (
+      <div className="app">
+        <h1>Renewable Energy Orchestrator</h1>
+        <p className="subtitle">ET × Accenture AI Hackathon — Agentic Edition</p>
+        <div className="row" style={{ marginBottom: 8 }}>
+          <button onClick={() => setView("main")}>← Back to full controls</button>
+          <button onClick={openIntro}>Take the tour</button>
+        </div>
+        <DayReportPanel source={dayReportSource} />
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <h1>Renewable Energy Orchestrator</h1>
-      <p className="subtitle">ET × Accenture AI Hackathon — Agentic Edition</p>
+      <p className="subtitle">
+        ET × Accenture AI Hackathon — Agentic Edition
+        {" — "}
+        <button className="link-button" onClick={openIntro} style={{ font: "inherit", color: "#8fb4ff", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          Take the tour
+        </button>
+      </p>
 
       <div className="panel">
         <h2>Controls</h2>
@@ -119,6 +203,7 @@ export default function App() {
             <option value="live">Live agent</option>
             <option value="safe">Safe mode</option>
           </select>
+          <ArmedModeLabel requestedMode={runMode} />
 
           {mode === "auto" ? (
             <button onClick={runAuto} disabled={loading}>{loading ? "Running…" : "Run Scenario (Auto)"}</button>
@@ -159,13 +244,14 @@ export default function App() {
             repaired={result.repaired}
             infeasible={result.infeasible}
             marginInfeasible={result.margin_infeasible}
+            requestedMode={runMode}
           />
           <EvaluatorPanel evaluation={result.stages.find((s) => s.name === "applied").evaluation} />
         </>
       )}
 
       <BatchRunPanel />
-      <FileInputPanel />
+      <FileInputPanel onOpenDayReport={(results) => { setDayReportSource({ label: "File Input run", results }); setView("dayReport"); }} />
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import { objectiveLabel } from "../outcome";
+
 export default function ScenarioPanel({ scenario }) {
   if (!scenario) return null;
   return (
@@ -8,7 +10,7 @@ export default function ScenarioPanel({ scenario }) {
           {scenario.difficulty}
         </span>
         <span className="badge" style={{ background: "#1f2b45", color: "#8fb4ff" }}>
-          objective: {scenario.objective || "none (cost_efficiency applies)"}
+          objective: {objectiveLabel(scenario.objective)}
         </span>
         <span className="badge" style={{ background: "#1f2b45", color: "#8fb4ff" }} title="Reuse this seed to reproduce this exact scenario">
           seed: {scenario.seed}

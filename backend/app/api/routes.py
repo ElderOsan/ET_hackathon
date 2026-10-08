@@ -14,7 +14,7 @@ from app.agents.pipeline import run_decision_pipeline
 from app.agents.scenario_agent import generate_scenario, normalize_scenario
 from app.core.config import GEMINI_API_KEY
 from app.core.llm_client import MODEL
-from app.data import file_input, physics, recording
+from app.data import day_report, file_input, physics, recording
 from app.data.benchmark_seeds import DEV_SEED_SET, HELD_OUT_SEED_SET
 from app.data.recording import BoundedLiveRecorder, LiveRecorder, Recorder, RecordingRecorder, ReplayRecorder, SafeModeRecorder
 from app.data.tuning import BENCHMARK_ALLOW_HELD_OUT, RULE_CATEGORY_MAP
@@ -220,6 +220,27 @@ def file_input_run_row(req: FileInputRunRowRequest):
         raise HTTPException(status_code=404, detail=f"No validated row {req.row_index} for run_id {req.run_id!r} -- preview the file again before running it.")
     recorder = _make_file_input_recorder(req.mode, req.run_id, req.row_index)
     return _run_or_503(scenario, recorder=recorder)
+
+
+class DayReportRequest(BaseModel):
+    results: list[ScenarioRunResult]
+
+
+@router.post("/file-input/day-report")
+def file_input_day_report(req: DayReportRequest):
+    """Additive-only (B2): computes day_report.build_day_report() over results the caller
+    already has (e.g. everything a File Input run or Door 1's recorded-day sequence already
+    accumulated) -- no server-side run store, no new state, nothing the model sees."""
+    scenarios = [r.scenario for r in req.results]
+    return day_report.build_day_report(scenarios, req.results)
+
+
+@router.post("/file-input/day-report/csv")
+def file_input_day_report_csv(req: DayReportRequest):
+    scenarios = [r.scenario for r in req.results]
+    report = day_report.build_day_report(scenarios, req.results)
+    csv_text = day_report.report_to_csv(report)
+    return Response(content=csv_text, media_type="text/csv")
 
 
 def _categorize_rule(rule_id: str, repairs: list[FieldRepair]) -> str:

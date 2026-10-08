@@ -1,7 +1,9 @@
 import { Fragment, useRef, useState } from "react";
 import { api } from "../api";
+import OutcomeBadge, { ArmedModeLabel } from "./OutcomeBadge";
+import { objectiveLabel } from "../outcome";
 
-export default function FileInputPanel() {
+export default function FileInputPanel({ onOpenDayReport }) {
   const fileRef = useRef(null);
   const [fileName, setFileName] = useState("");
   const [mode, setMode] = useState("record");
@@ -77,6 +79,7 @@ export default function FileInputPanel() {
             <option value="safe">Safe mode (no live attempt)</option>
           </select>
         </label>
+        <ArmedModeLabel requestedMode={mode} />
         <input ref={fileRef} type="file" accept=".csv,.xlsx" onChange={onFileChosen} />
       </div>
 
@@ -113,6 +116,17 @@ export default function FileInputPanel() {
           <button onClick={runAll} disabled={running || preview.ok_count === 0}>
             {running ? "Running…" : Object.keys(resultsByRow).length > 0 ? "Resume / Re-run" : "Run"}
           </button>
+          {onOpenDayReport && Object.values(resultsByRow).some((r) => !r.error) && (
+            <button
+              className="secondary"
+              onClick={() => onOpenDayReport(
+                preview.rows.filter((r) => r.status === "ok" && resultsByRow[r.row_index] && !resultsByRow[r.row_index].error)
+                  .map((r) => resultsByRow[r.row_index])
+              )}
+            >
+              View day report
+            </button>
+          )}
 
           {progress && (
             <p style={{ fontSize: 13, margin: "8px 0" }}>
@@ -141,18 +155,13 @@ export default function FileInputPanel() {
                   const appliedStage = res.stages.find((s) => s.name === "applied");
                   const failedRules = appliedStage.evaluation.rules.filter((x) => !x.passed && x.applicable).map((x) => x.rule_id);
                   const isOpen = expandedRow === r.row_index;
-                  const rowMode = appliedStage.decision.mode;
                   return (
                     <Fragment key={r.row_index}>
                       <tr style={{ cursor: "pointer" }} onClick={() => setExpandedRow(isOpen ? null : r.row_index)}>
                         <td>{r.row_index}</td>
                         <td>{res.scenario.tick}</td>
-                        <td>{res.scenario.objective || "none"}</td>
-                        <td>{rowMode !== "agent" && (
-                          <span className="badge" style={{ background: rowMode === "safe_mode" ? "#3a2a1f" : "#4a1f23", color: rowMode === "safe_mode" ? "#f5a666" : "#ff8a8a" }}>
-                            {rowMode}
-                          </span>
-                        )}</td>
+                        <td>{objectiveLabel(res.scenario.objective)}</td>
+                        <td><OutcomeBadge decision={appliedStage.decision} requestedMode={mode} /></td>
                         <td><span className={`badge ${rawStage.evaluation.status}`}>{rawStage.evaluation.status}</span></td>
                         <td><span className={`badge ${appliedStage.evaluation.status}`}>{appliedStage.evaluation.status}</span></td>
                         <td>{res.repaired ? "yes" : "no"}</td>

@@ -50,4 +50,32 @@ export const api = {
     return res.json();
   },
   runFileInputRow: (runId, rowIndex, mode) => request("/file-input/run-row", { method: "POST", body: JSON.stringify({ run_id: runId, row_index: rowIndex, mode }) }),
+
+  // Day report (B2) -- additive, stateless: the caller already has the results (a completed
+  // File Input run, or Door 1's own replay sequence) and sends them straight back.
+  dayReport: (results) => request("/file-input/day-report", { method: "POST", body: JSON.stringify({ results }) }),
+  dayReportCsv: async (results, filename) => {
+    const res = await fetch(`${BASE}/file-input/day-report/csv`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ results }),
+    });
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}: ${await res.text()}`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
+
+  // Door 1 automation: fetch the already-existing 96-row example file as bytes, so it can be
+  // fed straight into previewFileInput without a manual download/reupload round trip.
+  fetchExample96RowFile: async () => {
+    const res = await fetch(`${BASE}/file-input/example-96row`);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const blob = await res.blob();
+    return new File([blob], "example_96row_day.xlsx", { type: blob.type });
+  },
 };

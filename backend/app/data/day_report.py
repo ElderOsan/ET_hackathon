@@ -49,6 +49,10 @@ def _applied(result: ScenarioRunResult):
     return next(s for s in result.stages if s.name == "applied")
 
 
+def _raw(result: ScenarioRunResult):
+    return next(s for s in result.stages if s.name == "raw")
+
+
 def _row_ledger_entry(scenario: EnvironmentState, decision: Decision) -> dict[str, Any]:
     ledger = physics.build_tick_ledger(scenario, decision)
     sold_mw = decision.market_amount_mw if decision.market_action == "sell" else 0.0
@@ -79,7 +83,8 @@ def build_day_report(scenarios: list[EnvironmentState], agent_results: list[Scen
 
     per_tick = []
     rule_fire_counts: dict[str, int] = {}
-    verdict_counts = {"pass": 0, "flagged": 0, "fail": 0}
+    verdict_counts_applied = {"pass": 0, "flagged": 0, "fail": 0}
+    verdict_counts_raw_first_attempt = {"pass": 0, "flagged": 0, "fail": 0}
 
     agent_cum = {"cost": 0.0, "revenue": 0.0, "profit": 0.0, "bought_mwh": 0.0, "sold_mwh": 0.0, "curtailed_mwh": 0.0, "unserved_mwh": 0.0, "emissions_tonnes": 0.0}
     same_obj_cum = dict(agent_cum)
@@ -117,7 +122,9 @@ def build_day_report(scenarios: list[EnvironmentState], agent_results: list[Scen
         resulting_soc = {bid: _resulting_soc_pct(b, decision) for bid, b in batteries_by_id.items()}
 
         status = applied.evaluation.status.value
-        verdict_counts[status] = verdict_counts.get(status, 0) + 1
+        verdict_counts_applied[status] = verdict_counts_applied.get(status, 0) + 1
+        raw_status = _raw(agent_result).evaluation.status.value
+        verdict_counts_raw_first_attempt[raw_status] = verdict_counts_raw_first_attempt.get(raw_status, 0) + 1
         failing_rules = []
         for rule in applied.evaluation.rules:
             if not rule.passed and rule.applicable:
@@ -179,7 +186,17 @@ def build_day_report(scenarios: list[EnvironmentState], agent_results: list[Scen
             "mean_renewable_utilisation_pct": mean_utilisation,
         },
         "comparison": comparison,
-        "verdict_summary": {"counts": verdict_counts, "rule_fire_counts": rule_fire_counts},
+        "verdict_summary": {
+            # "first_attempt" (raw stage, pre-balancer) is the headline: the agent's OWN
+            # proposals, before any repair. "applied" (post-balancer) is kept alongside it,
+            # unambiguously labeled, never silently dropped -- a repair that turns a raw
+            # fail into an applied pass is a fact about the balancer, not the agent.
+            "counts_first_attempt_raw": verdict_counts_raw_first_attempt,
+            "counts_applied_after_repair": verdict_counts_applied,
+            "first_attempt_pass_rate_pct": round(100 * verdict_counts_raw_first_attempt["pass"] / len(scenarios), 1) if scenarios else 0.0,
+            "applied_pass_rate_pct": round(100 * verdict_counts_applied["pass"] / len(scenarios), 1) if scenarios else 0.0,
+            "rule_fire_counts": rule_fire_counts,
+        },
     }
 
 

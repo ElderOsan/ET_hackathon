@@ -1,161 +1,223 @@
-# Architecture — Renewable Energy Orchestrator
+# Architecture
 
-Carried over from the team's working notes (`Hackathon_Renewable_Energy_Orchestrator.docx`),
-updated 2026-10-04 after the physical-layer rebuild (physics module, deterministic
-balancer, raw+applied scoring) — see git log for the step-by-step history.
+Renewable Energy Orchestrator — ET × Accenture AI Hackathon, Problem 4.
 
-## Problem
+A plant operator makes a dispatch decision every fifteen minutes. This system puts a language model in that seat, surrounds it with deterministic machinery that cannot be talked into anything, and measures the result against criteria that were written down before the measurement ran.
 
-Utility operating 5 solar farms, 3 wind farms, 2 battery storage systems, several
-industrial consumers, grid interconnections and market access. Every 15 minutes,
-conditions change — clouds cut solar, wind shifts, prices spike, a battery goes offline,
-demand surges. The agent must continuously decide: charge/discharge batteries, sell to or
-buy from the grid, curtail renewable generation, or trigger demand response.
+The design question throughout was not "how do we make the agent look good" but "how would we know if it weren't."
 
-## Why this problem (over Banking, Prompt Injection Firewall, Retail)
+---
 
-Strongest "Agentic Capability" story — a true continuous decision-making loop under
-shifting state, rather than a one-shot classification or recommendation task.
+## 1. Process flow
 
-**Key risk:** a self-verification gap. Without energy-domain expertise, decisions can't be
-judged "good" or "bad" by instinct the way a retail discount could. Mitigated by grounding
-the Evaluator in well-established, publicly documented operating principles rather than
-inventing energy strategy from first principles (see the Learning Guide).
+```mermaid
+flowchart TD
+    A["Scenario source<br/>generated · uploaded · manual"] --> B["EnvironmentState<br/>31 fields"]
+    B --> C{"Split"}
+    C -->|"facts only"| D["orchestrator_facts()<br/>13 derived quantities"]
+    C -->|"hidden fields"| E["Expected-behaviour tags<br/>never shown to the model"]
 
-## Pipeline
+    D --> F["build_request()<br/>SYSTEM_PROMPT + state + facts"]
+    F --> G["Gemini<br/>forced function call"]
+    G --> H["Decision<br/>actions + reserve floor + reasoning"]
+    G -.->|"model unavailable"| M["Safe mode<br/>deterministic dispatcher"]
+    M --> H
+    G -.->|"replay"| N["Recorded decision<br/>no network call"]
+    N --> H
 
-One function — `app/agents/pipeline.py::run_decision_pipeline` — is the only path auto
-single runs, manual single runs, and batch runs ever go through:
+    H --> I["RAW STAGE<br/>evaluate the decision as received"]
+    H --> J["Balancer<br/>repair physical infeasibility"]
+    J --> K["APPLIED STAGE<br/>evaluate the repaired decision"]
 
+    E --> I
+    E --> K
+    I --> L["Verdict: pass · flagged · fail"]
+    K --> L
 ```
-scenario → Orchestrator (raw proposal) → balancer (applied decision) → Evaluator (both stages)
-```
 
-No other code calls `decide()`, `balance()`, or `evaluate()` directly. The Evaluator runs
-**twice** per decision — once against the model's raw proposal (every rule except the
-repair-magnitude one), once against the balancer's applied decision — so the model's own
-score and the system's final score are both visible, never conflated.
+The three dotted paths matter as much as the solid one. A decision can come from the model, from the deterministic dispatcher when the model is unavailable, or from a recording — and every decision, from any of those three sources, goes through **both** the raw evaluation and the balancer-then-applied evaluation identically (`app/agents/pipeline.py::_evaluate_proposal` is the one function both `run_decision_pipeline` and `reevaluate_stored` share). The evaluator is never told which source produced the decision it's judging.
 
-### Scenario Agent (Environment Generator) — `backend/app/agents/scenario_agent.py`
+---
 
-- Generates full environment state per tick: solar/wind output, demand, prices, battery
-  status, injected events — deterministic Python, seedable, no LLM call.
-- **Fixed fleet** (`app/data/fleet.py`): 5 solar farms (~110MW), 3 wind farms (~60MW), 2
-  batteries — identical in every scenario. Only output, forecast, demand, prices, SoC, and
-  events vary per scenario; a utility operates one portfolio.
-- Six calibrated profiles, each rejection-sampled against a target
-  generation/total-demand ratio range *and* checked for physical feasibility
-  (`min_achievable_unserved_mw == 0`) before being accepted:
-  `stable_day`, `cloudy_afternoon`, `price_spike`, `multi_failure_cascade`,
-  `surplus_day`, `shortfall_day` — see `app/data/tuning.py::PROFILE_RATIO_RANGES`.
-- Demand is generated total-first (within `DEMAND_BAND_MW`), then split into
-  `base_demand_mw` + `industrial_demand_mw` by a configured share — `total_demand_mw` is
-  computed once and is the only demand figure the prompt, Evaluator, and reference
-  calculator ever use. No component re-derives it.
-- Each scenario carries a declared **Primary Objective** as an explicit input
-  (`cost_efficiency`, `min_carbon`, `max_renewable_utilisation`, `max_profit`) — not
-  inferred by the orchestrator.
-- The hidden `expected_emergency` / `expected_ladder_step` tags are computed from the
-  scenario's actual net position and the physics module, not assigned from the difficulty
-  label — a `stable_day` edited to include a storm alert is still correctly classified.
-- Two modes: **Auto** (scenario sent directly to orchestrator) and **Manual** (generated
-  scenario reviewable/editable, server-normalized via `/api/scenario/normalize` before
-  sending — recomputes totals, auto-corrects event/battery inconsistencies, shows
-  read-only physics facts).
+## 2. Components
 
-### Physics Module — `backend/app/data/physics.py`
+### 2.1 Scenario source
 
-The single source of truth for every power-balance quantity: max charge/discharge per
-battery, power-balance residual, unserved load, the minimum curtailment physically
-required, the minimum unserved load *any* decision could achieve
-(`min_achievable_unserved_mw` — used to tell a physically infeasible scenario apart from a
-genuine decision mistake), net position (generation vs. total demand), and computed
-emergency status. The balancer, the Evaluator, and the Orchestrator's own input facts are
-all built on these same functions — nothing else computes them independently.
+Three entry points produce the same `EnvironmentState`:
 
-### Orchestrator Agent (Decision-Maker) — `backend/app/agents/orchestrator_agent.py`
+| Source | Used for | Determinism |
+|---|---|---|
+| **Generator** (`scenario_agent.py`) | Benchmarks, demo presets | Seeded. Same seed, same scenario, always |
+| **File input** (`file_input.py`) | Uploaded days (CSV/XLSX) | Content-hashed `run_id`, so re-uploading the same file reuses the same recordings |
+| **Manual form** | Exploration, judging | — |
 
-- Receives the environment state **plus a `physics_facts` block**
-  (`total_generation_mw`, `net_position_mw`, a surplus/shortfall/balanced label, the same
-  for the forecast, and per-battery discharge-available/charge-headroom) — computed facts
-  the model is told to use directly rather than recompute.
-- `reasoning` is the first declared property in the `submit_decision` schema and must be
-  written before any action, stating the net position and ladder step followed. (Tested
-  live: declared JSON schema property order does **not** control Gemini's actual
-  generation order — the natural-language instruction in the prompt is what drives
-  response quality, not the schema's property order.)
-- Judges every decision in two layers: Layer 1 golden rules (never traded away) and Layer
-  2 the objective cascade (only reorders priorities once Layer 1 holds). No objective
-  declared means `cost_efficiency` under the golden rules — a structural default, not a
-  special-cased fallback.
+The generator produces six difficulty profiles: `stable_day`, `cloudy_afternoon`, `price_spike`, `multi_failure_cascade`, `surplus_day`, `shortfall_day`.
 
-### Balancer — `backend/app/data/balancer.py`
+**The hidden-tag boundary.** Alongside each scenario the generator derives an expected-behaviour tag — the expected reserve-floor band, the expected ladder step, whether an emergency is expected. These fields live in `_HIDDEN_FIELDS` and are passed to the evaluator only. The orchestrator never sees them. `scripts/prompt_audit_live.py` builds several hundred requests and asserts that no expected-behaviour field, no evaluator output and no API key appears in any of them.
 
-Deterministic code between the Orchestrator and the Evaluator: the model proposes, the
-balancer makes the numbers physically true. Caps every battery action to feasibility, then
-unwinds — in order — curtailment, sale, and (if still short) battery charging, until load
-is met or nothing's left to remove. **Never invents supply the model didn't propose** —
-under-provisioning is left standing as a genuine Evaluator failure, not papered over. Every
-field it changes is recorded as a `FieldRepair` (proposed, applied, delta, reason) shown in
-the Decision panel. The same module also provides `reference_dispatch()`, the autonomous
-optimal-dispatch calculation rule 9 compares the actual decision against.
+For uploaded days, where there is no generator profile to derive from, the expected band is computed from the scenario's own state via `dispatcher.state_volatility_class`, not from a label.
 
-### Evaluator (Comparison Layer) — `backend/app/agents/evaluator.py` + `backend/app/data/rules.py`
+### 2.2 Orchestrator
 
-- 15 rules total: golden rules (severity `fail`, e.g. unserved load vs. the physically
-  achievable minimum, curtailment-amount vs. minimum required, transmission/frequency
-  limits) and cascade/floor/repair checks (severity `flagged`, e.g. reserve-margin
-  headroom, floor-band match, cascade-metric deviation, balancer-repair magnitude).
-- A rule that can't be judged for a given decision (e.g. reserve margin when load is
-  already unserved) reports a genuine **N/A**, never a disguised pass.
-- Two-number rules (unserved vs. achievable, curtailed vs. minimum required, cascade
-  metric vs. reference) carry both numbers as structured fields, not just prose.
-- Produces pass / fail / flagged per scenario, for both the raw and applied stage —
-  aggregated into first-attempt pass rate (the model's real score), applied pass rate,
-  repair rate, and a raw-rule category breakdown (arithmetic / strategy / outcome).
+| | |
+|---|---|
+| Model | `gemini-3.5-flash-lite` |
+| Temperature | 1.0, pinned |
+| Calling convention | Forced function call to `submit_decision` — the model cannot reply in prose |
+| Retries | Transient 429 and 503 retried with backoff; exhaustion falls through to safe mode |
+| One call per decision | No multi-turn loop, no self-correction pass |
 
-## Why objective varies per scenario set, not globally
+**What the model is given:** the scenario state, the declared objective, and thirteen derived physics facts — among them `sellable_surplus_mw`, `max_import_mw`, `min_required_curtailment_mw`, `surplus_after_max_charge_mw`, and per-battery discharge and charge headroom.
 
-Rather than picking one fixed objective for the whole system (which would require
-inventing weights across cost/carbon/reliability/profit without domain grounding), the
-objective is declared per scenario as an explicit input. The same environment conditions
-can correctly produce different decisions depending on the stated goal — this directly
-demonstrates the hackathon's **F2** requirement: "determine optimal cluster of options
-after determining optimality criteria given a specific situation."
+**What the model returns:** market action and amount, per-battery action and amount, curtailment by source, a proposed `reserve_floor_pct` with a one-line justification, and free-text reasoning naming which golden rules were binding and which ladder step it used.
 
-## Demo narrative
+**What the model is never given:** the rules it will be judged against, the expected-behaviour tags, or the evaluator's reference calculation.
 
-1. **Auto mode, bulk run** — "tested against N generated scenarios, X% first-attempt pass
-   rate, Y% applied pass rate, Z% repair rate" — proves robustness at scale *and* is honest
-   about how much of that score the balancer is doing versus the model (`BatchRunPanel`).
-2. **Manual mode, live edit** — hand-craft an edge case live in front of judges, with
-   read-only physics facts (net position, battery headroom) shown before you send it —
-   proves genuine interactivity, not cherry-picked scenarios.
-3. **Default fallback** — strip the objective out entirely, show the system falls back to
-   `cost_efficiency` under the golden rules safely rather than breaking.
-4. **Raw vs. applied, side by side** — pick a flagged or repaired row and show the model's
-   raw proposal next to what the balancer made of it, with the repair list — proves the
-   self-verification gap is actually being closed, not just claimed.
+### 2.3 Balancer
 
-## Current evidence (dev seed set, 2026-10-04, full 24-scenario matrix)
+The model's proposal may be physically infeasible — discharging faster than a battery's rate limit, or allocating the same surplus twice. The balancer repairs it deterministically and records every repair with a reason.
 
-**11/24 pass (45.8%), 13 flagged, 0 failed, 0 infeasible.** Zero hard-rule violations
-across the entire matrix — every non-pass is an advisory (cascade deviation, thin reserve
-margin, a repair) rather than a safety or reliability violation. Two calibration bugs found
-and fixed via this evidence (both approved before changing): `cloudy_afternoon` and
-`shortfall_day` were classified into a higher reserve-floor volatility band than the
-Evaluator's own signal-detection logic actually justified — see git log for the diagnostics.
+- **Phase A**, load unmet: unwind in a fixed order — sale, then curtailment, then (if still short) battery charging.
+- **Phase B**, surplus unabsorbed: additional sale up to the transmission limit, then forced curtailment.
 
-## Mapping to the 9-blocker grid
+The order is asserted directly by test, against the recorded repair sequence rather than the end state, so a reordering cannot pass silently (`tests/test_balancer_unwind_order.py` — note that the real execution order above is sale-then-curtailment, which the test confirms; a stale inline comment in `balancer.py` itself states the reverse and should not be trusted over the test).
 
-| | F1 (≥1 action cluster) | F2 (objective-aware optimal set + uncertainty) | F3 (time-series simulation) |
-|---|---|---|---|
-| **D1** (structured input, acceptable output) | Implemented: scenario → decision → balancer → evaluate | Implemented, with a caveat — see README's Known Limitations (the declared objective does not reliably change the model's surplus decision in practice) | Not yet — see README's Known Limitations (file input has no state carry-over) |
-| **D2** (structured input, high reliability) | Implemented with real evidence: 0 failures across a 24-scenario, 6-profile matrix | Batch run with mixed objectives + first-attempt/applied pass rates | Not yet |
-| **D3** (multimodal input, high reliability) | `multi_failure_cascade` profile exists; multimodal input (e.g. weather imagery, PDF maintenance schedules) not yet implemented | Same | Not yet |
+### 2.4 Evaluator
 
-Declare your actual self-estimated grid position only once the demo evidence backs it up —
-the hackathon penalizes both over- and under-estimation. The 0-failure, 0-infeasible result
-above is real evidence for a confident D2 claim; F2 is well-evidenced too (the cascade
-genuinely reorders decisions and the Evaluator genuinely checks the right metric per
-objective) — F3 (time-series) remains the honest gap.
+Seventeen rules in `run_rules()`, plus one pipeline-level rule (`rule_model_call`) for whether a decision was produced at all. Three-valued: **pass**, **flagged**, **fail**. Any fail makes the decision a fail; otherwise any flag makes it flagged.
+
+| Severity | Rules | What they protect |
+|---|---|---|
+| **Fail** | 1, 2a, 3, 4, 6, 7, 8a | Reliability, grid stability, curtailment discipline, battery safety |
+| **Flagged** | 2b, 3b, 5, 8b, 8c, 8d, 8e, 9, 10, 11 | Objective adherence, floor discipline, repair magnitude |
+
+Rules are evaluated from scenario state and the decision — never from the model's reasoning text. A model that explains itself persuasively scores exactly the same as one that says nothing.
+
+Two rules are objective-gated: `rule_5` is not applicable under `min_carbon` or `max_renewable_utilisation` (those objectives don't trade cost against a price-peak charging decision), and `rule_9` branches on which metric the declared objective's top priority names (cost, carbon, renewable utilisation, or profit).
+
+---
+
+## 3. The decisions the system makes
+
+### 3.1 Golden rules — never traded away
+
+Reliability, grid stability, minimal curtailment, battery protection. These are enforced regardless of declared objective, and a violation is a fail rather than a flag. Reliability and stability outrank the other two: a storm may legitimately force a deep discharge, and that case is logged as an emergency rather than scored as a violation.
+
+### 3.2 Objective cascade
+
+The declared objective reorders what is optimised *beneath* the golden rules.
+
+| Declared | Priority order |
+|---|---|
+| `cost_efficiency` (default) | cost → carbon → renewable utilisation |
+| `min_carbon` | carbon → cost → renewable utilisation |
+| `max_renewable_utilisation` | renewable utilisation → cost → carbon |
+| `max_profit` | profit → cost → carbon |
+
+A 5% tolerance band (`OBJECTIVE_TOLERANCE_PCT`) governs how `rule_9` scores the declared objective's **top** priority: the decision passes if it's within 5% of the reference-optimal outcome for that one metric, not just at an exact tie. The cascade's second and third priorities are a stated ordering for a human reader of the prompt, not a separately-scored mechanism — no rule evaluates or enforces anything about them; `rule_9` only ever checks the top priority.
+
+### 3.3 Dispatch ladders
+
+| Situation | Order |
+|---|---|
+| **Surplus** | serve load → charge battery → sell to grid → curtail (last) |
+| **Shortfall** | renewables → battery above floor → grid import → below-floor discharge (emergency only) |
+
+Under `max_profit` the surplus ladder branches: sell before charging. This is the one place the declared objective changes the dispatcher's own ordering, and it is measurable — see §6.
+
+The shortfall ladder is deliberately objective-blind. Keeping load served is not something an objective gets to reorder.
+
+### 3.4 Dynamic reserve floor
+
+The slice of battery charge held back for a genuine reliability emergency. The agent proposes it each interval, with a justification naming the signals that drove it.
+
+Code then enforces, rather than trusting:
+
+- clamped to 20–60%,
+- may rise by any amount in one interval but fall by at most 10 points,
+- every clamp or ramp-limit is recorded and flagged by `rule_8e`.
+
+Expected bands by volatility: calm 20–30%, some volatility 30–45%, heavy volatility 45–60%. A high floor on a calm day is a mistake, and `rule_8c` catches it.
+
+---
+
+## 4. Design decisions, and what each one buys
+
+### 4.1 The evaluator is separate and blind
+
+The orchestrator never sees the rules. This is what makes the pass rate mean anything: the agent cannot optimise for a test it has not read.
+
+### 4.2 Two evaluation stages
+
+Every decision is scored twice: **raw**, the decision as received from its source (model, safe mode, or replay), and **applied**, after the balancer repairs it.
+
+**The raw figure is the one reported.** It is the honest measure of the agent, because the applied figure is partly a measure of the repair machinery. Both are stored on every benchmark row, and the user interface shows both with the raw one labelled as the headline.
+
+### 4.3 Record and replay
+
+Every live call is recorded, keyed on `scenario_hash + prompt_version + model + temperature + sample_index`.
+
+`prompt_version()` hashes the system prompt and the tool schema; `scenario_hash()` hashes the declared objective, the full non-hidden scenario state, and the derived facts together. **Change either and the key changes, so a stale recording fails loudly rather than silently replaying a decision made under different conditions.** This is deliberate: a replay that quietly matched the wrong thing would be worse than no replay at all.
+
+A cache miss is a distinct, named outcome — not a failed decision. The distinction exists because it was once absent, and a prompt change made a shipped demo render as "0 of 96 passed", which is indistinguishable from the agent failing catastrophically.
+
+### 4.4 Safe mode
+
+When the model is unavailable — no key, rejected key, rate limit exhausted — the deterministic dispatcher decides instead, and the evaluator judges that decision live, by the same rules.
+
+The system therefore always produces a judged decision. Which component decided is reported on every result and never silently substituted.
+
+### 4.5 Pre-registration
+
+`evidence/gate.json` and `evidence/exit_tiers.json` were committed **before** the benchmark ran. Thresholds, per-profile targets, and tier definitions, fixed in advance with git timestamps.
+
+`evidence/prompt_freeze.json` records the frozen prompt version, and three tests pin it: one on `prompt_version()`, one on the exact fact key set, one on two reference `scenario_hash` values. An accidental prompt edit fails the test suite in seconds rather than being discovered when recordings stop matching.
+
+---
+
+## 5. Data and state
+
+A decision is evaluated **independently**. There is no multi-tick state engine: `previous_floor_pct` is supplied as an input so the ramp rule can be enforced, not accumulated across a run.
+
+A day — 96 intervals — is a sequence of independent decisions, assembled afterwards by `day_report.py` into cumulative figures and two deterministic baselines.
+
+| Baseline | Question it answers |
+|---|---|
+| **Same-objective dispatcher** | Does the agent match the deterministic fallback, given the same objective? |
+| **Fixed-cost dispatcher** | What does declaring an objective change at all? |
+
+Money is computed per interval: `amount_mw × 0.25 h × price`, with a 5% buy premium and a 5% sell discount off the quoted price (`PRICE_SPREAD_PCT`). Stored energy is valued at the sell price after charge efficiency — a definition whose consequences are documented in `reports/metric_limitations.md`.
+
+---
+
+## 6. How the architecture supports each demonstrated claim
+
+| Claim shown in the demo | Where the architecture provides it | Evidence |
+|---|---|---|
+| Three components, evaluator blind to what the agent saw | §2.1 hidden-tag boundary; §2.4 | `prompt_audit_live.py`: several hundred requests, zero leaks |
+| Golden rules enforced regardless of objective | §3.1; fail-severity rules in §2.4 | `rules.py` |
+| A declared objective changes the dispatch | §3.2 cascade; §3.3 surplus-ladder branch | `baseline_divergence_probe.json` — 30 of 31 constructed surplus states diverge, deterministically, no model involved |
+| Agent proposes a reserve floor; code enforces bounds | §3.4 | `rule_8a`–`8e` |
+| The agent's own proposal is scored before any repair | §4.2 | Raw and applied on every benchmark row |
+| Infeasible proposals are repaired deterministically | §2.3 | Unwind order asserted by test against the repair sequence |
+| Safe mode takes over when the model is unavailable | §4.4 | `test_safe_mode.py` |
+| Any run replays with no API key | §4.3 | 96 of 96, verified three times, from a clean clone |
+| Arbitrary day data can be uploaded and scored | §2.1 file input | Content-hashed run ids; `test_file_input.py` |
+| Every day is compared against two deterministic baselines | §5 | `day_report.py` |
+| Pass marks fixed before the run | §4.5 | `gate.json`, `exit_tiers.json`, committed before `round1` |
+| The system detects its own failures | §2.4; §4.3 | 72-case fault-injection matrix in `step6_evidence.json` |
+
+---
+
+## 7. What this architecture does not do
+
+Stated here so the demo is not assessed against capabilities that were never built.
+
+- **No multi-tick state engine.** Decisions are independent; `previous_floor_pct` is an input, not accumulated state.
+- **No forecast-error tracking.** Forecasts inform a single decision and are not scored for accuracy over a horizon.
+- **No multimodal ingestion.** Structured inputs only.
+- **No real grid or market integration.** Prices and transmission limits are simulated.
+- **No self-correction loop.** One model call per decision. The balancer repairs infeasibility, but the model is not asked to revise.
+- **The agent does not outperform the deterministic dispatcher.** On the identical 72 benchmark scenarios, scored by the same evaluator: 84.7% against 81.9% before repair, tied at 81.9% after, with three hard failures the dispatcher never produces. All three trace to two documented defects, both described in `reports/findings.md`.
+
+That last point is the architecture's own verdict on itself, and the reason the separation in §4.1 and the pre-registration in §4.5 were worth building. Without them we would not know it.

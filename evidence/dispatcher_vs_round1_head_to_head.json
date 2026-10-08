@@ -1,0 +1,44 @@
+{
+  "probe": "dispatcher-as-oracle vs round1 agent benchmark, identical 72 scenarios, current evaluator",
+  "source_benchmark": "evidence/round1_benchmark.json",
+  "method": "dispatch(scenario, scenario.objective) + reevaluate_stored() per stored scenario -- zero model calls, zero recorder.",
+  "dispatcher": {
+    "total": 72,
+    "raw": {
+      "pass": 59,
+      "flagged": 13,
+      "fail": 0
+    },
+    "raw_pass_rate_pct": 81.9,
+    "applied": {
+      "pass": 59,
+      "flagged": 13,
+      "fail": 0
+    },
+    "applied_pass_rate_pct": 81.9,
+    "repaired_count": 0
+  },
+  "agent_round1": {
+    "total": 72,
+    "judged_count": 71,
+    "first_attempt_passed": 61,
+    "first_attempt_pass_rate_pct": 85.9,
+    "first_attempt_pass_rate_pct_conservative_of_72": 84.7,
+    "applied_passed": 59,
+    "applied_flagged": 9,
+    "applied_failed": 3,
+    "applied_pass_rate_pct": 83.1,
+    "applied_pass_rate_pct_conservative_of_72": 81.9
+  },
+  "agent_applied_fail_ticks": [
+    16,
+    20,
+    38
+  ],
+  "agent_applied_fail_ticks_match_known_defects": {
+    "tick_38": "Gate 0.4 -- model not shown emergency discharge headroom (reports/round1.md, evidence/round1_tier_report.json fail_rows_raw)",
+    "tick_16": "balancer-repair gap -- capped discharge never substitutes available grid import (reports/round1.md Part 1B)",
+    "tick_20": "same balancer-repair gap as tick 16"
+  },
+  "headline": "Agent leads the dispatcher before repair (84.7% vs 81.9% raw, conservative/72), ties it after repair (81.9% applied, both), and produces 3 hard fails the dispatcher never produces (dispatcher: 0 repairs needed, 0 fails, 13 flagged instead). On this benchmark the LLM orchestrator does not demonstrate an advantage over the deterministic dispatcher."
+}

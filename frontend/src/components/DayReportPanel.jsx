@@ -146,6 +146,14 @@ export default function DayReportPanel({ source }) {
     ? objectiveLabel(distinctObjectives[0])
     : `mixed (${distinctObjectives.map(objectiveLabel).join(", ")})`;
 
+  // True when the same-objective and fixed-cost baselines produced the same cumulative
+  // numbers on every comparison row (within float rounding) -- not evidence the declared
+  // objective was "already cost," just that this day's own surplus ticks never gave the two
+  // dispatch orders a chance to diverge (see the note rendered below).
+  const baselinesMatch = COMPARISON_ROWS.every(
+    ({ key }) => Math.abs(report.comparison[key].diff_same_objective_vs_fixed_cost) < 0.05
+  );
+
   return (
     <div className="panel">
       <h2>Day report — {source?.label}</h2>
@@ -195,6 +203,17 @@ export default function DayReportPanel({ source }) {
         <strong>Fixed-cost dispatcher</strong> — what does declaring an objective change at
         all, isolated from the agent (both baselines are the same dispatcher)?
       </p>
+      {baselinesMatch && (
+        <p style={{ fontSize: 12, color: "#9aa4b2", background: "#1a2233", padding: 8, borderRadius: 6 }}>
+          ⓘ The two baseline columns below are the same on this run. That's not because the
+          declared objective happened to already be cost efficiency — it's because the
+          transmission/export cap binds on every surplus interval in this data, so selling
+          first (fixed-cost order) or charging first (same-objective order) saturate the same
+          sell limit either way. On a day with more export headroom than battery charge
+          capacity, these two columns do diverge — see the project's own{" "}
+          <code>baseline_divergence_probe.json</code> for a constructed example.
+        </p>
+      )}
       <table>
         <thead>
           <tr><th>Metric</th><th>Agent</th><th>Same-objective dispatcher</th><th>Fixed-cost dispatcher</th></tr>

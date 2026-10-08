@@ -57,9 +57,13 @@ tick) has three downloads:
   **Applied** verdict (after the deterministic balancer fixes anything infeasible) —
   `pass` / `flagged` / `fail`, plus which rule(s) fired and why (click a row to expand the
   full scenario/decision/verdict JSON).
-- The **Batch Run** and **File Input** panels add cumulative pass rates, a per-rule failure
-  breakdown, and (File Input) a per-tick ledger (cost, revenue, profit, emissions, renewable
-  utilisation) with a side-by-side comparison against the dispatcher baseline.
+- The **Batch Run** panel adds cumulative pass rates and a per-rule failure breakdown.
+  **File Input** runs (and the pre-recorded 96-row day via Door 1) can open a dedicated
+  **day-report screen**: a per-tick ledger (cost, revenue, profit, emissions, renewable
+  utilisation) plus a side-by-side comparison against **two** deterministic dispatcher
+  baselines — one under the day's own declared objective per tick, one fixed to
+  `cost_efficiency` throughout — so you can see both how the agent compares to the
+  deterministic fallback and what declaring an objective changes on its own.
 - `reports/` holds this project's own written-up findings as the build progressed —
   `reports/round0.md` is the main benchmark report against the project's exit tiers;
   `evidence/` holds the raw data (stored scenarios, recorded calls, rule-fire counts, secret
@@ -67,23 +71,88 @@ tick) has three downloads:
 
 ## Measured results
 
-*(Placeholders — filled in after the final run before submission.)*
+### Dispatcher vs agent head-to-head (identical 72 scenarios, same evaluator)
 
-- Round 0 benchmark (72 scenarios, dev seed): first-attempt pass rate **`<PLACEHOLDER>`**,
-  tier reached **`<PLACEHOLDER>`** — full breakdown in `reports/round0.md`.
-- Dispatcher-as-oracle (200 scenarios, no model calls): **`<PLACEHOLDER>`** clean pass,
-  **`<PLACEHOLDER>`** golden-rule pass.
-- 96-row day (live run): **`<PLACEHOLDER>`** pass / **`<PLACEHOLDER>`** flagged /
-  **`<PLACEHOLDER>`** fail.
+Source: `evidence/dispatcher_vs_round1_head_to_head.json` (zero model calls — the deterministic
+dispatcher run on the exact same 72 scenarios as the round1 benchmark below, scored by the
+same current evaluator).
+
+| | raw / first-attempt | applied (after repair) |
+|---|---|---|
+| **Dispatcher** | 59 pass / 13 flagged / 0 fail — 81.9% | identical: 59/13/0 — 81.9%, 0/72 needed any repair |
+| **Agent** (round1) | 61/72 = 84.7% | 59 pass / 9 flagged / 3 fail — 81.9% |
+
+The agent leads before repair, ties after repair, and produces three hard failures the
+dispatcher never produces. On this benchmark the LLM orchestrator does not demonstrate an
+advantage over the deterministic dispatcher.
+
+The composition difference is the informative part: the agent has fewer flags than the
+dispatcher (9 vs 13) and more fails (3 vs 0) — it trades minor cascade deviations for
+occasional hard failures, rather than simply failing less often overall.
+
+The dispatcher is feasible by construction (0/72 repairs needed). Part of what "ties after
+repair" measures is that the agent needs a repair stage the dispatcher structurally does not.
+
+The agent's three applied fails are exactly **tick 38** (`evidence/round1_tier_report.json`'s
+`fail_rows_raw` — the model isn't shown emergency discharge headroom) and **ticks 16 and 20**
+(`reports/round1.md` Part 1B — the balancer caps an over-limit discharge and never substitutes
+available grid import). The entire deficit is accounted for by two named, already-documented
+defects, not general unreliability.
+
+### Round1 benchmark (72 scenarios, live)
+
+Source: `evidence/round1_benchmark.json` + `evidence/round1_tier_report.json`.
+
+- First-attempt pass rate: **61/72 = 84.7%** (lead number — the one 429/safe-mode scenario
+  stays in the denominator and never counts as a pass, per `exit_tiers.json`'s own
+  "every scenario in the denominator, no exclusions"). Secondary: **61/71 = 85.9%**
+  agent-only, with that one scenario excluded from both the numerator and denominator.
+- Tier outcome: **neither Tier G nor Tier A reached.** Tier A clears every quantitative
+  criterion (overall pass rate, per-objective minimums, avoidable-unserved %, non-fail rate)
+  and misses only the qualitative "replay matches 72/72" item (71/72, strict reading — the
+  one rate-limited call never produced a recording to replay). Tier G misses that same item
+  plus the stable/surplus/shortfall criterion, by exactly one row (33/36 = 91.7% vs the
+  34/36 = 92.0% required — 92% is not an attainable score on a 36-row denominator at all).
+  Full breakdown in `reports/round1.md`.
+
+### 96-row day (live run)
+
+Source: `recordings/fileinput_0486961f6cc7/` (current as of D.3's paced re-recording).
+
+- Applied: **80 pass / 15 flagged / 1 fail, out of 96 — 83.3%.**
 
 ## Known limitations
 
 - **File input has no state carry-over.** Each uploaded row is an independent tick with its
   own battery state of charge — this is a per-tick decision tester, not a multi-tick
   simulation where one tick's outcome feeds the next.
-- **The declared objective does not reliably change the model's surplus (charge-vs-sell)
-  decision.** Under `max_profit`, the ladder is defined to sell before charging; in observed
-  runs the live model frequently charges first regardless of the declared objective.
+- **The `max_profit` ladder reword (commit 678c109) has a real but very partial effect on the
+  model's surplus (charge-vs-sell) decision, and the other three objectives remain
+  indistinguishable from each other.**
+  - **Real and causal:** the identical scenario (tick 60, surplus_day, seed 20301306) produced
+    `charge 16.0 / sell 34.9` under the pre-678c109 prompt (`evidence/round0_run2_benchmark.json`)
+    and `charge 0 / sell 50.9` under the current prompt (`evidence/round1_benchmark.json`) —
+    same scenario, different prompt version, different decision.
+  - **Very partial:** of round1's 9 max_profit rows that were actually in a surplus state,
+    only 1 (tick 60) followed the reworded ladder cleanly; 8 still charged before or instead
+    of fully selling. round0_run2's equivalent count on the same 9 rows was 0 (`reports/round1.md`).
+  - **Attributable to commit 678c109 as a whole, not to the ladder reword specifically:** that
+    commit bundled the reword with two new physics facts in the same change. Round1 ticks 34
+    and 36 name the sell-first rule correctly in their own reasoning text, then rationalize
+    charging anyway using `surplus_after_max_charge_mw` — one of the new facts — as license
+    rather than as the post-sale remainder it actually is. Neither half of the commit can be
+    credited individually.
+
+  **Stronger evidence, at the dispatcher level, with no model involved:** `evidence/baseline_divergence_probe.json`
+  found that on 30 of 31 constructed surplus states, the deterministic dispatcher's own output
+  diverges sharply between `max_profit` and `cost_efficiency` — the declared objective
+  genuinely reaches dispatch. But the size of that divergence is bounded: `reports/metric_limitations.md`
+  shows it equals exactly the avoided round-trip charging loss (`0.35 MWh x $24.04 sell price
+  = $8.41`), because the profit metric values stored energy at the *current* sell price, never
+  at a future one. Under this definition, `max_profit` can only ever prefer selling — it has no
+  way to reward charging for a later, higher price, which is the actual reason an operator
+  charges during a spike. This is a boundary of the metric as defined, not of the dispatcher,
+  balancer, or agent.
 - **The expected reserve-floor band and the dispatcher's own floor choice can legitimately
   disagree.** The *expected* band (what a scenario's volatility class implies) is mapped from
   the scenario's profile name; the *dispatcher's own* floor choice is derived from live state

@@ -1,0 +1,38 @@
+{
+  "cache_key": "04131d21f892343f98040934",
+  "scenario_hash": "6e93aace36712fb7",
+  "prompt_version": "114f4a55af8ba01b",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 1.0,
+  "sample_index": 0,
+  "tick": 69,
+  "seed": 20311206,
+  "recorded_at": 1791451861.0713341,
+  "request": {
+    "contents": "Declared objective for this tick: max_renewable_utilisation\n\nEnvironment state:\n{\n  \"tick\": 69,\n  \"seed\": 20311206,\n  \"difficulty\": \"shortfall_day\",\n  \"objective\": \"max_renewable_utilisation\",\n  \"solar_output_mw\": 90.3,\n  \"solar_forecast_mw\": 88.6,\n  \"wind_output_mw\": 4.4,\n  \"wind_forecast_mw\": 4.5,\n  \"solar_farms\": [\n    {\n      \"id\": \"solar_1\",\n      \"capacity_mw\": 28.0,\n      \"output_mw\": 19.9,\n      \"forecast_mw\": 19.6\n    },\n    {\n      \"id\": \"solar_2\",\n      \"capacity_mw\": 24.0,\n      \"output_mw\": 15.9,\n      \"forecast_mw\": 15.6\n    },\n    {\n      \"id\": \"solar_3\",\n      \"capacity_mw\": 22.0,\n      \"output_mw\": 17.9,\n      \"forecast_mw\": 17.6\n    },\n    {\n      \"id\": \"solar_4\",\n      \"capacity_mw\": 20.0,\n      \"output_mw\": 15.9,\n      \"forecast_mw\": 15.6\n    },\n    {\n      \"id\": \"solar_5\",\n      \"capacity_mw\": 16.0,\n      \"output_mw\": 16.0,\n      \"forecast_mw\": 16.0\n    }\n  ],\n  \"wind_farms\": [\n    {\n      \"id\": \"wind_1\",\n      \"capacity_mw\": 24.0,\n      \"output_mw\": 1.6,\n      \"forecast_mw\": 1.6\n    },\n    {\n      \"id\": \"wind_2\",\n      \"capacity_mw\": 20.0,\n      \"output_mw\": 1.8,\n      \"forecast_mw\": 1.8\n    },\n    {\n      \"id\": \"wind_3\",\n      \"capacity_mw\": 16.0,\n      \"output_mw\": 1.1,\n      \"forecast_mw\": 1.1\n    }\n  ],\n  \"base_demand_mw\": 82.5,\n  \"base_demand_forecast_mw\": 87.0,\n  \"total_demand_mw\": 110.7,\n  \"total_demand_forecast_mw\": 115.2,\n  \"grid_frequency_hz\": 50.031,\n  \"transmission_constraint_mw\": 180.0,\n  \"transmission_headroom_mw\": 180.0,\n  \"batteries\": [\n    {\n      \"id\": \"battery_1\",\n      \"capacity_mwh\": 40.0,\n      \"state_of_charge_pct\": 88.3,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 10.0,\n      \"max_discharge_rate_mw\": 10.0,\n      \"charging_efficiency_pct\": 92.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    },\n    {\n      \"id\": \"battery_2\",\n      \"capacity_mwh\": 25.0,\n      \"state_of_charge_pct\": 45.3,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 6.0,\n      \"max_discharge_rate_mw\": 6.0,\n      \"charging_efficiency_pct\": 90.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    }\n  ],\n  \"previous_floor_pct\": 25.0,\n  \"electricity_price_per_mwh\": 213.5,\n  \"buy_price_per_mwh\": 224.18,\n  \"sell_price_per_mwh\": 202.82,\n  \"carbon_price_per_ton\": 34.9,\n  \"grid_carbon_intensity_t_per_mwh\": 0.865,\n  \"demand_response_incentive_per_mwh\": 22.7,\n  \"weather_forecast\": \"clear\",\n  \"storm_alert\": false,\n  \"maintenance_scheduled\": false,\n  \"industrial_demand_mw\": 28.2,\n  \"events\": []\n}\n\nPhysics facts (computed \u2014 use directly, do not recompute):\n{\n  \"total_generation_mw\": 94.7,\n  \"net_position_mw\": -16.0,\n  \"position\": \"shortfall\",\n  \"forecast_total_generation_mw\": 93.1,\n  \"forecast_net_position_mw\": -22.1,\n  \"forecast_position\": \"shortfall\",\n  \"sellable_surplus_mw\": 0.0,\n  \"max_import_mw\": 180.0,\n  \"min_required_curtailment_mw\": 0.0,\n  \"surplus_after_max_charge_mw\": 0.0,\n  \"per_battery\": [\n    {\n      \"battery_id\": \"battery_1\",\n      \"discharge_available_mw\": 10.0,\n      \"charge_headroom_mw\": 10.0\n    },\n    {\n      \"battery_id\": \"battery_2\",\n      \"discharge_available_mw\": 6.0,\n      \"charge_headroom_mw\": 6.0\n    }\n  ],\n  \"total_discharge_available_mw\": 16.0,\n  \"total_charge_headroom_mw\": 16.0\n}"
+  },
+  "status": "ok",
+  "response_args": {
+    "reasoning": "Position is shortfall (-16.0 MW net). Following shortfall ladder: use all renewables, discharge batteries up to available rates (battery_1: 10 MW, battery_2: 6 MW) exactly covering the 16 MW shortfall without needing grid purchases. Golden Rule 1 (Reliability) and Rule 4 (Battery protection) respected. Objective max_renewable_utilisation prioritizes utilizing local renewable generation and stored energy.",
+    "market_action": "buy",
+    "reserve_floor_pct": 25,
+    "battery_actions": [
+      {
+        "action": "discharge",
+        "amount_mw": 10,
+        "battery_id": "battery_1"
+      },
+      {
+        "action": "discharge",
+        "battery_id": "battery_2",
+        "amount_mw": 6
+      }
+    ],
+    "curtail_wind_mw": 0,
+    "demand_response_triggered": false,
+    "floor_justification": "Stable weather, calm forecast, maintaining standard reserve floor of 25%",
+    "curtail_solar_mw": 0,
+    "market_amount_mw": 0
+  },
+  "latency_ms": 1860.0
+}

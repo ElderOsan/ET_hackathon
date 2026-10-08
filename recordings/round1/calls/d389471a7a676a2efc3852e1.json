@@ -1,0 +1,33 @@
+{
+  "cache_key": "d389471a7a676a2efc3852e1",
+  "scenario_hash": "a029a3e898350acf",
+  "prompt_version": "114f4a55af8ba01b",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 1.0,
+  "sample_index": 0,
+  "tick": 42,
+  "seed": 20291106,
+  "recorded_at": 1791451753.0097384,
+  "request": {
+    "contents": "Declared objective for this tick: min_carbon\n\nEnvironment state:\n{\n  \"tick\": 42,\n  \"seed\": 20291106,\n  \"difficulty\": \"multi_failure_cascade\",\n  \"objective\": \"min_carbon\",\n  \"solar_output_mw\": 56.9,\n  \"solar_forecast_mw\": 52.2,\n  \"wind_output_mw\": 35.4,\n  \"wind_forecast_mw\": 34.7,\n  \"solar_farms\": [\n    {\n      \"id\": \"solar_1\",\n      \"capacity_mw\": 28.0,\n      \"output_mw\": 14.1,\n      \"forecast_mw\": 13.0\n    },\n    {\n      \"id\": \"solar_2\",\n      \"capacity_mw\": 24.0,\n      \"output_mw\": 8.3,\n      \"forecast_mw\": 7.6\n    },\n    {\n      \"id\": \"solar_3\",\n      \"capacity_mw\": 22.0,\n      \"output_mw\": 11.0,\n      \"forecast_mw\": 10.1\n    },\n    {\n      \"id\": \"solar_4\",\n      \"capacity_mw\": 20.0,\n      \"output_mw\": 15.6,\n      \"forecast_mw\": 14.3\n    },\n    {\n      \"id\": \"solar_5\",\n      \"capacity_mw\": 16.0,\n      \"output_mw\": 7.9,\n      \"forecast_mw\": 7.2\n    }\n  ],\n  \"wind_farms\": [\n    {\n      \"id\": \"wind_1\",\n      \"capacity_mw\": 24.0,\n      \"output_mw\": 13.3,\n      \"forecast_mw\": 13.1\n    },\n    {\n      \"id\": \"wind_2\",\n      \"capacity_mw\": 20.0,\n      \"output_mw\": 12.6,\n      \"forecast_mw\": 12.3\n    },\n    {\n      \"id\": \"wind_3\",\n      \"capacity_mw\": 16.0,\n      \"output_mw\": 9.5,\n      \"forecast_mw\": 9.3\n    }\n  ],\n  \"base_demand_mw\": 49.0,\n  \"base_demand_forecast_mw\": 53.4,\n  \"total_demand_mw\": 98.0,\n  \"total_demand_forecast_mw\": 102.4,\n  \"grid_frequency_hz\": 50.028,\n  \"transmission_constraint_mw\": 180.0,\n  \"transmission_headroom_mw\": 2.0,\n  \"batteries\": [\n    {\n      \"id\": \"battery_1\",\n      \"capacity_mwh\": 40.0,\n      \"state_of_charge_pct\": 39.2,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 10.0,\n      \"max_discharge_rate_mw\": 10.0,\n      \"charging_efficiency_pct\": 92.0,\n      \"degradation_pct\": 2.0,\n      \"available\": true\n    },\n    {\n      \"id\": \"battery_2\",\n      \"capacity_mwh\": 25.0,\n      \"state_of_charge_pct\": 23.2,\n      \"min_safe_soc_pct\": 10.0,\n      \"max_charge_rate_mw\": 6.0,\n      \"max_discharge_rate_mw\": 6.0,\n      \"charging_efficiency_pct\": 90.0,\n      \"degradation_pct\": 2.0,\n      \"available\": false\n    }\n  ],\n  \"previous_floor_pct\": 25.0,\n  \"electricity_price_per_mwh\": 295.1,\n  \"buy_price_per_mwh\": 309.86,\n  \"sell_price_per_mwh\": 280.35,\n  \"carbon_price_per_ton\": 36.8,\n  \"grid_carbon_intensity_t_per_mwh\": 0.672,\n  \"demand_response_incentive_per_mwh\": 25.0,\n  \"weather_forecast\": \"storm\",\n  \"storm_alert\": true,\n  \"maintenance_scheduled\": false,\n  \"industrial_demand_mw\": 49.0,\n  \"events\": [\n    \"battery_2_offline\",\n    \"transmission_at_capacity\",\n    \"demand_surge\",\n    \"storm_alert\"\n  ]\n}\n\nPhysics facts (computed \u2014 use directly, do not recompute):\n{\n  \"total_generation_mw\": 92.3,\n  \"net_position_mw\": -5.7,\n  \"position\": \"shortfall\",\n  \"forecast_total_generation_mw\": 86.9,\n  \"forecast_net_position_mw\": -15.5,\n  \"forecast_position\": \"shortfall\",\n  \"sellable_surplus_mw\": 0.0,\n  \"max_import_mw\": 2.0,\n  \"min_required_curtailment_mw\": 0.0,\n  \"surplus_after_max_charge_mw\": 0.0,\n  \"per_battery\": [\n    {\n      \"battery_id\": \"battery_1\",\n      \"discharge_available_mw\": 10.0,\n      \"charge_headroom_mw\": 10.0\n    },\n    {\n      \"battery_id\": \"battery_2\",\n      \"discharge_available_mw\": 0.0,\n      \"charge_headroom_mw\": 0.0\n    }\n  ],\n  \"total_discharge_available_mw\": 10.0,\n  \"total_charge_headroom_mw\": 10.0\n}"
+  },
+  "status": "ok",
+  "response_args": {
+    "battery_actions": [
+      {
+        "amount_mw": 5.7,
+        "battery_id": "battery_1",
+        "action": "discharge"
+      }
+    ],
+    "reserve_floor_pct": 45,
+    "market_action": "hold",
+    "curtail_solar_mw": 0,
+    "demand_response_triggered": false,
+    "market_amount_mw": 0,
+    "floor_justification": "Storm alert, transmission constraint, and multi-failure cascade active; raise reserve floor to 45.0% for heavy volatility resilience.",
+    "curtail_wind_mw": 0,
+    "reasoning": "Position is shortfall (-5.7 MW). Dispatch-ladder step: battery discharge above floor. Golden rules binding: 1 (Reliability), 2 (Grid stability: transmission headroom is only 2.0 MW), 4 (Battery protection). Cascade: min_carbon priority places carbon (grid purchase carbon intensity 0.672 t/MWh) first, avoiding grid purchase by discharging battery_1 (5.7 MW). Battery 2 is offline. Reserve floor raised to 45% due to storm alert and volatility."
+  },
+  "latency_ms": 1625.0
+}

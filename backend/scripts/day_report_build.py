@@ -2,6 +2,11 @@
 """Builds the day report from the stored evidence/day_report_example_agent_results.json
 (written by day_report_run.py) and exports JSON + CSV. No model calls -- the baseline
 comparison uses the deterministic dispatcher directly.
+
+Each stored row's RAW proposal is re-scored under today's balancer/rules/physics code via
+pipeline.reevaluate_stored before the report is built -- the stored file's own `evaluation`
+field is frozen at recording time and must never be read directly here, or a rule/balancer
+change made after the recording would silently not show up in this report.
 """
 from __future__ import annotations
 
@@ -11,13 +16,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app.agents.pipeline import reevaluate_stored
 from app.data.day_report import build_day_report, report_to_csv, report_to_json
 from app.models.schemas import EnvironmentState, ScenarioRunResult
 
 RUN_ID = sys.argv[1] if len(sys.argv) > 1 else "day_report_example"
 ROOT = Path(__file__).resolve().parents[2]
 raw = json.loads((ROOT / "evidence" / f"{RUN_ID}_agent_results.json").read_text())
-results = [ScenarioRunResult(**r) for r in raw]
+stored = [ScenarioRunResult(**r) for r in raw]
+raw_proposals = [next(s.decision for s in r.stages if s.name == "raw") for r in stored]
+results = [reevaluate_stored(r.scenario, proposal) for r, proposal in zip(stored, raw_proposals)]
 scenarios = [r.scenario for r in results]
 
 report = build_day_report(scenarios, results)

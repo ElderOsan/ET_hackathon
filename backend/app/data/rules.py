@@ -11,6 +11,7 @@ from app.data.balancer import reference_dispatch
 from app.data.tuning import (
     BALANCE_TOLERANCE_MW,
     CURTAIL_TOLERANCE_MW,
+    DISPATCHER_PRICE_SPIKE_THRESHOLD_USD,
     FLOOR_BANDS,
     FLOOR_MAX,
     FLOOR_MIN,
@@ -25,8 +26,16 @@ from app.models.schemas import Decision, EnvironmentState, FieldRepair, Objectiv
 
 
 def _daily_high_threshold(scenario: EnvironmentState) -> float:
-    # Simple proxy until historical price series exist (see Next Steps doc).
-    return scenario.electricity_price_per_mwh * 0.95 if scenario.difficulty.value == "price_spike" else scenario.electricity_price_per_mwh + 1
+    # State-based, not generator-tag-based. The old form gated on
+    # scenario.difficulty.value == "price_spike" and fell back to price + 1 otherwise -- a
+    # threshold the price itself can never reach by construction, for EVERY scenario not
+    # already tagged by the generator as a price-spike profile. Difficulty.FILE_INPUT rows
+    # (and every other generated profile) never carry that tag, so the price-peak check was
+    # structurally dead for them regardless of the actual price: a 190/MWh tick evaluated as
+    # "not at peak." Reuses the same absolute threshold dispatcher.state_volatility_class
+    # already uses for this exact judgment -- one definition of "high price," not two. Do not
+    # reinstate the difficulty-gated form; it was never reachable for most scenarios.
+    return DISPATCHER_PRICE_SPIKE_THRESHOLD_USD
 
 
 def _volatility_signal_present(scenario: EnvironmentState) -> bool:

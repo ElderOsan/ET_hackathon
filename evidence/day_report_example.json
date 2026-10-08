@@ -436,11 +436,9 @@
         "battery_2": 74.0
       },
       "verdict": {
-        "raw": "flagged",
-        "applied": "flagged",
-        "failing_rules": [
-          "rule_8c"
-        ]
+        "raw": "pass",
+        "applied": "pass",
+        "failing_rules": []
       },
       "ledger": {
         "sold_mw": 0.0,
@@ -768,14 +766,20 @@
     }
   },
   "verdict_summary": {
-    "counts": {
-      "pass": 9,
-      "flagged": 3,
+    "counts_first_attempt_raw": {
+      "pass": 10,
+      "flagged": 2,
       "fail": 0
     },
+    "counts_applied_after_repair": {
+      "pass": 10,
+      "flagged": 2,
+      "fail": 0
+    },
+    "first_attempt_pass_rate_pct": 83.3,
+    "applied_pass_rate_pct": 83.3,
     "rule_fire_counts": {
-      "rule_8b": 2,
-      "rule_8c": 1
+      "rule_8b": 2
     }
   }
 }

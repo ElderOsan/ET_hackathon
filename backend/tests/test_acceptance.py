@@ -378,7 +378,11 @@ def test_21_rule5_avoidable_charge_only_and_na_for_carbon_and_renewable():
     # Brief 2 Patch 2, acceptance test 6: rule_5 doesn't flag charging that absorbs
     # unsellable surplus, flags only the sellable part otherwise, and is N/A for
     # min_carbon / max_renewable_utilisation.
-    base = dict(difficulty=Difficulty.D2_PRICE_SPIKE, total_demand_mw=90.0, total_demand_forecast_mw=90.0, transmission_headroom_mw=5.0)
+    # price is explicit and >= DISPATCHER_PRICE_SPIKE_THRESHOLD_USD: _daily_high_threshold now
+    # uses that absolute, state-based threshold rather than the old difficulty-gated relative
+    # one (price*0.95, reachable at any price once tagged D2_PRICE_SPIKE) -- the tick88
+    # fixture's own default price (60.0) no longer counts as "at peak" on its own.
+    base = dict(difficulty=Difficulty.D2_PRICE_SPIKE, total_demand_mw=90.0, total_demand_forecast_mw=90.0, transmission_headroom_mw=5.0, electricity_price_per_mwh=150.0, buy_price_per_mwh=153.0, sell_price_per_mwh=147.0)
     # generation 101.7 - demand 90 = surplus 11.7MW; sellable 5.0MW (headroom); unsellable 6.7MW.
 
     scenario = _tick88_scenario(**base, objective=Objective.COST_EFFICIENCY)

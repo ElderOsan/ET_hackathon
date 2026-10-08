@@ -8,8 +8,8 @@ import json
 import os
 
 from app.agents.evaluator import evaluate
-from app.data import physics
-from app.data.tuning import PRICE_SPREAD_PCT
+from app.data import file_input, physics, rules
+from app.data.tuning import DISPATCHER_PRICE_SPIKE_THRESHOLD_USD, PRICE_SPREAD_PCT
 from app.models.schemas import Battery, BatteryAction, Difficulty, Objective
 from tests.test_acceptance import _decision, _tick88_scenario
 
@@ -171,7 +171,15 @@ def _rule5(scenario, decision):
 
 def _r5_scenario(objective, total_demand_mw=90.0, transmission_headroom_mw=5.0):
     # generation 101.7; at demand=90, surplus=11.7MW. transmission_headroom_mw caps sellable.
-    return _tick88_scenario(difficulty=Difficulty.D2_PRICE_SPIKE, objective=objective, total_demand_mw=total_demand_mw, total_demand_forecast_mw=total_demand_mw, transmission_headroom_mw=transmission_headroom_mw)
+    # price is explicit and >= DISPATCHER_PRICE_SPIKE_THRESHOLD_USD (the state-based
+    # threshold _daily_high_threshold now uses) -- the fixture's own tick88 default (60.0) no
+    # longer counts as "at peak" since the fix replaced the old difficulty-gated relative
+    # threshold (price*0.95, reachable at any price once tagged D2_PRICE_SPIKE) with an
+    # absolute one.
+    return _tick88_scenario(
+        difficulty=Difficulty.D2_PRICE_SPIKE, objective=objective, total_demand_mw=total_demand_mw, total_demand_forecast_mw=total_demand_mw,
+        transmission_headroom_mw=transmission_headroom_mw, electricity_price_per_mwh=150.0, buy_price_per_mwh=153.0, sell_price_per_mwh=147.0,
+    )
 
 
 def test_5_01_fully_sellable_surplus_charging_flagged():
@@ -542,3 +550,56 @@ def test_freeze_scenario_hash_unchanged():
         f"didn't. Every recording is now invalid. If this change was deliberate, update "
         f"the constant and re-record; if not, revert it."
     )
+
+
+# ---- _daily_high_threshold / rule_8c / rule_5 -- state-based, not generator-tag-based -----
+# Regression guards for the bug confirmed this session: _daily_high_threshold() used to gate
+# on scenario.difficulty.value == "price_spike", a generator tag Difficulty.FILE_INPUT rows
+# never carry, making the price-peak check permanently unreachable for them regardless of
+# actual price. No test existed for this bug class before now.
+
+
+def test_volatility_signal_present_for_file_input_at_high_price():
+    # EXAMPLE_DAY_ROWS[7] is the 12-row example's price-spike row (price 165, >= the 100
+    # threshold) -- the exact row that used to be flagged by rule_8c incorrectly.
+    row = dict(file_input.EXAMPLE_DAY_ROWS[7])
+    scenario = file_input.row_to_scenario(row, 7)
+    assert scenario.difficulty == Difficulty.FILE_INPUT
+    assert scenario.electricity_price_per_mwh >= DISPATCHER_PRICE_SPIKE_THRESHOLD_USD
+    assert rules._volatility_signal_present(scenario) is True
+
+
+def test_volatility_signal_absent_for_file_input_at_calm_price():
+    # EXAMPLE_DAY_ROWS[0]: no storm, no battery outage, price well under threshold -- isolates
+    # the price check from the other four signals (storm/outage/demand_surge/transmission).
+    row = dict(file_input.EXAMPLE_DAY_ROWS[0])
+    scenario = file_input.row_to_scenario(row, 0)
+    assert scenario.electricity_price_per_mwh < DISPATCHER_PRICE_SPIKE_THRESHOLD_USD
+    assert rules._volatility_signal_present(scenario) is False
+
+
+def test_rule_8c_does_not_fire_on_raised_floor_at_high_price():
+    row = dict(file_input.EXAMPLE_DAY_ROWS[7])
+    scenario = file_input.row_to_scenario(row, 7)
+    decision = _decision(tick=scenario.tick, proposed_floor_pct=37.5, applied_floor_pct=37.5)
+    result = rules.rule_8c_floor_raised_without_signal(scenario, decision)
+    assert result.passed is True
+
+
+def test_rule_5_fires_on_avoidable_charging_at_high_price_file_input():
+    # The newly-reachable path: a FILE_INPUT scenario with a genuine surplus (so charging is
+    # possible at all), a high price, a non-exempt objective, no emergency, and a charge that
+    # exceeds the unsellable surplus -- asserted directly, not left to chance.
+    scenario = _tick88_scenario(
+        difficulty=Difficulty.FILE_INPUT, objective=Objective.COST_EFFICIENCY,
+        total_demand_mw=50.0, total_demand_forecast_mw=50.0,  # generation 101.7 -> 51.7MW surplus
+        transmission_headroom_mw=180.0,  # fully sellable -> unsellable_surplus_mw == 0, so any charge is avoidable
+        electricity_price_per_mwh=150.0, buy_price_per_mwh=153.0, sell_price_per_mwh=147.0,
+    )
+    assert scenario.electricity_price_per_mwh >= DISPATCHER_PRICE_SPIKE_THRESHOLD_USD
+    decision = _decision(
+        battery_actions=[BatteryAction(battery_id="battery_1", action="charge", amount_mw=10.0), BatteryAction(battery_id="battery_2", action="hold", amount_mw=0.0)],
+    )
+    result = rules.rule_5_no_charge_at_price_peak(scenario, decision)
+    assert result.applicable is True
+    assert result.passed is False

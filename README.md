@@ -144,7 +144,7 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
-`run_server.bat` / `run_dev.bat` wrap the two dev commands above.
+`backend/run_server.bat` / `frontend/run_dev.bat` wrap the two dev commands above.
 
 **`frontend/dist/` is committed on purpose** so judges never need Node — but that means it
 can drift from `frontend/src/`. After any frontend change, rebuild it before committing:

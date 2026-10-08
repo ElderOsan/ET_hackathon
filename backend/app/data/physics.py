@@ -212,20 +212,6 @@ def unserved_mw(scenario: EnvironmentState, decision: Decision) -> float:
     return max(0.0, scenario.total_demand_mw - load_served)
 
 
-def power_balance_residual(scenario: EnvironmentState, decision: Decision) -> float:
-    """sources - sinks. Should be ~0 (within BALANCE_TOLERANCE_MW) for a consistent decision."""
-    generation = scenario.solar_output_mw + scenario.wind_output_mw
-    curtailment = decision.curtail_solar_mw + decision.curtail_wind_mw
-    discharge = sum(a.amount_mw for a in decision.battery_actions if a.action == "discharge")
-    charge = sum(a.amount_mw for a in decision.battery_actions if a.action == "charge")
-    purchase = decision.market_amount_mw if decision.market_action == "buy" else 0.0
-    sale = decision.market_amount_mw if decision.market_action == "sell" else 0.0
-    load_served = min(scenario.total_demand_mw, generation - curtailment + discharge + purchase - charge - sale)
-    sources = (generation - curtailment) + discharge + purchase
-    sinks = load_served + charge + sale + curtailment
-    return sources - sinks
-
-
 def net_transmission_flow_mw(decision: Decision) -> float:
     """Positive = net export (selling), negative = net import (buying)."""
     if decision.market_action == "sell":

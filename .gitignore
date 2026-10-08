@@ -12,3 +12,7 @@ frontend/node_modules/
 # it is not regenerated automatically by anything in this repo.
 
 .DS_Store
+
+# Assistant tooling, not project content (dev-server launch config for the Claude Code tool
+# session) -- never something a judge's clean clone or the README's documented workflow needs.
+.claude/

@@ -8,7 +8,7 @@ Five pieces:
      (>=99%) -- it is the reference implementation, not just another decision-maker.
   B. Known-bad baselines: four naive strategies (random, always-hold, always-sell,
      always-charge) over the same 200 scenarios should each pass rarely (<=25%).
-  C. Fault-injection matrix: 12 fault types x 5 scenarios -- each fault is a single-field
+  C. Fault-injection matrix: 12 fault types x 6 profiles = 72 cases -- each fault is a single-field
      perturbation of a known-clean dispatcher decision, checked against the ONE rule it is
      designed to trip. Rules that are structurally coupled (e.g. rule_1/rule_6 both react to
      excess curtailment) are expected to co-trigger and are reported as such, not as false
@@ -333,7 +333,7 @@ def main():
     for name, (passed, total, pct) in oracle_and_baselines.items():
         print(f"{name:24s} {passed:4d}/{total} = {pct:5.1f}% pass")
 
-    print("\n=== C: fault-injection matrix (12 fault types x 5 scenarios) ===")
+    print("\n=== C: fault-injection matrix (12 fault types x 6 profiles = 72 cases) ===")
     rows = run_fault_matrix()
     caught = sum(1 for r in rows if r["intended_caught"])
     false_alarms = [r for r in rows if r["unexpected_false_alarms"]]

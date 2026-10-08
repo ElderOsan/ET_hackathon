@@ -1,0 +1,759 @@
+{
+  "probe": "D.5 baseline divergence (sellable_surplus_mw > total_charge_capacity_mw regime)",
+  "base_scenario": {
+    "difficulty": "D4_SURPLUS_DAY",
+    "seed": 777001,
+    "generation_mw": 122.0,
+    "transmission_headroom_mw": 180.0,
+    "total_charge_cap_mw": 16.0
+  },
+  "method": "dispatch() + balance() only -- zero model calls. Surplus swept via total_demand_mw, solar/wind/batteries/transmission/prices held fixed.",
+  "sweep": [
+    {
+      "surplus_mw": 0.0,
+      "sellable_surplus_mw": 0.0,
+      "sellable_exceeds_charge_cap": false,
+      "max_profit": {
+        "sell_mw": 0.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 0.0,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 0.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 0.0,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": false
+    },
+    {
+      "surplus_mw": 2.0,
+      "sellable_surplus_mw": 2.0,
+      "sellable_exceeds_charge_cap": false,
+      "max_profit": {
+        "sell_mw": 2.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 12.0,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 0.0,
+        "charge_mw": 2.0,
+        "cost": 0.0,
+        "profit": 11.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 4.0,
+      "sellable_surplus_mw": 4.0,
+      "sellable_exceeds_charge_cap": false,
+      "max_profit": {
+        "sell_mw": 4.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 24.0,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 0.0,
+        "charge_mw": 4.0,
+        "cost": 0.0,
+        "profit": 22.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 6.0,
+      "sellable_surplus_mw": 6.0,
+      "sellable_exceeds_charge_cap": false,
+      "max_profit": {
+        "sell_mw": 6.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 36.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 0.0,
+        "charge_mw": 6.0,
+        "cost": 0.0,
+        "profit": 33.2,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 8.0,
+      "sellable_surplus_mw": 8.0,
+      "sellable_exceeds_charge_cap": false,
+      "max_profit": {
+        "sell_mw": 8.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 48.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 0.0,
+        "charge_mw": 8.0,
+        "cost": 0.0,
+        "profit": 44.2,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 10.0,
+      "sellable_surplus_mw": 10.0,
+      "sellable_exceeds_charge_cap": false,
+      "max_profit": {
+        "sell_mw": 10.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 60.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 0.0,
+        "charge_mw": 10.0,
+        "cost": 0.0,
+        "profit": 55.3,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 12.0,
+      "sellable_surplus_mw": 12.0,
+      "sellable_exceeds_charge_cap": false,
+      "max_profit": {
+        "sell_mw": 12.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 72.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 0.0,
+        "charge_mw": 12.0,
+        "cost": 0.0,
+        "profit": 66.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 14.0,
+      "sellable_surplus_mw": 14.0,
+      "sellable_exceeds_charge_cap": false,
+      "max_profit": {
+        "sell_mw": 14.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 84.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 0.0,
+        "charge_mw": 14.0,
+        "cost": 0.0,
+        "profit": 76.9,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 16.0,
+      "sellable_surplus_mw": 16.0,
+      "sellable_exceeds_charge_cap": false,
+      "max_profit": {
+        "sell_mw": 16.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 96.2,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 0.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 87.7,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 18.0,
+      "sellable_surplus_mw": 18.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 18.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 108.2,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 2.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 99.7,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 20.0,
+      "sellable_surplus_mw": 20.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 20.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 120.2,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 4.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 111.7,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 22.0,
+      "sellable_surplus_mw": 22.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 22.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 132.2,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 6.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 123.8,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 24.0,
+      "sellable_surplus_mw": 24.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 24.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 144.2,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 8.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 135.8,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 26.0,
+      "sellable_surplus_mw": 26.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 26.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 156.3,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 10.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 147.8,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 28.0,
+      "sellable_surplus_mw": 28.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 28.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 168.3,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 12.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 159.8,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 30.0,
+      "sellable_surplus_mw": 30.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 30.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 180.3,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 14.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 171.8,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 32.0,
+      "sellable_surplus_mw": 32.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 32.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 192.3,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 16.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 183.9,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 34.0,
+      "sellable_surplus_mw": 34.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 34.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 204.3,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 18.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 195.9,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 36.0,
+      "sellable_surplus_mw": 36.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 36.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 216.4,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 20.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 207.9,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 38.0,
+      "sellable_surplus_mw": 38.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 38.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 228.4,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 22.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 219.9,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 40.0,
+      "sellable_surplus_mw": 40.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 40.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 240.4,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 24.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 231.9,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 42.0,
+      "sellable_surplus_mw": 42.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 42.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 252.4,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 26.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 244.0,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 44.0,
+      "sellable_surplus_mw": 44.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 44.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 264.4,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 28.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 256.0,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 46.0,
+      "sellable_surplus_mw": 46.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 46.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 276.5,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 30.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 268.0,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 48.0,
+      "sellable_surplus_mw": 48.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 48.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 288.5,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 32.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 280.0,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 50.0,
+      "sellable_surplus_mw": 50.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 50.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 300.5,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 34.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 292.0,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 52.0,
+      "sellable_surplus_mw": 52.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 52.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 312.5,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 36.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 304.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 54.0,
+      "sellable_surplus_mw": 54.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 54.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 324.5,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 38.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 316.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 56.0,
+      "sellable_surplus_mw": 56.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 56.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 336.6,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 40.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 328.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 58.0,
+      "sellable_surplus_mw": 58.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 58.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 348.6,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 42.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 340.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    },
+    {
+      "surplus_mw": 60.0,
+      "sellable_surplus_mw": 60.0,
+      "sellable_exceeds_charge_cap": true,
+      "max_profit": {
+        "sell_mw": 60.0,
+        "charge_mw": 0,
+        "cost": 0.0,
+        "profit": 360.6,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "cost_efficiency": {
+        "sell_mw": 44.0,
+        "charge_mw": 16.0,
+        "cost": 0.0,
+        "profit": 352.1,
+        "emissions_tonnes": 0.0,
+        "curtailed_mw": 0.0,
+        "renewable_utilisation_pct": 100.0
+      },
+      "diverges": true
+    }
+  ],
+  "diverging_count": 30,
+  "total_count": 31
+}

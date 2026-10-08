@@ -37,8 +37,15 @@ Every panel in the UI (Auto, Manual, Batch Run, File Input) has a mode selector:
 
 **You do not need a Gemini API key to use this app.** Safe mode and Replay mode work
 immediately, with no setup. A key only unlocks Live mode — get one free (no credit card) at
-[aistudio.google.com](https://aistudio.google.com), then put it in `backend/.env`
-(copy `backend/.env.example` first; see that file for the exact line to fill in).
+[aistudio.google.com](https://aistudio.google.com), then either:
+- put it in `backend/.env` (copy `backend/.env.example` first; see that file for the exact
+  line to fill in), **or**
+- set it as a shell environment variable instead — no file needed, and it works whether or
+  not `backend/.env` exists:
+  - Windows (PowerShell): `$env:GEMINI_API_KEY = "your-key-here"`
+  - macOS / Linux: `export GEMINI_API_KEY="your-key-here"`
+
+  then run `run.bat` / `./run.sh` from that same shell session.
 
 ## Where the example files are
 

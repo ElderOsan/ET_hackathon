@@ -26,6 +26,7 @@ export default function App() {
   // B1: "intro" (first-run screen) | "main" (today's existing layout) | "dayReport" (Door 1).
   const [view, setView] = useState("intro");
   const [dayReportSource, setDayReportSource] = useState(null); // {label} -- which door opened it, for DayReportPanel's own fetch
+  const [presetHint, setPresetHint] = useState(null); // B8: demo-preset guidance text, shown until the user acts manually
 
   useEffect(() => {
     api
@@ -98,6 +99,7 @@ export default function App() {
     setGeneratedScenario(null);
     setResult(null);
     setError(null);
+    setPresetHint(null);
   }
 
   async function runAuto() {
@@ -118,6 +120,25 @@ export default function App() {
     setLoading(true);
     try {
       const s = await api.generateScenario({ difficulty, objective: objective || null });
+      setGeneratedScenario(s);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // B8: demo presets -- load a known-shape scenario into Manual mode so a judge can see and
+  // edit the values before running. Never fires a run directly.
+  async function loadPreset(presetDifficulty, seed, hint) {
+    reset();
+    setMode("manual");
+    setDifficulty(presetDifficulty);
+    setObjective("");
+    setPresetHint(hint || null);
+    setLoading(true);
+    try {
+      const s = await api.generateScenario({ difficulty: presetDifficulty, objective: null, seed });
       setGeneratedScenario(s);
     } catch (e) {
       setError(String(e));
@@ -211,6 +232,29 @@ export default function App() {
             <button onClick={generateScenario} disabled={loading}>{loading ? "Working…" : "Generate Scenario"}</button>
           )}
         </div>
+
+        <div className="row" style={{ marginTop: 10, alignItems: "baseline" }}>
+          <span style={{ fontSize: 12, color: "#9aa4b2" }}>Demo presets — load into the form below, edit anything, then run:</span>
+          <button className="secondary" disabled={loading} onClick={() => loadPreset(
+            "surplus_day", 777001,
+            "Loaded the same surplus state under every objective (D4_SURPLUS_DAY, seed 777001) matches what the ladder reword was for: now change the Objective field below and run — max_profit should sell before charging; every other objective should charge first. Re-load this preset and switch Objective to compare."
+          )}>
+            Compare objectives on one state
+          </button>
+          <button className="secondary" disabled={loading} onClick={() => loadPreset("stable_day", 200001)}>A calm day</button>
+          <button className="secondary" disabled={loading} onClick={() => loadPreset(
+            "multi_failure_cascade", 300001,
+            "This generator profile always bundles all four cascade events together (battery outage, transmission at capacity, demand surge, storm alert) — there is no “storm only” scenario in the generator. This is the same profile as “A multi-failure cascade”, a different seed."
+          )}>
+            A storm
+          </button>
+          <button className="secondary" disabled={loading} onClick={() => loadPreset("multi_failure_cascade", 300002)}>A multi-failure cascade</button>
+        </div>
+        {presetHint && (
+          <p style={{ fontSize: 12, color: "#8fb4ff", background: "#1f2b45", padding: 8, borderRadius: 6, marginTop: 8 }}>
+            ⓘ {presetHint}
+          </p>
+        )}
 
         <div className="row" style={{ marginTop: 8, fontSize: 13 }}>
           {status && !status.key_configured && (

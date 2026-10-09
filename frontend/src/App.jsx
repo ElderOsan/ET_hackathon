@@ -42,8 +42,12 @@ export default function App() {
         setStatus(s);
         if (!s.key_configured) {
           setRunMode("safe"); // no key -> default straight to Safe mode, no error shown
-          setView("intro"); // B1: no key configured -> always show the doors, not just first visit
-        } else if (localStorage.getItem(INTRO_DISMISSED_KEY)) {
+        }
+        // The doors show on first visit regardless of key state -- Door 1 (recorded day,
+        // no key needed) and Door 2 (safe mode) are worth seeing even by a judge who already
+        // set up a key, and Door 3 itself already adapts its own copy to key_configured.
+        // Only a remembered dismissal (not key state) skips straight to the main view.
+        if (localStorage.getItem(INTRO_DISMISSED_KEY)) {
           setView("main");
         }
       })

@@ -8,8 +8,8 @@ objective cascade, and a dispatcher-computed reference.
 ## Quick start (3 commands, no Node required)
 
 ```bash
-git clone <this repo's URL>
-cd <repo folder>
+git clone https://github.com/ElderOsan/ET_hackathon.git
+cd ET_hackathon
 ```
 
 Then run the one script for your OS — it creates the Python virtual environment, installs

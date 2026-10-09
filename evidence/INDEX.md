@@ -5,14 +5,21 @@
 > any new run lands in `evidence/`, `reports/`, or `recordings/`. If the newest round you
 > expect isn't listed below, do not assume it's missing from the repo -- assume this index is
 > stale and check `git log` directly. An index that silently goes stale is worse than no index.
+> This full regeneration (2026-10-09) replaces the previous version, which predated round1,
+> the paced re-recording of the 96-row day, the fresh 12-row day, the tier report, two new
+> probes, and three new reports -- it would have told a reader half of this evidence didn't
+> exist.
 
 One row per artifact in `evidence/` and `reports/`. `prompt_version` is `orchestrator_agent.prompt_version()`
 at the time the underlying model calls were made (hashes `SYSTEM_PROMPT` + the tool schema) --
 `N/A` means the artifact involves no live model call (deterministic re-score, pre-registration
-spec, or a scan). Current prompt_version as of commit `50256d0` is `114f4a55af8ba01b`
-(`evidence/prompt_freeze.json`); anything below it is stale for live-model purposes. This file
-replaces guessing from filenames -- see the two different 12-row datasets below (the live-agent
-one and the dispatcher/safe-mode one) that caused this morning's confusion.
+spec, or a scan). **Current prompt_version is `114f4a55af8ba01b`, frozen at commit `cad104a`
+(`evidence/prompt_freeze.json`) and unchanged through every commit since** (the three
+freeze-guard tests in `backend/tests/test_calibration.py` enforce this; confirmed diff-empty
+on `orchestrator_agent.py`/`schemas.py`/`physics.py` as of this regeneration's own commit).
+Anything below that value is stale for live-model purposes. This file replaces guessing from
+filenames -- see the two different 12-row datasets below (the live-agent one and the
+dispatcher/safe-mode one) that caused an earlier session's confusion.
 
 ## Pre-registration (not run output -- current by definition, nothing to supersede)
 
@@ -22,36 +29,49 @@ one and the dispatcher/safe-mode one) that caused this morning's confusion.
 | `evidence/exit_tiers.json` | Round 0's pre-registered tier definitions (Tier G / Tier A), frozen before the run | `e1c464e` | N/A (spec) | Current |
 | `evidence/prompt_freeze.json` | The prompt freeze record itself (SHA, timestamp, prompt_version, reference scenario_hashes) | `cad104a` | `114f4a55af8ba01b` | Current -- this IS the freeze |
 
-## Round 0 benchmark (72 scenarios) -- pre-registered, history kept intact per instruction
+## round1 -- the current benchmark (72 scenarios, post-freeze, post-paced-D.3)
 
 | File | What it is | Commit | prompt_version | Status |
 |---|---|---|---|---|
-| `evidence/round0_benchmark.json` | First Round 0 pass, full 72-row dump | `b5c751b` | `8088e95c1e20b0c7` | **Stale** -- pre profit-fix AND pre-678c109. 3 rows' `rule_9` verdicts don't match current code (profit formula). Kept as history, not a current-build claim. |
-| `evidence/round0_tier_report.json` | Tier evaluation against `round0_benchmark.json` | `b5c751b` | `8088e95c1e20b0c7` | **Stale**, same reason as above |
-| `reports/round0.md` | Written-up Round 0 report | `b5c751b` | `8088e95c1e20b0c7` | **Stale** -- describes the pre-profit-fix run |
-| `evidence/round0_profit_fix_reeval.json` | `round0_benchmark.json`'s raw decisions re-scored under the profit-fix code (zero model calls) | `d81b308` | `8088e95c1e20b0c7` (re-scored, not re-recorded) | Scoring-current as of the profit fix; now stale again re: the 678c109 prompt change (the decisions themselves are still pre-678c109) |
-| `evidence/round0_run2_benchmark.json` | Round 0 re-run after the profit fix, full 72-row dump | `cac91bd` | `8088e95c1e20b0c7` | **Stale re: prompt** (pre-678c109) but **current re: scoring** -- re-scoring its stored raw decisions under today's code (checked this session) produces 0 verdict changes. This is the number the fresh round1 run supersedes. |
-| `evidence/round0_run2_tier_report.json` | Tier evaluation against `round0_run2_benchmark.json` | `cac91bd` | `8088e95c1e20b0c7` | Same as above |
-| **`evidence/round1_*` (placeholder)** | **Tomorrow's fresh 72-scenario run, post-678c109 AND post the rule_8c/rule_5 fix** | *(not yet run)* | `114f4a55af8ba01b` (expected) | **Pending** -- this is the number that supersedes `round0_run2` for the final submission |
+| `evidence/round1_benchmark.json` | 72-scenario live benchmark, full row dump | `6fa01ec` | `114f4a55af8ba01b` | **Current -- this is the submission's primary benchmark** |
+| `evidence/round1_tier_report.json` | Tier evaluation against `gate.json`/`exit_tiers.json` | `09136cd` | `114f4a55af8ba01b` | **Current.** Neither Tier G nor Tier A reached; Tier A clears every quantitative criterion and misses only the replay-match item; Tier G misses that plus the three-profile line by one row |
+| `reports/round1.md` | Full write-up: ladder-reword/applied-fail analysis, the tier call, all required disclosures | `09136cd` | `114f4a55af8ba01b` | **Current** |
+| `evidence/dispatcher_vs_round1_head_to_head.json` | Deterministic dispatcher run on round1's *identical* 72 scenarios, scored by the same evaluator, zero model calls | `d2537c5` | N/A (dispatcher, re-scored) | **Current.** Agent leads before repair (84.7% vs 81.9%), ties after repair (81.9% both), with 3 hard fails (ticks 16/20/38) the dispatcher never produces |
+| `backend/scripts/probe_dispatcher_vs_round1.py` | Script producing the file above | `d2537c5` | N/A | Current |
+| `evidence/baseline_divergence_probe.json` | Hand-built surplus-state sweep: does declaring an objective reach the dispatcher? Zero model calls | `20d850c` | N/A (dispatcher only) | **Current.** 30 of 31 constructed states diverge deterministically between `max_profit` and `cost_efficiency` |
+| `backend/scripts/probe_baseline_divergence.py` | Script producing the file above | `20d850c` | N/A | Current |
+| `reports/metric_limitations.md` | The profit-metric boundary the divergence above is bounded by (0.35 MWh round-trip loss x $24.04 = $8.41); the objective-cascade scoring gap (only the top priority is scored) | `20d850c` (metric finding); `db5cd89` (cascade-gap addition) | N/A (derivation) | **Current** |
+| `reports/ui_copy_corrections.md` | Logged UI copy fix for the day-report screen's baseline-match explanation (transmission cap binding, not "objective was already cost") -- not yet applied to the UI | `20d850c` | N/A | Current as a logged, unapplied fix |
+| `reports/findings.md` | Full findings write-up (reasoning/submission mismatches, the model-information gap, the balancer-repair gap, the dispatcher head-to-head, declined changes, process-apparatus catches, method notes, known issues) -- every number verified against its source file before this was saved; two fabricated/unsourced claims caught and corrected during that verification | `db5cd89` (latest addition: the cascade-scoring-gap known issue) | N/A (derivation) | **Current** |
 
-## Shipped-demo evidence (README-referenced, judge-facing, re-recorded tomorrow)
+## Round 0 benchmark (72 scenarios) -- pre-registered, history kept intact per instruction, now superseded
 
 | File | What it is | Commit | prompt_version | Status |
 |---|---|---|---|---|
-| `recordings/example_96row_day/` + `recordings/fileinput_0486961f6cc7/` | The 96-row day's recorded calls (two run_ids, same content -- see Gate 0.1) | `48e6e2d` (shipped) | `8088e95c1e20b0c7` | **Stale and currently broken** -- replay on current master misses 100% of rows (verified live, Gate 0.1). Re-record scheduled. |
-| `recordings/day_report_example/` | The 12-row day's recorded **live-agent** calls | `43a3695` | `8088e95c1e20b0c7` | **Stale**, same reason |
-| `evidence/day_report_example_agent_results.json` | The 12-row live-agent `ScenarioRunResult`s, as recorded | `43a3695` | `8088e95c1e20b0c7` | Stale decisions, but... |
-| `evidence/day_report_example.json` / `.csv` | The built day report from the above, **re-scored under current rules** via `pipeline.reevaluate_stored` (zero model calls) | `50256d0` | N/A (re-scored) | **Current re: scoring** (first-attempt pass 83.3%, post rule_8c fix). Still describes a pre-678c109 prompt's decisions -- a fresh live 12-row run would still change the actual proposals, not just their verdicts. |
+| `evidence/round0_benchmark.json` | First Round 0 pass, full 72-row dump | `b5c751b` | `8088e95c1e20b0c7` | **Superseded by round1** (see above). Also stale on its own terms -- pre profit-fix AND pre-678c109; 3 rows' `rule_9` verdicts don't match current code. Kept as history, not a current-build claim. |
+| `evidence/round0_tier_report.json` | Tier evaluation against `round0_benchmark.json` | `b5c751b` | `8088e95c1e20b0c7` | **Superseded by `round1_tier_report.json`**, same reason as above |
+| `reports/round0.md` | Written-up Round 0 report | `b5c751b` | `8088e95c1e20b0c7` | **Superseded by `reports/round1.md`** -- describes the pre-profit-fix run |
+| `evidence/round0_profit_fix_reeval.json` | `round0_benchmark.json`'s raw decisions re-scored under the profit-fix code (zero model calls) | `d81b308` | `8088e95c1e20b0c7` (re-scored, not re-recorded) | Historical intermediate step; superseded by round1 |
+| `evidence/round0_run2_benchmark.json` | Round 0 re-run after the profit fix, full 72-row dump | `cac91bd` | `8088e95c1e20b0c7` | **Superseded by `round1_benchmark.json`.** Still used deliberately as the pre-678c109 "before" side of the ladder-reword comparison (tick 60: charge 16.0/sell 34.9, vs round1's charge 0/sell 50.9 on the identical scenario) -- correct to keep for that reason, not a current-build claim otherwise. |
+| `evidence/round0_run2_tier_report.json` | Tier evaluation against `round0_run2_benchmark.json` | `cac91bd` | `8088e95c1e20b0c7` | **Superseded by `round1_tier_report.json`** |
 
-**Note on the two different "12-row reports" that caused this morning's confusion:** the table
+## Shipped-demo evidence (README-referenced, judge-facing) -- re-recorded under the frozen prompt, no longer stale
+
+| File | What it is | Commit | prompt_version | Status |
+|---|---|---|---|---|
+| `recordings/example_96row_day/` + `recordings/fileinput_0486961f6cc7/` | The 96-row day's recorded calls (two run_ids, same content) | `0d0fd27` | `114f4a55af8ba01b` | **Current, verified working.** Re-recorded live, paced at 4s/call against the measured 15 req/min free-tier limit (fixing the 429 that cost round1 its replay-match criterion); 96/96 completed live; no-key replay verified 96/96 on both run_ids, **three separate times** (post-recording, post stale-file cleanup, and once more immediately before). This is no longer the broken state an earlier audit caught (Gate 0.1: on the pre-D.3 master, replay missed 100% of rows after the 678c109 prompt change) -- that finding is what D.3 exists to have fixed, and it's now verified fixed. |
+| `recordings/day_report_example/` | The 12-row day's recorded **live-agent** calls | `e291ac3` | `114f4a55af8ba01b` | **Current.** Re-run live, paced, under D.4 |
+| `evidence/day_report_example_agent_results.json` | The 12-row live-agent `ScenarioRunResult`s, as recorded | `e291ac3` | `114f4a55af8ba01b` | **Current for the first time since the freeze** -- previously the stored pre-678c109 decisions were being re-scored under current rules (correct per `day_report_build.py`'s own contract) but the underlying decisions themselves were stale; this run replaces the decisions too. Raw/first-attempt: 10 pass, 2 flagged, 0 fail (83.3%). Applied: identical. |
+| `evidence/day_report_example.json` / `.csv` | The built day report from the above | `e291ac3` | `114f4a55af8ba01b` | **Current**, decisions and scoring both |
+
+**Note on the two different "12-row reports" that caused an earlier session's confusion:** the table
 above is the **live-agent** one (`day_report_example_agent_results.json`, real model decisions,
-not stored as a committed day-report artifact's twin). A **separate**, not-committed-anywhere
-12-row report was demonstrated live in chat during the B9 checkpoint and again during the
-rule_8c fix verification, built from **Safe-mode dispatcher decisions** on the same
-`file_input.EXAMPLE_DAY_ROWS` data, run fresh through the UI/API each time -- it has no evidence
-file of its own and is reproducible on demand (`dispatcher.dispatch` on each row, zero model
-calls). Do not confuse the two: same 12 input rows, different decision-makers, different
-verdicts.
+committed as its own evidence file). A **separate**, not-committed-anywhere
+12-row report has also been demonstrated live in chat from time to time, built from **Safe-mode
+dispatcher decisions** on the same `file_input.EXAMPLE_DAY_ROWS` data, run fresh through the
+UI/API each time -- it has no evidence file of its own and is reproducible on demand
+(`dispatcher.dispatch` on each row, zero model calls). Do not confuse the two: same 12 input
+rows, different decision-makers, different verdicts.
 
 ## Probes (deliberately dated, cited correctly as before/after)
 
@@ -62,31 +82,33 @@ verdicts.
 | `evidence/ladder_reword_probe.json` | Cross-objective probe, post-reword | `81ba71d` | `114f4a55af8ba01b` | **Current** |
 | `reports/ladder_reword_probe.md` | Before/after write-up (uses both probes above) | `81ba71d` | mixed (by design) | **Current** |
 
+(`evidence/baseline_divergence_probe.json` and `evidence/dispatcher_vs_round1_head_to_head.json` are listed under round1 above, since both were produced specifically to extend that benchmark's analysis, not as standalone probes.)
+
 ## This session's own infrastructure evidence
 
 | File | What it is | Commit | prompt_version | Status |
 |---|---|---|---|---|
-| `evidence/step6_evidence.json` | Deterministic suite: 200-scenario oracle + baselines, 72-case fault matrix, determinism checks, recordings-based prompt-leak scan | `6cd573a` | N/A (no model calls in A/B/C/E; D scans whatever's on disk at run time) | **Current** -- re-ran this session, numbers unchanged from the last known result |
-| `reports/preflight_audit.md` | Full pre-flight audit (this file's own source material for the table above) | `6cd573a` | N/A (audit document) | Current as of its own commit; superseded in spirit by this INDEX for the stale/current question specifically |
-| `evidence/secret_scan.md` | Secret-scan write-up | `bbebba9` | N/A (scan) | Covers repo state at `bbebba9`; re-scan before final push, not because anything is suspected |
-| `evidence/secret_scan_post_audith.json` | Secret scan after audit-H recordings staged | `bbebba9` | N/A (scan) | Scope-limited to that commit's `git log`, not a standing guarantee |
+| `evidence/step6_evidence.json` | Deterministic suite: 200-scenario oracle + baselines, 72-case fault matrix, determinism checks, recordings-based prompt-leak scan | `6cd573a` | N/A (no model calls in A/B/C/E; D scans whatever's on disk at run time) | Current as of its own last re-run; not re-run again during this regeneration (no rule/balancer/dispatcher change since to invalidate it) |
+| `reports/preflight_audit.md` | Full pre-flight audit (this file's own source material for an earlier version of the table above) | `6cd573a` | N/A (audit document) | **Contains disproved claims -- do not read at face value.** Three specific claims in this document were disproved on 2026-10-08: (1) that the shipped 96-row recorded day "still works" on replay -- it did not (Gate 0.1: 0/96 on the then-current master; see the "Shipped-demo evidence" table above for the now-fixed state); (2) its own `orchestrator_facts()` table lists only 5 of the function's actual 13 keys, omitting `total_generation_mw`, `net_position_mw`, `position`, both forecast equivalents, and the two `total_*` aggregate fields entirely; (3) a paragraph claiming "the model has no fact telling it how much import headroom alone would cover a shortfall" directly contradicts this same document's own table 20 lines above it, which lists `max_import_mw` as exactly that fact. This document's Gate-0.4-adjacent finding (the balancer-repair/no-import-substitution gap) is independently correct and reconfirmed in `reports/round1.md`'s Part 1B -- the document is not wrong throughout, just not reliable to cite without checking against a current source first. |
+| `evidence/secret_scan.md` | Secret-scan write-up | `bbebba9` | N/A (scan) | Covers repo state at `bbebba9`. A fresh full-history scan (D.8) was re-run before the repo went public (2026-10-08) and came back clean -- see commit history around that date; no new write-up file was created for it since the result was report-only (0 real secrets, all flagged items previously-documented false-positive classes). |
+| `evidence/secret_scan_post_audith.json` | Secret scan after audit-H recordings staged | `bbebba9` | N/A (scan) | Scope-limited to that commit's `git log`, not a standing guarantee -- superseded in spirit by the D.8 full-history re-scan noted above |
 | `evidence/secret_scan_round0.json` | Secret scan after Round 0 staged | `dd9cde1` | N/A (scan) | Same |
 
 ## Earlier project phases (Brief 2 / Patch 2 / Addendum C) -- historical record, not current-build claims
 
 | File | What it is | Commit | prompt_version | Status |
 |---|---|---|---|---|
-| `evidence/brief2_after_run.json` | Brief 2 benchmark output | `24dcff3` | pre-dates `recordings/` tracking | Superseded by Round 0 |
-| `evidence/brief2_patch2_benchmark.json` | Brief 2 Patch 2 benchmark output | `24dcff3` | pre-dates `recordings/` tracking | Superseded by Round 0 |
-| `evidence/brief2_patch_benchmark.json` | Brief 2 Patch benchmark output | `24dcff3` | pre-dates `recordings/` tracking | Superseded by Round 0 |
-| `evidence/brief2_patch_gapfill.json` | Brief 2 Patch gap-fill cases | `24dcff3` | pre-dates `recordings/` tracking | Superseded by Round 0 |
+| `evidence/brief2_after_run.json` | Brief 2 benchmark output | `24dcff3` | pre-dates `recordings/` tracking | Superseded by round1 |
+| `evidence/brief2_patch2_benchmark.json` | Brief 2 Patch 2 benchmark output | `24dcff3` | pre-dates `recordings/` tracking | Superseded by round1 |
+| `evidence/brief2_patch_benchmark.json` | Brief 2 Patch benchmark output | `24dcff3` | pre-dates `recordings/` tracking | Superseded by round1 |
+| `evidence/brief2_patch_gapfill.json` | Brief 2 Patch gap-fill cases | `24dcff3` | pre-dates `recordings/` tracking | Superseded by round1 |
 | `reports/patch2.md` | Patch 2 write-up | `24dcff3` | pre-dates `recordings/` tracking | Historical |
 | `reports/patch3_step1.md` | Patch 3 Step 1 write-up | `24dcff3` | pre-dates `recordings/` tracking | Historical |
 | `evidence/patch2_reeval_rule_fixes.json` | Patch 2 rule-fix re-evaluation (zero model calls) | `662009f` | N/A (re-scored) | Historical |
 | `evidence/patch2_runs.jsonl` | Patch 2 raw run log | `1595d81` | pre-dates `recordings/` tracking | Historical |
 | `evidence/patch2_summary.csv` | Patch 2 summary | `0b725fd` | pre-dates `recordings/` tracking | Historical |
 | `evidence/addendumC_reeval.json` | Addendum C re-evaluation (zero model calls) | `1595d81` | N/A (re-scored) | Historical |
-| `evidence/objective_audit.csv` / `reports/objective_audit.md` | Objective-cascade audit | `24dcff3` | pre-dates `recordings/` tracking | Historical -- findings folded into later work |
+| `evidence/objective_audit.csv` / `reports/objective_audit.md` | Objective-cascade audit | `24dcff3` | pre-dates `recordings/` tracking | Historical -- findings folded into later work. Note (2026-10-09): this document's rule_9 formula descriptions predate the current `rules.py` implementation in places; cross-check against source before citing, same caution as `preflight_audit.md` above. |
 
 ## Scratch (deleted)
 
